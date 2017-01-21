@@ -42,11 +42,11 @@ Plugin 'huawenyu/neogdb.vim'
   - :GdbWatchWord
 
 ## Keys
-  - <F4> continue
-  - <F5> next
-  - <F6> step
-  - <F7> finish
-  - <F9> print <var>
+  - `<F4>` continue
+  - `<F5>` next
+  - `<F6>` step
+  - `<F7>` finish
+  - `<F9>` print <var>
 
 # License
 Vim license, see LICENSE
