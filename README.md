@@ -49,7 +49,7 @@ Plugin 'huawenyu/neogdb.vim'
   - <F9> print <var>
 
 # License
-Vim license, see LICENSE
+Vim license, see LICENSE.
 
 # Maintainer
 Wilson Huawen Yu <[huawen.yu@gmail.com](mailto:huawen.yu@gmail.com)>
