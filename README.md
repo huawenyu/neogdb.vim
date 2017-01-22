@@ -2,7 +2,7 @@
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
 The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim
 
-![screen](https://github.com/huawenyu/neogdb.vim/screen.gif)
+[![screen](./screen.gif)](#features)
 
 # Install
 
