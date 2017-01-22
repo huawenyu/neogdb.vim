@@ -175,18 +175,30 @@ function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     if exists('g:gdb')
         throw 'Gdb already running'
     endif
-    let gdb = {}
-    " gdbserver port
-    let gdb._mode = a:mode
-    let gdb._server_addr = a:server_addr
-    let gdb._reconnect = a:reconnect
-    let gdb._initialized = 0
-    " window number that will be displaying the current file
-    let gdb._jump_window = 1
-    let gdb._current_buf = -1
-    let gdb._current_line = -1
-    let gdb._has_breakpoints = 0
-    let gdb._server_exited = 0
+    let gdb = vimexpect#Parser(s:gdb_running_matcher, copy(s:gdb))
+    call extend(gdb, gdb#spawn(a:000))
+
+    " Create new tab for the debugging view
+    tabnew
+    let gdb._tab = tabpagenr()
+    " create horizontal split to display the current file and maybe gdbserver
+    sp
+    let gdb._server_buf = -1
+    if type(a:server_cmd) == type('')
+        " spawn gdbserver in a vertical split
+        let server = gdb_expect#gdbserver_new(gdb)
+        vsp | enew | let gdb._server_id = termopen(a:server_cmd, server)
+        let gdb._jump_window = 2
+        let gdb._server_buf = bufnr('%')
+    endif
+    " go to the bottom window and spawn gdb client
+    wincmd j
+    enew | let gdb._client_id = termopen(a:client_cmd, gdb)
+    let gdb._client_buf = bufnr('%')
+    call gdb_expect#Map(1)
+    " go to the window that displays the current file
+    exe gdb._jump_window 'wincmd w'
+    let g:gdb = gdb
     "}
 endfunction
 
@@ -272,28 +284,6 @@ function! gdb_expect#Kill()
         throw 'Gdb is not running'
     endif
     call g:gdb.kill()
-endfunction
-
-
-function! gdb_expect#Map(type)
-    "{
-    if a:type == 0
-        tunmap <f4>
-        tunmap <f5>
-        tunmap <f6>
-        tunmap <f7>
-    elseif a:type == 1
-        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
-        tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
-        tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
-        tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
-    elseif a:type == 2
-        nnoremap <silent> <f4> :GdbContinue<cr>
-        nnoremap <silent> <f5> :GdbNext<cr>
-        nnoremap <silent> <f6> :GdbStep<cr>
-        nnoremap <silent> <f7> :GdbFinish<cr>
-    endif
-    "}
 endfunction
 
 

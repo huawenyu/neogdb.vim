@@ -16,7 +16,7 @@ function! s:__init__()
 endfunction
 call s:__init__()
 
-function! gdb_expect#gdbserver_new(gdb) abort
+function! gdb_python#gdbserver_new(gdb) abort
     "{
     let this = {}
     let this._gdb = a:gdb
@@ -31,7 +31,7 @@ function! gdb_expect#gdbserver_new(gdb) abort
 endfunction
 
 
-function! gdb_expect#gdb_pause_match_new() abort
+function! gdb_python#gdb_pause_match_new() abort
     "{
     let this = vimexpect#State([
                 \ ['Continuing.', 'continue'],
@@ -80,7 +80,7 @@ function! gdb_expect#gdb_pause_match_new() abort
 endfunction
 
 
-function! gdb_expect#gdb_running_match_new() abort
+function! gdb_python#gdb_running_match_new() abort
     "{
     let this = vimexpect#State([
                 \ ['\v^Breakpoint \d+', 'pause'],
@@ -123,12 +123,12 @@ function! gdb_expect#gdb_running_match_new() abort
 endfunction
 
 
-function! gdb_expect#gdb_new() abort
+function! gdb_python#gdb_new() abort
     "{
     let this = {}
 
     function! this.kill()
-        call gdb_expect#Map(0)
+        call gdb_python#Map(0)
         call self.update_current_line_sign(0)
         exe 'bd! '.self._client_buf
         if self._server_buf != -1
@@ -170,28 +170,34 @@ function! gdb_expect#gdb_new() abort
 endfunction
 
 
-function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
+function! gdb_python#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     "{
     if exists('g:gdb')
         throw 'Gdb already running'
     endif
     let gdb = {}
-    " gdbserver port
-    let gdb._mode = a:mode
-    let gdb._server_addr = a:server_addr
-    let gdb._reconnect = a:reconnect
-    let gdb._initialized = 0
-    " window number that will be displaying the current file
-    let gdb._jump_window = 1
-    let gdb._current_buf = -1
-    let gdb._current_line = -1
-    let gdb._has_breakpoints = 0
-    let gdb._server_exited = 0
+    call extend(gdb, gdb#spawn(a:000))
+
+    " Create new tab for the debugging view
+    tabnew
+    let gdb._tab = tabpagenr()
+
+    " create horizontal split to display the current file and maybe gdbserver
+    sp
+    let gdb._server_buf = -1
+    " go to the bottom window and spawn gdb client
+    wincmd j
+    enew | let gdb._client_id = termopen(a:client_cmd, gdb)
+    let gdb._client_buf = bufnr('%')
+    call gdb_python#Map(1)
+    " go to the window that displays the current file
+    exe gdb._jump_window 'wincmd w'
+    let g:gdb = gdb
     "}
 endfunction
 
 
-function! gdb_expect#Test(bang, filter)
+function! gdb_python#Test(bang, filter)
     "{
     let cmd = "GDB=1 make test"
     if a:bang == '!'
@@ -209,7 +215,7 @@ function! gdb_expect#Test(bang, filter)
 endfunction
 
 
-function! gdb_expect#RefreshBreakpointSigns(breakpoints)
+function! gdb_python#RefreshBreakpointSigns(breakpoints)
     "{
     let buf = bufnr('%')
     let i = 5000
@@ -228,7 +234,7 @@ function! gdb_expect#RefreshBreakpointSigns(breakpoints)
 endfunction
 
 
-function! gdb_expect#RefreshBreakpoints(breakpoints)
+function! gdb_python#RefreshBreakpoints(breakpoints)
     "{
     if !exists('g:gdb')
         return
@@ -251,7 +257,7 @@ function! gdb_expect#RefreshBreakpoints(breakpoints)
 endfunction
 
 
-function! gdb_expect#Send(data)
+function! gdb_python#Send(data)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -259,7 +265,7 @@ function! gdb_expect#Send(data)
 endfunction
 
 
-function! gdb_expect#Interrupt()
+function! gdb_python#Interrupt()
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -267,33 +273,11 @@ function! gdb_expect#Interrupt()
 endfunction
 
 
-function! gdb_expect#Kill()
+function! gdb_python#Kill()
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
     call g:gdb.kill()
-endfunction
-
-
-function! gdb_expect#Map(type)
-    "{
-    if a:type == 0
-        tunmap <f4>
-        tunmap <f5>
-        tunmap <f6>
-        tunmap <f7>
-    elseif a:type == 1
-        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
-        tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
-        tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
-        tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
-    elseif a:type == 2
-        nnoremap <silent> <f4> :GdbContinue<cr>
-        nnoremap <silent> <f5> :GdbNext<cr>
-        nnoremap <silent> <f6> :GdbStep<cr>
-        nnoremap <silent> <f7> :GdbFinish<cr>
-    endif
-    "}
 endfunction
 
 
@@ -303,9 +287,9 @@ function! s:__fini__()
         return
     endif
 
-    let s:gdb_pause_matcher = gdb_expect#gdb_pause_match_new()
-    let s:gdb_running_matcher = gdb_expect#gdb_running_match_new()
-    let s:gdb = gdb_expect#gdb_new()
+    let s:gdb_pause_matcher = gdb_python#gdb_pause_match_new()
+    let s:gdb_running_matcher = gdb_python#gdb_running_match_new()
+    let s:gdb = gdb_python#gdb_new()
     "}
 endfunction
 call s:__fini__()
