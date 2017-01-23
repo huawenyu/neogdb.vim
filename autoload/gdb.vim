@@ -3,20 +3,15 @@ function! s:__init__()
     if exists("s:init")
         return
     endif
-
     sign define GdbBreakpoint text=●
     sign define GdbCurrentLine text=⇒
-
-
     let s:gdb_port = 7778
-    let s:run_gdb = "gdb -q -f a.out"
     let s:max_breakpoint_sign_id = 0
-
     "}
 endfunction
 call s:__init__()
 
-function! gdb_expect#gdbserver_new(gdb) abort
+function! gdb#gdbserver_new(gdb) abort
     "{
     let this = {}
     let this._gdb = a:gdb
@@ -31,104 +26,13 @@ function! gdb_expect#gdbserver_new(gdb) abort
 endfunction
 
 
-function! gdb_expect#gdb_pause_match_new() abort
-    "{
-    let this = vimexpect#State([
-                \ ['Continuing.', 'continue'],
-                \ ['\v[\o32]{2}([^:]+):(\d+):\d+', 'jump'],
-                \ ['Remote communication error.  Target disconnected.:', 'retry'],
-                \ ])
-
-
-    function this.continue(...)
-        call self._parser.switch(s:gdb_running_matcher)
-        call self.update_current_line_sign(0)
-    endfunction
-
-
-    function this.jump(file, line, ...)
-        if tabpagenr() != self._tab
-            " Don't jump if we are not in the debugger tab
-            return
-        endif
-        let window = winnr()
-        exe self._jump_window 'wincmd w'
-        let self._current_buf = bufnr('%')
-        let target_buf = bufnr(a:file, 1)
-        if bufnr('%') != target_buf
-            exe 'buffer ' target_buf
-            let self._current_buf = target_buf
-        endif
-        exe ':' a:line
-        let self._current_line = a:line
-        exe window 'wincmd w'
-        call self.update_current_line_sign(1)
-    endfunction
-
-
-    function this.retry(...)
-        if self._server_exited
-            return
-        endif
-        sleep 1
-        call self.attach()
-        call self.send('continue')
-    endfunction
-
-    return this
-    "}
-endfunction
-
-
-function! gdb_expect#gdb_running_match_new() abort
-    "{
-    let this = vimexpect#State([
-                \ ['\v^Breakpoint \d+', 'pause'],
-                \ ['\v\[Inferior\ +.{-}\ +exited\ +normally', 'disconnected'],
-                \ ['(gdb)', 'pause'],
-                \ ])
-
-    function this.pause(...)
-        call self._parser.switch(s:gdb_pause_matcher)
-        if !self._initialized
-            call self.send('set confirm off')
-            call self.send('set pagination off')
-            if !empty(self._server_addr)
-                call self.send('set remotetimeout 50')
-                call self.attach()
-                call s:RefreshBreakpoints()
-                call self.send('c')
-            endif
-            if g:gdb._mode == 1
-                call self.send('br main')
-                call self.send('r')
-            endif
-            let self._initialized = 1
-        endif
-    endfunction
-
-
-    function this.disconnected(...)
-        if !self._server_exited && self._reconnect
-            " Refresh to force a delete of all watchpoints
-            call s:RefreshBreakpoints()
-            sleep 1
-            call self.attach()
-            call self.send('continue')
-        endif
-    endfunction
-
-    return this
-    "}
-endfunction
-
-
-function! gdb_expect#gdb_new() abort
+function! gdb#gdb_new() abort
     "{
     let this = {}
+    let this.state = "null"
 
     function! this.kill()
-        call gdb_expect#Map(0)
+        call gdb#Map("unmap")
         call self.update_current_line_sign(0)
         exe 'bd! '.self._client_buf
         if self._server_buf != -1
@@ -152,6 +56,65 @@ function! gdb_expect#gdb_new() abort
     endfunction
 
 
+    function this.retry()
+        if self._server_exited
+            return
+        endif
+        sleep 1
+        call self.attach()
+        call self.send('continue')
+    endfunction
+
+
+    function this.on_jump(file, line)
+        if tabpagenr() != self._tab
+            " Don't jump if we are not in the debugger tab
+            return
+        endif
+        let window = winnr()
+        exe self._jump_window 'wincmd w'
+        let self._current_buf = bufnr('%')
+        let target_buf = bufnr(a:file, 1)
+        if bufnr('%') != target_buf
+            exe 'buffer ' target_buf
+            let self._current_buf = target_buf
+        endif
+        exe ':' a:line
+        let self._current_line = a:line
+        exe window 'wincmd w'
+        call self.update_current_line_sign(1)
+    endfunction
+
+    function this.on_pause()
+        if !self._initialized
+            call self.send('set confirm off')
+            call self.send('set pagination off')
+            if !empty(self._server_addr)
+                call self.send('set remotetimeout 50')
+                call self.attach()
+                call s:RefreshBreakpoints()
+                call self.send('c')
+            endif
+            if g:gdb._mode == 1
+                call self.send('br main')
+                call self.send('r')
+            endif
+            let self._initialized = 1
+        endif
+    endfunction
+
+
+    function this.on_disconnected()
+        if !self._server_exited && self._reconnect
+            " Refresh to force a delete of all watchpoints
+            call s:RefreshBreakpoints()
+            sleep 1
+            call self.attach()
+            call self.send('continue')
+        endif
+    endfunction
+
+
     function! this.update_current_line_sign(add)
         " to avoid flicker when removing/adding the sign column(due to the change in
         " line width), we switch ids for the line sign and only remove the old line
@@ -170,7 +133,7 @@ function! gdb_expect#gdb_new() abort
 endfunction
 
 
-function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
+function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     "{
     if exists('g:gdb')
         throw 'Gdb already running'
@@ -187,29 +150,13 @@ function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     let gdb._current_line = -1
     let gdb._has_breakpoints = 0
     let gdb._server_exited = 0
+
+    return gdb
     "}
 endfunction
 
 
-function! gdb_expect#Test(bang, filter)
-    "{
-    let cmd = "GDB=1 make test"
-    if a:bang == '!'
-        let server_addr = '| vgdb'
-        let cmd = printf('VALGRIND=1 %s', cmd)
-    else
-        let server_addr = printf('localhost:%d', s:gdb_port)
-        let cmd = printf('GDBSERVER_PORT=%d %s', s:gdb_port, cmd)
-    endif
-    if a:filter != ''
-        let cmd = printf('TEST_SCREEN_TIMEOUT=1000000 TEST_FILTER="%s" %s', a:filter, cmd)
-    endif
-    call s:Spawn(cmd, s:run_gdb, server_addr, 1)
-    "}
-endfunction
-
-
-function! gdb_expect#RefreshBreakpointSigns(breakpoints)
+function! gdb#RefreshBreakpointSigns(breakpoints)
     "{
     let buf = bufnr('%')
     let i = 5000
@@ -228,12 +175,12 @@ function! gdb_expect#RefreshBreakpointSigns(breakpoints)
 endfunction
 
 
-function! gdb_expect#RefreshBreakpoints(breakpoints)
+function! gdb#RefreshBreakpoints(breakpoints)
     "{
     if !exists('g:gdb')
         return
     endif
-    if g:gdb._parser.state() == s:gdb_running_matcher
+    if g:gdb.state ==# "running"
         " pause first
         call jobsend(g:gdb._client_id, "\<c-c>")
     endif
@@ -251,7 +198,7 @@ function! gdb_expect#RefreshBreakpoints(breakpoints)
 endfunction
 
 
-function! gdb_expect#Send(data)
+function! gdb#Send(data)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -259,7 +206,51 @@ function! gdb_expect#Send(data)
 endfunction
 
 
-function! gdb_expect#Interrupt()
+function! gdb#Jump(file, line)
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+    call g:gdb.on_jump(a:file, a:line)
+endfunction
+
+
+function! gdb#Breakpoints(file)
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+    if filereadable(a:file)
+        exec "lgetfile " . a:file
+    endif
+endfunction
+
+
+function! gdb#Stack(file)
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+    if filereadable(a:file)
+        exec "cgetfile " . a:file
+    endif
+endfunction
+
+
+function! gdb#OnContinue()
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+    echo "gdb#OnContinue"
+endfunction
+
+
+function! gdb#OnExit()
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+    echo "gdb#OnExit"
+endfunction
+
+
+function! gdb#Interrupt()
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -267,7 +258,7 @@ function! gdb_expect#Interrupt()
 endfunction
 
 
-function! gdb_expect#Kill()
+function! gdb#Kill()
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -275,23 +266,31 @@ function! gdb_expect#Kill()
 endfunction
 
 
-function! gdb_expect#Map(type)
+function! gdb#Map(type)
     "{
-    if a:type == 0
+    if a:type ==# "unmap"
+        unmap <f4>
+        unmap <f5>
+        unmap <f6>
+        unmap <f7>
+        unmap <f8>
         tunmap <f4>
         tunmap <f5>
         tunmap <f6>
         tunmap <f7>
-    elseif a:type == 1
-        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
-        tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
-        tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
-        tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
-    elseif a:type == 2
-        nnoremap <silent> <f4> :GdbContinue<cr>
-        nnoremap <silent> <f5> :GdbNext<cr>
-        nnoremap <silent> <f6> :GdbStep<cr>
-        nnoremap <silent> <f7> :GdbFinish<cr>
+    elseif a:type ==# "tmap"
+        tmap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
+        tmap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
+        tmap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
+        tmap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
+    elseif a:type ==# "nmap"
+        nmap <silent> <f4> :GdbContinue<cr>
+        nmap <silent> <f5> :GdbNext<cr>
+        nmap <silent> <f6> :GdbStep<cr>
+        nmap <silent> <f7> :GdbFinish<cr>
+        nmap <silent> <f8> :GdbUntil<cr>
+        nmap <silent> <C-Up>   :GdbFrameUp<CR>
+        nmap <silent> <C-Down> :GdbFrameDown<CR>
     endif
     "}
 endfunction
@@ -302,10 +301,6 @@ function! s:__fini__()
     if exists("s:init")
         return
     endif
-
-    let s:gdb_pause_matcher = gdb_expect#gdb_pause_match_new()
-    let s:gdb_running_matcher = gdb_expect#gdb_running_match_new()
-    let s:gdb = gdb_expect#gdb_new()
     "}
 endfunction
 call s:__fini__()
