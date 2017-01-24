@@ -30,7 +30,7 @@ function! gdb_expect#gdb_pause_match_new() abort
 
 
     function this.jump(file, line, ...)
-        call self.on_jump(a:file, a:line)
+        call gdb#Jump(a:file, a:line)
     endfunction
 
 
@@ -47,6 +47,7 @@ function! gdb_expect#gdb_running_match_new() abort
     "{
     let this = vimexpect#State([
                 \ ['\v^Breakpoint \d+', 'pause'],
+                \ ['\v^Temporary breakpoint \d+', 'pause'],
                 \ ['\v\[Inferior\ +.{-}\ +exited\ +normally', 'disconnected'],
                 \ ['(gdb)', 'pause'],
                 \ ])
