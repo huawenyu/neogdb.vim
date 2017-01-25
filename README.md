@@ -8,7 +8,7 @@ The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib
     + auto save/load,
     + populate to local list: lopen
     + side color sign
-    + triple state: enable -> disale -> delete
+    + triple state: enable -> disable -> delete
     + toggle current line/toggle-all-breakpoints
     + support condition set
   - backtrace:
