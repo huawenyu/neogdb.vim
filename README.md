@@ -2,6 +2,18 @@
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
 The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim
 
+## feature
+  - gdb commands maps: next, step, finish, continue, etc.
+  - breakpoints:
+    + auto save/load,
+    + populate to local list: lopen
+    + side color sign
+    + triple state: enable -> disale -> delete
+    + toggle current line/toggle-all-breakpoints
+    + support condition set
+  - backtrace:
+    + populate to quickfix: copen
+
 ## layout
 
 ```
@@ -23,6 +35,7 @@ The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib
 +-------------------------+--------------------------+
 
 ```
+## Screen Demo
 
 [![screen](./screen.gif)](#features)
 
