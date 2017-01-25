@@ -1,11 +1,34 @@
+function! s:__init__()
+    "{
+    if exists("s:init")
+        return
+    endif
+    let s:run_gdb_cmd = "gdb -q -f "
+    "}
+endfunction
+call s:__init__()
+
+function! gdb_expect#sample(server) abort
+    let @W= printf("call gdb_expect#spawn(\"bash -c 'ping -c 1 %s; bash'\", 'sysinit/init', '%s', 0, 1)",
+                \ a:server, a:server)
+endfunction
+
+
 function! gdb_expect#gdbserver_new(gdb) abort
     "{
-    let this = {}
+    let this = vimexpect#State([
+                \ ['Listening on port (\d+)', 'on_accept'],
+                \ ['Detaching from process \d+', 'on_exit'],
+                \ ])
     let this._gdb = a:gdb
-
 
     function this.on_exit()
         let self._gdb._server_exited = 1
+    endfunction
+
+    function this.on_accept(port, ...)
+        call gdb#Send(printf("target remote %s:%d\nc",
+                    \ self._gdb._server_addr, a:port))
     endfunction
 
     return this
@@ -74,6 +97,7 @@ function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
         throw 'Gdb already running'
     endif
 
+    let cword = expand("<cword>")
     let gdb = vimexpect#Parser(s:gdb_running_matcher, copy(s:gdb))
     let gdb_i = gdb#spawn(a:server_cmd, a:client_cmd, a:server_addr, a:reconnect, a:mode)
     call extend(gdb, gdb_i)
@@ -81,23 +105,62 @@ function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     " Create new tab for the debugging view
     tabnew
     let gdb._tab = tabpagenr()
-    " create horizontal split to display the current file and maybe gdbserver
-    sp
+    silent! ball 1
+    let gdb._win_main = win_getid()
+
+    " Create term
     let gdb._server_buf = -1
-    if type(a:server_cmd) == type('')
+    if type(a:server_cmd) == type('') && !empty(a:server_cmd)
         " spawn gdbserver in a vertical split
         let server = gdb_expect#gdbserver_new(gdb)
-        vsp | enew | let gdb._server_id = termopen(a:server_cmd, server)
-        let gdb._jump_window = 2
+        let server_parser = vimexpect#Parser(server, server)
+        silent! vsp
+        let gdb._win_server = win_getid()
+        enew | let gdb._server_id = termopen(a:server_cmd, server_parser)
         let gdb._server_buf = bufnr('%')
+
+        silent! sp
+        let gdb._win_gdbclient = win_getid()
+    else
+        silent! vsp
+        let gdb._win_gdbclient = win_getid()
     endif
-    " go to the bottom window and spawn gdb client
-    wincmd j
-    enew | let gdb._client_id = termopen(a:client_cmd, gdb)
-    let gdb._client_buf = bufnr('%')
-    call gdb#Map("tmap")
-    " go to the window that displays the current file
-    exe gdb._jump_window 'wincmd w'
+
+    " Create quickfix: lgetfile, cgetfile
+    if win_gotoid(gdb._win_main) == 1
+        if !filereadable(gdb._gdb_bt_qf)
+            exec "silent! vimgrep " . cword ." ". expand("%")
+        else
+            exec "silent cgetfile " . gdb._gdb_bt_qf
+        endif
+        silent! copen
+        let gdb._win_qf = win_getid()
+    endif
+
+    if win_gotoid(gdb._win_main) == 1
+        if !filereadable(gdb._gdb_break_qf)
+            exec "silent! lvimgrep " . cword ." ". expand("%")
+        else
+            exec "silent lgetfile " . gdb._gdb_break_qf
+        endif
+        silent! lopen
+        let gdb._win_lqf = win_getid()
+    endif
+
+    " Create gdb terminal
+    if win_gotoid(gdb._win_gdbclient) == 1
+        let gdb._server_buf = -1
+        enew | let gdb._client_id = termopen(s:run_gdb_cmd . a:client_cmd, gdb)
+        let gdb._client_buf = bufnr('%')
+        call gdb#Map("tmap")
+    endif
+
+    " Backto main windows for display file
+    if win_gotoid(gdb._win_main) == 1
+        let gdb._jump_window = win_id2win(gdb._win_main)
+        "normal 
+        stopinsert
+    endif
     let g:gdb = gdb
     "}
 endfunction

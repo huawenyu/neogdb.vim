@@ -1,18 +1,10 @@
-" Gdb log:
-"show logging            Show the current values of the logging settings.
-"set logging on          Enable logging.
-"set logging off         Disable logging.
-"set logging file file   Change the name of the current logfile. The default logfile is gdb.txt.
-"set logging overwrite [on|off]  By default, gdb will append to the logfile. Set overwrite if you want set logging on to overwrite the logfile instead.
-"set logging redirect [on|off]   By default, gdb output will go to both the terminal and the logfile. Set redirect if you want output to go only to the log file.
-
 function! s:__init__()
     "{
     if exists("s:init")
         return
     endif
 
-    sign define GdbBreakpointEn text=● texthl=Number
+    sign define GdbBreakpointEn text=● texthl=Search
     sign define GdbBreakpointDis text=● texthl=Function
     "sign define GdbBreakpointDis text=● texthl=Identifier
 
@@ -21,12 +13,15 @@ function! s:__init__()
     "sign define GdbCurrentLine text=⇒ texthl=String
 
     set errorformat+=#0\ \ %m\ \(%.%#\)\ at\ %f:%l
-    set errorformat+=#%.%#\ in\ %m\ \(%.%#\)\ at\ %f:%l
+    set errorformat+=#%.%#\ \ %.%#\ in\ %m\ \(%.%#\)\ at\ %f:%l
+    set errorformat+=#%.%#\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
 
     let s:gdb_port = 7778
     let s:max_breakpoint_sign_id = 0
     let s:breakpoints = {}
-    let s:gdb_file_bt = '/tmp/gdb.bt'
+    let s:gdb_bt_qf = '/tmp/gdb.bt'
+    let s:gdb_break_qf = '/tmp/gdb.break'
+    let s:gdb_source_break = './.gdb.break'
     "}
 endfunction
 call s:__init__()
@@ -91,8 +86,15 @@ function! gdb#gdb_new() abort
             " Don't jump if we are not in the debugger tab
             return
         endif
-        let window = winnr()
-        exe self._jump_window 'wincmd w'
+
+        let cwindow = win_getid()
+        if cwindow != self._win_main
+            if win_gotoid(self._win_main) != 1
+                return
+            endif
+        endif
+
+        stopinsert
         let self._current_buf = bufnr('%')
         let target_buf = bufnr(a:file, 1)
         if bufnr('%') != target_buf
@@ -100,8 +102,12 @@ function! gdb#gdb_new() abort
             let self._current_buf = target_buf
         endif
         exe ':' a:line
+        "normal 
         let self._current_line = a:line
-        exe window 'wincmd w'
+
+        if cwindow != self._win_main
+            call win_gotoid(cwindow)
+        endif
         call self.update_current_line_sign(1)
     endfunction
 
@@ -120,18 +126,28 @@ function! gdb#gdb_new() abort
                         \ set logging off\n
                         \ end"
             call g:gdb.send(cmdstr_bt)
-
-            if !empty(self._server_addr)
-                call self.send('set remotetimeout 50')
-                call self.attach()
-                call s:RefreshBreakpoints()
-                call self.send('c')
+            if filereadable(s:gdb_source_break)
+                call gdb#ReadVariable("s:breakpoints", s:gdb_source_break)
             endif
+
+            "if !empty(self._server_addr)
+            "    call self.send('set remotetimeout 50')
+            "    call self.attach()
+            "    call s:RefreshBreakpoints()
+            "    call self.send('c')
+            "endif
+
+            let self._initialized = 1
+            if !empty(s:breakpoints)
+                call gdb#Breaks2Qf()
+                call gdb#RefreshBreakpointSigns()
+                call gdb#RefreshBreakpoints()
+            endif
+
             if g:gdb._mode == 1
                 call self.send('br main')
                 call self.send('r')
             endif
-            let self._initialized = 1
         endif
     endfunction
 
@@ -182,6 +198,9 @@ function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     let gdb._current_line = -1
     let gdb._has_breakpoints = 0
     let gdb._server_exited = 0
+    let gdb._gdb_bt_qf = s:gdb_bt_qf
+    let gdb._gdb_break_qf = s:gdb_break_qf
+    let gdb._gdb_source_break = s:gdb_source_break
 
     return gdb
     "}
@@ -231,11 +250,9 @@ function! gdb#RefreshBreakpoints()
 
     let g:gdb._has_breakpoints = 0
     for [next_key, next_val] in items(s:breakpoints)
-        let file = next_val['file']
-        let linenr = next_val['line']
-        if next_val['state']
+        if next_val['state'] && !empty(next_val['cmd'])
             let g:gdb._has_breakpoints = 1
-            call g:gdb.send('break '.file.':'.linenr)
+            call g:gdb.send('break '.next_val['cmd'])
         endif
     endfor
     "}
@@ -255,7 +272,9 @@ function! gdb#Jump(file, line)
         throw 'Gdb is not running'
     endif
     call g:gdb.send('parser_bt')
-    exec "cfile " . s:gdb_file_bt
+    if filereadable(s:gdb_bt_qf)
+        exec "cgetfile " . s:gdb_bt_qf
+    endif
     call g:gdb.on_jump(a:file, a:line)
 endfunction
 
@@ -265,7 +284,7 @@ function! gdb#Breakpoints(file)
         throw 'Gdb is not running'
     endif
     if filereadable(a:file)
-        exec "lgetfile " . a:file
+        exec "silent lgetfile " . a:file
     endif
 endfunction
 
@@ -275,7 +294,7 @@ function! gdb#Stack(file)
         throw 'Gdb is not running'
     endif
     if filereadable(a:file)
-        exec "cgetfile " . a:file
+        exec "silent cgetfile " . a:file
     endif
 endfunction
 
@@ -320,6 +339,7 @@ function! gdb#Map(type)
         unmap <f6>
         unmap <f7>
         unmap <f8>
+        cunmap <silent> <f9> <cr>
         tunmap <f4>
         tunmap <f5>
         tunmap <f6>
@@ -335,6 +355,7 @@ function! gdb#Map(type)
         nmap <silent> <f6> :GdbStep<cr>
         nmap <silent> <f7> :GdbFinish<cr>
         nmap <silent> <f8> :GdbUntil<cr>
+        cnoremap <silent> <f9> <cr>
         nmap <silent> <C-Up>   :GdbFrameUp<CR>
         nmap <silent> <C-Down> :GdbFrameDown<CR>
     endif
@@ -342,23 +363,87 @@ function! gdb#Map(type)
 endfunction
 
 
+function! gdb#SaveVariable(var, file)
+    call writefile([string(a:var)], a:file)
+endfunction
+
+function! gdb#ReadVariable(varname, file)
+    let recover = readfile(a:file)[0]
+    execute "let ".a:varname." = " . recover
+endfunction
+
+function! gdb#Breaks2Qf()
+    let list2 = []
+    let i = 0
+    for [next_key, next_val] in items(s:breakpoints)
+        if !empty(next_val['cmd'])
+            let i += 1
+            call add(list2, printf('#%d  %d in    %s    at %s:%d',
+                        \ i, next_val['state'], next_val['cmd'],
+                        \ next_val['file'], next_val['line']))
+        endif
+    endfor
+
+    call writefile(split(join(list2, "\n"), "\n"), s:gdb_break_qf)
+    if filereadable(s:gdb_break_qf)
+        exec "silent lgetfile " . s:gdb_break_qf
+    endif
+endfunction
+
+
+function! gdb#GetCFunLinenr()
+  let lnum = line(".")
+  let col = col(".")
+  let linenr = search("^[^ \t#/]\\{2}.*[^:]\s*$", 'bW')
+  call search("\\%" . lnum . "l" . "\\%" . col . "c")
+  return linenr
+endfunction
+
+
 " Key: file:line, <or> file:function
 " Value: empty, <or> if condition
 " @state 0 disable 1 enable, Toggle: none -> enable -> disable
+" @type 0 line-break, 1 function-break
 function! gdb#ToggleBreak()
-    let filenm = bufname('%')
-    let linenr = line('.')
-    let file_breakpoints = filenm .':'.linenr
+    let filenm = bufname("%")
+    let linenr = line(".")
+    let colnr = col(".")
+    let cword = expand("<cword>")
+    let cfuncline = gdb#GetCFunLinenr()
+
+    Decho "FunctionLinenr=" . cfuncline
+    let type = 0
+    if linenr == cfuncline
+        let type = 1
+        let file_breakpoints = filenm .':'.cword
+    else
+        let file_breakpoints = filenm .':'.linenr
+    endif
+
     let old_value = get(s:breakpoints, file_breakpoints, {})
     if empty(old_value)
-        let s:breakpoints[file_breakpoints] = {'file':filenm,
-                    \'type':0, 'line':linenr, 'fn' : '',
-                    \'state':1, 'cond' : ''}
+        let break_new = input("[break] ", file_breakpoints)
+        if !empty(break_new)
+            let s:breakpoints[file_breakpoints] = {'file':filenm,
+                        \'type':type, 'line':linenr, 'col':colnr,
+                        \'fn' : '', 'state':1, 'cmd' : break_new}
+            Decho break_new
+        endif
     elseif old_value['state']
-        let old_value['state'] = 0
+        let break_new = input("[disable break] ", file_breakpoints)
+        if !empty(break_new)
+            let old_value['state'] = 0
+            Decho break_new
+        endif
     else
-        call remove(s:breakpoints, file_breakpoints)
+        let break_new = input("(delete break) ", file_breakpoints)
+        if !empty(break_new)
+            call remove(s:breakpoints, file_breakpoints)
+            Decho break_new
+        endif
     endif
+    call gdb#SaveVariable(s:breakpoints, s:gdb_source_break)
+    call gdb#Breaks2Qf()
     call gdb#RefreshBreakpointSigns()
     call gdb#RefreshBreakpoints()
 endfunction
