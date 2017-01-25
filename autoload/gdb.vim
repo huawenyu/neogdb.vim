@@ -510,6 +510,7 @@ function! gdb#Map(type)
         unmap <f8>
         unmap <f9>
         unmap <f10>
+        vunmap <f9>
         cunmap <silent> <f9> <cr>
         tunmap <f4>
         tunmap <f5>
@@ -531,6 +532,7 @@ function! gdb#Map(type)
         nmap <silent> <f9> :GdbToggleBreak<cr>
         nmap <silent> <f10> :GdbToggleBreakAll<cr>
         cnoremap <silent> <f9> <cr>
+        vnoremap <silent> <f9> :GdbEvalRange<cr>
         nmap <silent> <C-Up>   :GdbFrameUp<CR>
         nmap <silent> <C-Down> :GdbFrameDown<CR>
     endif
@@ -543,6 +545,7 @@ function! s:__fini__()
     if exists("s:init")
         return
     endif
+    call gdb#Map("nmap")
     "}
 endfunction
 call s:__fini__()

@@ -2,6 +2,28 @@
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
 The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim
 
+## layout
+
+```
++-------------------------+--------------------------+
+|                         |                          |
+|                         |                          |
+|                         |                          |
+|                         |    terminal>             |
+|     Code c/c++          |    (gdb)                 |
+|                         |                          |
+|                         |                          |
+|                         |                          |
+|                         |                          |
+|                         +--------------------------+
+|                         |                          |
++-------------------------+  backtrace               |
+| breakpoints             |                          |
+|                         |                          |
++-------------------------+--------------------------+
+
+```
+
 [![screen](./screen.gif)](#features)
 
 # Install
@@ -28,7 +50,7 @@ Plugin 'huawenyu/neogdb.vim'
 # Usage
 
 ## commands
-  - :GdbDebug my_debug_app
+  - :GdbLocal my_debug_app
   - :GdbDebugStop
   - :GdbToggleBreakpoint
   - :GdbClearBreakpoints
