@@ -17,18 +17,33 @@ endfunction
 function! gdb_expect#gdbserver_new(gdb) abort
     "{
     let this = vimexpect#State([
-                \ ['Listening on port (\d+)', 'on_accept'],
-                \ ['Detaching from process \d+', 'on_exit'],
+                \ ['\vListening on port (\d+)$', 'on_accept'],
+                \ ['\vDetaching from process \d+', 'on_exit'],
+                \ ['test_func$', 'on_func'],
+                \ ['window.vim', 'on_win'],
+                \ ['\vtest_func1 (\d+)', 'on_func1'],
                 \ ])
     let this._gdb = a:gdb
 
-    function this.on_exit()
+    function this.on_exit(...)
         let self._gdb._server_exited = 1
     endfunction
 
     function this.on_accept(port, ...)
         call gdb#Send(printf("target remote %s:%d\nc",
                     \ self._gdb._server_addr, a:port))
+    endfunction
+
+    function this.on_func(...)
+        echomsg "call test_func"
+    endfunction
+
+    function this.on_win(...)
+        echomsg "call on_win"
+    endfunction
+
+    function this.on_func1(num, ...)
+        echomsg "call test_func1 num=" . a:num
     endfunction
 
     return this
@@ -114,13 +129,15 @@ function! gdb_expect#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
         " spawn gdbserver in a vertical split
         let server = gdb_expect#gdbserver_new(gdb)
         let server_parser = vimexpect#Parser(server, server)
+
         silent! vsp
+        let gdb._win_gdbclient = win_getid()
+
+        silent! sp
         let gdb._win_server = win_getid()
         enew | let gdb._server_id = termopen(a:server_cmd, server_parser)
         let gdb._server_buf = bufnr('%')
 
-        silent! sp
-        let gdb._win_gdbclient = win_getid()
     else
         silent! vsp
         let gdb._win_gdbclient = win_getid()

@@ -19,6 +19,7 @@ function! s:__init__()
     let s:gdb_port = 7778
     let s:max_breakpoint_sign_id = 0
     let s:breakpoints = {}
+    let s:toggle_all = 0
     let s:gdb_bt_qf = '/tmp/gdb.bt'
     let s:gdb_break_qf = '/tmp/gdb.break'
     let s:gdb_source_break = './.gdb.break'
@@ -113,8 +114,16 @@ function! gdb#gdb_new() abort
 
     function this.on_pause()
         if !self._initialized
-            call self.send('set confirm off')
-            call self.send('set pagination off')
+            "set python print-stack full
+            "set filename-display absolute
+            let cmdstr_bt = "set confirm off\n
+                        \ set pagination off\n
+                        \ set verbose off\n
+                        \ set print pretty on\n
+                        \ set print array off\n
+                        \ print array-indexes on\n
+                        \"
+            call g:gdb.send(cmdstr_bt)
 
             let cmdstr_bt = "define parser_bt\n
                         \ set logging off\n
@@ -126,6 +135,21 @@ function! gdb#gdb_new() abort
                         \ set logging off\n
                         \ end"
             call g:gdb.send(cmdstr_bt)
+
+            let cmdstr_bt = "define silent_on\n
+                        \ set logging off\n
+                        \ set logging file /dev/null\n
+                        \ set logging overwrite off\n
+                        \ set logging redirect on\n
+                        \ set logging on\n
+                        \ end"
+            call g:gdb.send(cmdstr_bt)
+
+            let cmdstr_bt = "define silent_off\n
+                        \ set logging off\n
+                        \ end"
+            call g:gdb.send(cmdstr_bt)
+
             if filereadable(s:gdb_source_break)
                 call gdb#ReadVariable("s:breakpoints", s:gdb_source_break)
             endif
@@ -251,10 +275,16 @@ function! gdb#RefreshBreakpoints()
     let g:gdb._has_breakpoints = 0
     for [next_key, next_val] in items(s:breakpoints)
         if next_val['state'] && !empty(next_val['cmd'])
-            let g:gdb._has_breakpoints = 1
+            if ! g:gdb._has_breakpoints
+                let g:gdb._has_breakpoints = 1
+                call g:gdb.send('silent_on')
+            endif
             call g:gdb.send('break '.next_val['cmd'])
         endif
     endfor
+    if g:gdb._has_breakpoints
+        call g:gdb.send('silent_off')
+    endif
     "}
 endfunction
 
@@ -328,38 +358,6 @@ function! gdb#Kill()
         throw 'Gdb is not running'
     endif
     call g:gdb.kill()
-endfunction
-
-
-function! gdb#Map(type)
-    "{
-    if a:type ==# "unmap"
-        unmap <f4>
-        unmap <f5>
-        unmap <f6>
-        unmap <f7>
-        unmap <f8>
-        cunmap <silent> <f9> <cr>
-        tunmap <f4>
-        tunmap <f5>
-        tunmap <f6>
-        tunmap <f7>
-    elseif a:type ==# "tmap"
-        tmap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
-        tmap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
-        tmap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
-        tmap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
-    elseif a:type ==# "nmap"
-        nmap <silent> <f4> :GdbContinue<cr>
-        nmap <silent> <f5> :GdbNext<cr>
-        nmap <silent> <f6> :GdbStep<cr>
-        nmap <silent> <f7> :GdbFinish<cr>
-        nmap <silent> <f8> :GdbUntil<cr>
-        cnoremap <silent> <f9> <cr>
-        nmap <silent> <C-Up>   :GdbFrameUp<CR>
-        nmap <silent> <C-Down> :GdbFrameDown<CR>
-    endif
-    "}
 endfunction
 
 
@@ -449,6 +447,20 @@ function! gdb#ToggleBreak()
 endfunction
 
 
+function! gdb#ToggleBreakAll()
+    let s:toggle_all = ! s:toggle_all
+    for v in values(s:breakpoints)
+        if s:toggle_all
+            let v['state'] = 0
+        else
+            let v['state'] = 1
+        endif
+    endfor
+    call gdb#RefreshBreakpointSigns()
+    call gdb#RefreshBreakpoints()
+endfunction
+
+
 function! gdb#TBreak()
     let file_breakpoints = bufname('%') .':'. line('.')
     call g:gdb.send("tbreak ". file_breakpoints. "\nc")
@@ -485,6 +497,44 @@ function! gdb#Watch(expr)
 
     call gdb#Eval(expr)
     call gdb#Send('watch *$')
+endfunction
+
+
+function! gdb#Map(type)
+    "{
+    if a:type ==# "unmap"
+        unmap <f4>
+        unmap <f5>
+        unmap <f6>
+        unmap <f7>
+        unmap <f8>
+        unmap <f9>
+        unmap <f10>
+        cunmap <silent> <f9> <cr>
+        tunmap <f4>
+        tunmap <f5>
+        tunmap <f6>
+        tunmap <f7>
+        tunmap <f10>
+    elseif a:type ==# "tmap"
+        tmap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
+        tmap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
+        tmap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
+        tmap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
+        tmap <silent> <f10> <c-\><c-n>:GdbToggleBreakAll<cr>i
+    elseif a:type ==# "nmap"
+        nmap <silent> <f4> :GdbContinue<cr>
+        nmap <silent> <f5> :GdbNext<cr>
+        nmap <silent> <f6> :GdbStep<cr>
+        nmap <silent> <f7> :GdbFinish<cr>
+        nmap <silent> <f8> :GdbUntil<cr>
+        nmap <silent> <f9> :GdbToggleBreak<cr>
+        nmap <silent> <f10> :GdbToggleBreakAll<cr>
+        cnoremap <silent> <f9> <cr>
+        nmap <silent> <C-Up>   :GdbFrameUp<CR>
+        nmap <silent> <C-Down> :GdbFrameDown<CR>
+    endif
+    "}
 endfunction
 
 

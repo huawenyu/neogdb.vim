@@ -21,8 +21,9 @@ command! -nargs=1 GdbRemote call gdb_expect#spawn("$SHELL", <q-args>, 0, 0, 0)
 "command! -nargs=1 GdbDebug1 call gdb_python#spawn(0, <q-args>, 0, 0, 1)
 "command! -nargs=1 -complete=file GdbInspectCore call gdb_expect#spawn(0, printf('gdb -q -f -c %s a.out', <q-args>), 0, 0, 0)
 command! GdbDebugStop call gdb#Kill()
-command! GdbToggleBreakpoint call gdb#ToggleBreak()
-command! GdbClearBreakpoints call gdb#ClearBreak()
+command! GdbToggleBreak call gdb#ToggleBreak()
+command! GdbToggleBreakAll call gdb#ToggleBreakAll()
+command! GdbClearBreak call gdb#ClearBreak()
 command! GdbContinue call gdb#Send("c")
 command! GdbNext call gdb#Send("n")
 command! GdbStep call gdb#Send("s")
@@ -42,7 +43,6 @@ call gdb#Map("nmap")
 nnoremap <F2> :GdbRemote sysinit/init
 nnoremap <silent> <m-pageup> :GdbFrameUp<cr>
 nnoremap <silent> <m-pagedown> :GdbFrameDown<cr>
-nnoremap <silent> <f9> :GdbToggleBreakpoint<cr>
 vnoremap <silent> <f9> :GdbEvalRange<cr>
 nnoremap <silent> <m-f9> :GdbWatchWord<cr>
 vnoremap <silent> <m-f9> :GdbWatchRange<cr>
