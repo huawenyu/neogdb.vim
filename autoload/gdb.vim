@@ -27,6 +27,105 @@ function! s:__init__()
 endfunction
 call s:__init__()
 
+
+
+
+
+function! gdb#SchemeCreate() abort
+    " special scheme for some kinds of app
+    " @action call, state, send,
+    return {
+        \ "name" : "SchemeGDB",
+        \ "window" : [
+        \   {   "name":   "gdb",
+        \       "state":  "pause",
+        \       "layout": ["conf_gdb_layout", "sp"],
+        \       "cmd":    ["conf_gdb_cmd", "$SHELL"],
+        \   },
+        \   {   "name":   "gdbserver",
+        \       "state":  "gdbserver",
+        \       "layout": ["conf_server_layout", "sp"],
+        \       "cmd":    ["conf_server_cmd", "$SHELL"],
+        \       "addr":   ["conf_server_addr", "localhost"],
+        \   },
+        \ ],
+        \ "state" : {
+        \   "pause": [
+        \       {   "match":   "Continuing.",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_continue",
+        \       },
+        \       {   "match":   "\v[\o32]{2}([^:]+):(\d+):\d+",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_jump",
+        \       },
+        \       {   "match":   "Remote communication error.  Target disconnected.:",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_retry",
+        \       },
+        \   ],
+        \   "running": [
+        \       {   "match":   "\v^Breakpoint \d+",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_pause",
+        \       },
+        \       {   "match":   "\v^Temporary breakpoint \d+",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_pause",
+        \       },
+        \       {   "match":   "\v\[Inferior\ +.{-}\ +exited\ +normally",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_disconnected",
+        \       },
+        \       {   "match":   "(gdb)",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_pause",
+        \       },
+        \   ],
+        \   "gdbserver": [
+        \       {   "match":   "\vListening on port (\d+)$",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_listen",
+        \       },
+        \       {   "match":   "\vDetaching from process \d+",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":  "on_exit",
+        \       },
+        \   ],
+        \ }
+        \}
+endfunc
+
+
+
+function! gdb#SchemeConfigSample() abort
+    " user special config
+    return {
+        \ "scheme" : "gdb#SchemeCreate",
+        \ "conf_gdb_cmd" : "gdb -q -f sysinit/init",
+        \ "conf_server_cmd" : "$SHELL",
+        \ "conf_server_addr" : "10.1.1.125",
+        \ "state" : {
+        \   "gdbserver": [
+        \       ['\vListening on port (\d+)$', 'on_accept'],
+        \       ['\vDetaching from process \d+', 'on_exit'],
+        \   ],
+        \ }
+        \ }
+endfunc
+
+
+
+
 function! gdb#gdbserver_new(gdb) abort
     "{
     let this = {}
