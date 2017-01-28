@@ -325,7 +325,10 @@ function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     let gdb._gdb_break_qf = s:gdb_break_qf
     let gdb._gdb_source_break = s:gdb_source_break
 
-    return gdb
+    "return gdb
+
+    let conf = gdb#SchemeConfigSample()
+    let g:gdb_runtime = state#Open(conf)
     "}
 endfunction
 

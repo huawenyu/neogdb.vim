@@ -45,9 +45,26 @@ function! state#CreateRuntime(scheme, config) abort
     let ctx.conf = conf
     let g:state_ctx = ctx
 
+    " Merge conf.state into scheme.state
+    if has_key(conf, 'state')
+        for [k,v] in keys(conf.state)
+            if has_key(scheme.state, k)
+                call extend(scheme.state[k], v)
+            else
+                let scheme.state[k] = v
+            endif
+        endfor
+    endif
+    unlet conf['state']
+
+    " Merge conf.window into scheme.window
+    if has_key(conf, 'window')
+        call extend(scheme.window, conf.window)
+    endif
+    unlet conf['window']
+
     " Load state
-    let states = scheme.state
-    for [k,v] in items(states)
+    for [k,v] in items(scheme.state)
         let expect = []
         for i in v
             call add(expect, [ i.match, 'on_call', i ])
