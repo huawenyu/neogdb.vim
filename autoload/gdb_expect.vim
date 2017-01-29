@@ -25,15 +25,6 @@ function! gdb_expect#gdbserver_new(gdb) abort
                 \ ])
     let this._gdb = a:gdb
 
-    function this.on_exit(...)
-        let self._gdb._server_exited = 1
-    endfunction
-
-    function this.on_accept(port, ...)
-        call gdb#Send(printf("target remote %s:%d\nc",
-                    \ self._gdb._server_addr, a:port))
-    endfunction
-
     function this.on_func(...)
         echomsg "call test_func"
     endfunction

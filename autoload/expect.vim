@@ -25,8 +25,9 @@ let s:State = {}
 
 " Create a new State instance with a list where each item is a [regexp, name]
 " pair. A method named `name` must be defined in the created instance.
-function s:State.create(patterns)
+function s:State.create(name, patterns)
   let this = copy(self)
+  let this.name = a:name
   let this._patterns = a:patterns
   return this
 endfunction
@@ -121,14 +122,14 @@ function s:Parser.parse(lines)
   endif
   let state = self.state()
   " search for a match using the list of patterns
-  for [pattern, handler, data] in state._patterns
+  for [pattern, handler, arg1] in state._patterns
     let matches = matchlist(lines, pattern)
     if empty(matches)
       continue
     endif
     let match_idx = match(lines, pattern)
-    let matches[0] = data
-    call call(state[handler], matches[0:], self._target)
+    let matches[0] = arg1
+    call call(state[handler], matches, self._target)
     return match_idx
   endfor
 endfunction
@@ -150,6 +151,6 @@ function expect#Parser(initial_state, target)
 endfunction
 
 
-function expect#State(patterns)
-  return s:State.create(a:patterns)
+function expect#State(name, patterns)
+  return s:State.create(a:name, a:patterns)
 endfunction

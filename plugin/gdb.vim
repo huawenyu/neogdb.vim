@@ -14,10 +14,12 @@ endif
 "let s:run_gdb = "gdb -q -f a.out"
 
 
+command! -nargs=1 GdbRemote call gdb#spawn("$SHELL", <q-args>, 0, 0, 0)
+"command! -nargs=1 GdbLocal  call gdb_expect#spawn(0, <q-args>, 0, 0, 1)
+"command! -nargs=1 GdbRemote call gdb_expect#spawn("$SHELL", <q-args>, 0, 0, 0)
+"
 "command! GdbDebugNvim call gdb_expect#spawn(printf('make && gdbserver localhost:%d a.out', s:gdb_port), s:run_gdb, printf('localhost:%d', s:gdb_port), 0, 0)
 "command! -nargs=1 GdbDebugServer call gdb_expect#spawn(0, s:run_gdb, 'localhost:'.<q-args>, 0, 0)
-command! -nargs=1 GdbLocal  call gdb_expect#spawn(0, <q-args>, 0, 0, 1)
-command! -nargs=1 GdbRemote call gdb_expect#spawn("$SHELL", <q-args>, 0, 0, 0)
 "command! -nargs=1 GdbDebug1 call gdb_python#spawn(0, <q-args>, 0, 0, 1)
 "command! -nargs=1 -complete=file GdbInspectCore call gdb_expect#spawn(0, printf('gdb -q -f -c %s a.out', <q-args>), 0, 0, 0)
 command! GdbDebugStop call gdb#Kill()

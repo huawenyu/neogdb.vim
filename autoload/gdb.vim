@@ -32,14 +32,12 @@ call s:__init__()
 
 
 function! gdb#SchemeCreate() abort
-    " special scheme for some kinds of app
-    " @action call, state, send,
-    return {
+    let this = {
         \ "name" : "SchemeGDB",
         \ "window" : [
         \   {   "name":   "gdb",
         \       "state":  "pause",
-        \       "layout": ["conf_gdb_layout", "sp"],
+        \       "layout": ["conf_gdb_layout", "vsp"],
         \       "cmd":    ["conf_gdb_cmd", "$SHELL"],
         \   },
         \   {   "name":   "gdbserver",
@@ -54,134 +52,60 @@ function! gdb#SchemeCreate() abort
         \       {   "match":   "Continuing.",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_continue",
+        \           "arg0":    "on_continue",
         \       },
         \       {   "match":   "\v[\o32]{2}([^:]+):(\d+):\d+",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_jump",
+        \           "arg0":    "on_jump",
         \       },
         \       {   "match":   "Remote communication error.  Target disconnected.:",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_retry",
+        \           "arg0":    "on_retry",
         \       },
         \   ],
         \   "running": [
         \       {   "match":   "\v^Breakpoint \d+",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_pause",
+        \           "arg0":    "on_pause",
         \       },
         \       {   "match":   "\v^Temporary breakpoint \d+",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_pause",
+        \           "arg0":    "on_pause",
         \       },
         \       {   "match":   "\v\[Inferior\ +.{-}\ +exited\ +normally",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_disconnected",
+        \           "arg0":    "on_disconnected",
         \       },
         \       {   "match":   "(gdb)",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_pause",
+        \           "arg0":    "on_pause",
         \       },
         \   ],
         \   "gdbserver": [
-        \       {   "match":   "\vListening on port (\d+)$",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":  "on_listen",
-        \       },
         \       {   "match":   "\vDetaching from process \d+",
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":  "on_exit",
+        \           "arg0":    "on_exit",
         \       },
         \   ],
         \ }
         \}
-endfunc
 
+    let this.statename = "null"
 
-
-function! gdb#SchemeConfigSample() abort
-    " user special config
-    return {
-        \ "scheme" : "gdb#SchemeCreate",
-        \ "conf_gdb_cmd" : "gdb -q -f sysinit/init",
-        \ "conf_server_cmd" : "$SHELL",
-        \ "conf_server_addr" : "10.1.1.125",
-        \ "state" : {
-        \   "gdbserver": [
-        \       ['\vListening on port (\d+)$', 'on_accept'],
-        \       ['\vDetaching from process \d+', 'on_exit'],
-        \   ],
-        \ }
-        \ }
-endfunc
-
-
-
-
-function! gdb#gdbserver_new(gdb) abort
-    "{
-    let this = {}
-    let this._gdb = a:gdb
-
-
-    function this.on_exit()
-        let self._gdb._server_exited = 1
-    endfunction
-
-    return this
-    "}
-endfunction
-
-
-function! gdb#gdb_new() abort
-    "{
-    let this = {}
-    let this.state = "null"
-
-    function! this.kill()
-        call gdb#Map("unmap")
+    function this.on_continue(...)
+        call self._target._parser.switch(self._ctx.state['running'])
+        let self.statename = self.name
         call self.update_current_line_sign(0)
-        exe 'bd! '.self._client_buf
-        if self._server_buf != -1
-            exe 'bd! '.self._server_buf
-        endif
-        exe 'tabnext '.self._tab
-        tabclose
-        unlet g:gdb
     endfunction
 
-
-    function! this.send(data)
-        call jobsend(self._client_id, a:data."\<cr>")
-    endfunction
-
-
-    function! this.attach()
-        if !empty(self._server_addr)
-            call self.send(printf('target remote %s', self._server_addr))
-        endif
-    endfunction
-
-
-    function this.retry()
-        if self._server_exited
-            return
-        endif
-        sleep 1
-        call self.attach()
-        call self.send('continue')
-    endfunction
-
-
-    function this.on_jump(file, line)
+    function this.on_jump(file, line, ...)
         if tabpagenr() != self._tab
             " Don't jump if we are not in the debugger tab
             return
@@ -211,9 +135,20 @@ function! gdb#gdb_new() abort
         call self.update_current_line_sign(1)
     endfunction
 
-    function this.on_pause()
+    function this.on_retry(...)
+        if self._server_exited
+            return
+        endif
+        sleep 1
+        call self.attach()
+        call self.send('continue')
+    endfunction
+
+    function this.on_pause(...)
+        call self._target._parser.switch(self._ctx.state['pause'])
+        let self.statename = self.name
+
         if !self._initialized
-            "set python print-stack full
             "set filename-display absolute
             let cmdstr_bt = "set confirm off\n
                         \ set pagination off\n
@@ -274,14 +209,70 @@ function! gdb#gdb_new() abort
         endif
     endfunction
 
-
-    function this.on_disconnected()
+    function this.on_disconnected(...)
         if !self._server_exited && self._reconnect
             " Refresh to force a delete of all watchpoints
             call s:RefreshBreakpoints()
             sleep 1
             call self.attach()
             call self.send('continue')
+        endif
+    endfunction
+
+    function! this.on_exit(...)
+        let self._gdb._server_exited = 1
+    endfunction
+
+    return this
+endfunc
+
+
+
+function! gdb#SchemeConfigSample() abort
+    " user special config
+    let this = {
+        \ "scheme" : "gdb#SchemeCreate",
+        \ "conf_gdb_cmd" : "gdb -q -f sysinit/init",
+        \ "conf_server_cmd" : "$SHELL",
+        \ "conf_server_addr" : "10.1.1.125",
+        \ "state" : {
+        \   "gdbserver": [
+        \       {   "match":   "\vListening on port (\d+)$",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_accept",
+        \       },
+        \   ]
+        \ }
+        \ }
+
+    function this.on_accept(port, ...)
+        call gdb#Send(printf("target remote %s:%d\nc",
+                    \ self._gdb._server_addr, a:port))
+    endfunction
+
+
+    function! this.kill()
+        call gdb#Map("unmap")
+        call self.update_current_line_sign(0)
+        exe 'bd! '.self._client_buf
+        if self._server_buf != -1
+            exe 'bd! '.self._server_buf
+        endif
+        exe 'tabnext '.self._tab
+        tabclose
+        unlet g:gdb
+    endfunction
+
+
+    function! this.send(data)
+        call jobsend(self._client_id, a:data."\<cr>")
+    endfunction
+
+
+    function! this.attach()
+        if !empty(self._server_addr)
+            call self.send(printf('target remote %s', self._server_addr))
         endif
     endfunction
 
@@ -300,36 +291,34 @@ function! gdb#gdb_new() abort
     endfunction
 
     return this
-    "}
-endfunction
+
+endfunc
+
 
 
 function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
-    "{
-    if exists('g:gdb')
-        throw 'Gdb already running'
-    endif
-    let gdb = {}
-    " gdbserver port
-    let gdb._mode = a:mode
-    let gdb._server_addr = a:server_addr
-    let gdb._reconnect = a:reconnect
-    let gdb._initialized = 0
-    " window number that will be displaying the current file
-    let gdb._jump_window = 1
-    let gdb._current_buf = -1
-    let gdb._current_line = -1
-    let gdb._has_breakpoints = 0
-    let gdb._server_exited = 0
-    let gdb._gdb_bt_qf = s:gdb_bt_qf
-    let gdb._gdb_break_qf = s:gdb_break_qf
-    let gdb._gdb_source_break = s:gdb_source_break
-
+    "if exists('g:gdb')
+    "    throw 'Gdb already running'
+    "endif
+    "let gdb = {}
+    "" gdbserver port
+    "let gdb._mode = a:mode
+    "let gdb._server_addr = a:server_addr
+    "let gdb._reconnect = a:reconnect
+    "let gdb._initialized = 0
+    "" window number that will be displaying the current file
+    "let gdb._jump_window = 1
+    "let gdb._current_buf = -1
+    "let gdb._current_line = -1
+    "let gdb._has_breakpoints = 0
+    "let gdb._server_exited = 0
+    "let gdb._gdb_bt_qf = s:gdb_bt_qf
+    "let gdb._gdb_break_qf = s:gdb_break_qf
+    "let gdb._gdb_source_break = s:gdb_source_break
     "return gdb
 
     let conf = gdb#SchemeConfigSample()
     let g:gdb_runtime = state#Open(conf)
-    "}
 endfunction
 
 
@@ -365,7 +354,7 @@ function! gdb#RefreshBreakpoints()
     if !exists('g:gdb')
         return
     endif
-    if g:gdb.state ==# "running"
+    if g:gdb.statename ==# "running"
         " pause first
         call jobsend(g:gdb._client_id, "\<c-c>")
     endif
