@@ -28,9 +28,6 @@ endfunction
 call s:__init__()
 
 
-
-
-
 function! gdb#SchemeCreate() abort
     let this = {
         \ "name" : "SchemeGDB",
@@ -49,46 +46,41 @@ function! gdb#SchemeCreate() abort
         \ ],
         \ "state" : {
         \   "pause": [
-        \       {   "match":   "Continuing.",
+        \       {   "match":   ["Continuing."],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_continue",
         \       },
-        \       {   "match":   "\v[\o32]{2}([^:]+):(\d+):\d+",
+        \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
+        \                       '\v/([\h\d/]+):(\d+):\d+',
+        \                      ],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_jump",
         \       },
-        \       {   "match":   "Remote communication error.  Target disconnected.:",
+        \       {   "match":   ["Remote communication error.  Target disconnected.:"],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_retry",
         \       },
         \   ],
         \   "running": [
-        \       {   "match":   "\v^Breakpoint \d+",
+        \       {   "match":   ['\v^Breakpoint \d+',
+        \                       '\v^Temporary breakpoint \d+',
+        \                       "(gdb)",
+        \                      ],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_pause",
         \       },
-        \       {   "match":   "\v^Temporary breakpoint \d+",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_pause",
-        \       },
-        \       {   "match":   "\v\[Inferior\ +.{-}\ +exited\ +normally",
+        \       {   "match":   ['\v\[Inferior\ +.{-}\ +exited\ +normally'],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_disconnected",
         \       },
-        \       {   "match":   "(gdb)",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_pause",
-        \       },
         \   ],
         \   "gdbserver": [
-        \       {   "match":   "\vDetaching from process \d+",
+        \       {   "match":   ['\vDetaching from process \d+'],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_exit",
@@ -97,58 +89,29 @@ function! gdb#SchemeCreate() abort
         \ }
         \}
 
-    let this.statename = "null"
 
     function this.on_continue(...)
-        call self._target._parser.switch(self._ctx.state['running'])
-        let self.statename = self.name
-        call self.update_current_line_sign(0)
+        call state#Switch('gdb', 'running', 0)
+        call gdb#Update_current_line_sign(0)
     endfunction
 
     function this.on_jump(file, line, ...)
-        if tabpagenr() != self._tab
-            " Don't jump if we are not in the debugger tab
-            return
-        endif
-
-        let cwindow = win_getid()
-        if cwindow != self._win_main
-            if win_gotoid(self._win_main) != 1
-                return
-            endif
-        endif
-
-        stopinsert
-        let self._current_buf = bufnr('%')
-        let target_buf = bufnr(a:file, 1)
-        if bufnr('%') != target_buf
-            exe 'buffer ' target_buf
-            let self._current_buf = target_buf
-        endif
-        exe ':' a:line
-        "normal 
-        let self._current_line = a:line
-
-        if cwindow != self._win_main
-            call win_gotoid(cwindow)
-        endif
-        call self.update_current_line_sign(1)
+        call gdb#Jump(a:file, a:line)
     endfunction
 
     function this.on_retry(...)
-        if self._server_exited
+        if g:gdb._server_exited
             return
         endif
         sleep 1
-        call self.attach()
-        call self.send('continue')
+        call gdb#Attach()
+        call gdb#Send('continue')
     endfunction
 
     function this.on_pause(...)
-        call self._target._parser.switch(self._ctx.state['pause'])
-        let self.statename = self.name
+        call state#Switch('gdb', 'pause', 0)
 
-        if !self._initialized
+        if !g:gdb._initialized
             "set filename-display absolute
             let cmdstr_bt = "set confirm off\n
                         \ set pagination off\n
@@ -157,7 +120,7 @@ function! gdb#SchemeCreate() abort
                         \ set print array off\n
                         \ print array-indexes on\n
                         \"
-            call g:gdb.send(cmdstr_bt)
+            call gdb#Send(cmdstr_bt)
 
             let cmdstr_bt = "define parser_bt\n
                         \ set logging off\n
@@ -168,7 +131,7 @@ function! gdb#SchemeCreate() abort
                         \ bt\n
                         \ set logging off\n
                         \ end"
-            call g:gdb.send(cmdstr_bt)
+            call gdb#Send(cmdstr_bt)
 
             let cmdstr_bt = "define silent_on\n
                         \ set logging off\n
@@ -177,25 +140,25 @@ function! gdb#SchemeCreate() abort
                         \ set logging redirect on\n
                         \ set logging on\n
                         \ end"
-            call g:gdb.send(cmdstr_bt)
+            call gdb#Send(cmdstr_bt)
 
             let cmdstr_bt = "define silent_off\n
                         \ set logging off\n
                         \ end"
-            call g:gdb.send(cmdstr_bt)
+            call gdb#Send(cmdstr_bt)
 
             if filereadable(s:gdb_source_break)
                 call gdb#ReadVariable("s:breakpoints", s:gdb_source_break)
             endif
 
-            "if !empty(self._server_addr)
-            "    call self.send('set remotetimeout 50')
-            "    call self.attach()
-            "    call s:RefreshBreakpoints()
-            "    call self.send('c')
+            "if !empty(g:gdb._server_addr)
+            "    call gdb#SendSvr('set remotetimeout 50')
+            "    call gdb#Attach()
+            "    call gdb#RefreshBreakpoints()
+            "    call gdb#Send('c')
             "endif
 
-            let self._initialized = 1
+            let g:gdb._initialized = 1
             if !empty(s:breakpoints)
                 call gdb#Breaks2Qf()
                 call gdb#RefreshBreakpointSigns()
@@ -203,24 +166,25 @@ function! gdb#SchemeCreate() abort
             endif
 
             if g:gdb._mode == 1
-                call self.send('br main')
-                call self.send('r')
+                let cmdstr = "br main\n
+                            \ r"
+                call gdb#Send(cmdstr)
             endif
         endif
     endfunction
 
     function this.on_disconnected(...)
-        if !self._server_exited && self._reconnect
+        if !g:gdb._server_exited && g:gdb._reconnect
             " Refresh to force a delete of all watchpoints
-            call s:RefreshBreakpoints()
+            call gdb#RefreshBreakpoints()
             sleep 1
-            call self.attach()
-            call self.send('continue')
+            call gdb#Attach()
+            call gdb#Send('continue')
         endif
     endfunction
 
     function! this.on_exit(...)
-        let self._gdb._server_exited = 1
+        let g:gdb._server_exited = 1
     endfunction
 
     return this
@@ -237,7 +201,7 @@ function! gdb#SchemeConfigSample() abort
         \ "conf_server_addr" : "10.1.1.125",
         \ "state" : {
         \   "gdbserver": [
-        \       {   "match":   "\vListening on port (\d+)$",
+        \       {   "match":   ['\vListening on port (\d+)$'],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_accept",
@@ -248,77 +212,93 @@ function! gdb#SchemeConfigSample() abort
 
     function this.on_accept(port, ...)
         call gdb#Send(printf("target remote %s:%d\nc",
-                    \ self._gdb._server_addr, a:port))
+                    \ g:gdb._server_addr, a:port))
     endfunction
 
-
-    function! this.kill()
-        call gdb#Map("unmap")
-        call self.update_current_line_sign(0)
-        exe 'bd! '.self._client_buf
-        if self._server_buf != -1
-            exe 'bd! '.self._server_buf
-        endif
-        exe 'tabnext '.self._tab
-        tabclose
-        unlet g:gdb
-    endfunction
-
-
-    function! this.send(data)
-        call jobsend(self._client_id, a:data."\<cr>")
-    endfunction
-
-
-    function! this.attach()
-        if !empty(self._server_addr)
-            call self.send(printf('target remote %s', self._server_addr))
-        endif
-    endfunction
-
-
-    function! this.update_current_line_sign(add)
-        " to avoid flicker when removing/adding the sign column(due to the change in
-        " line width), we switch ids for the line sign and only remove the old line
-        " sign after marking the new one
-        let old_line_sign_id = get(self, '_line_sign_id', 4999)
-        let self._line_sign_id = old_line_sign_id == 4999 ? 4998 : 4999
-        if a:add && self._current_line != -1 && self._current_buf != -1
-            exe 'sign place '.self._line_sign_id.' name=GdbCurrentLine line='
-                        \.self._current_line.' buffer='.self._current_buf
-        endif
-        exe 'sign unplace '.old_line_sign_id
-    endfunction
 
     return this
-
 endfunc
 
 
+function! gdb#Kill()
+    call gdb#Map("unmap")
+    call gdb#Update_current_line_sign(0)
+    exe 'bd! '. g:gdb._client_buf
+    if g:gdb._server_buf != -1
+        exe 'bd! '. g:gdb._server_buf
+    endif
+    exe 'tabnext '. g:gdb._tab
+    tabclose
+    unlet g:gdb
+endfunction
+
+
+function! gdb#Send(data)
+    call jobsend(g:gdb._client_id, a:data."\<cr>")
+endfunction
+
+
+function! gdb#SendSvr(data)
+    call jobsend(g:gdb._server_id, a:data."\<cr>")
+endfunction
+
+
+function! gdb#Attach()
+    if !empty(g:gdb._server_addr)
+        call jobsend(g:gdb._server_id, printf('target remote %s', g:gdb._server_addr))
+    endif
+endfunction
+
+
+function! gdb#Update_current_line_sign(add)
+    " to avoid flicker when removing/adding the sign column(due to the change in
+    " line width), we switch ids for the line sign and only remove the old line
+    " sign after marking the new one
+    let old_line_sign_id = get(g:gdb, '_line_sign_id', 4999)
+    let g:gdb._line_sign_id = old_line_sign_id == 4999 ? 4998 : 4999
+    if a:add && g:gdb._current_line != -1 && g:gdb._current_buf != -1
+        exe 'sign place '. g:gdb._line_sign_id. ' name=GdbCurrentLine line='
+                    \. g:gdb._current_line. ' buffer='. g:gdb._current_buf
+    endif
+    exe 'sign unplace '.old_line_sign_id
+endfunction
+
 
 function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
-    "if exists('g:gdb')
-    "    throw 'Gdb already running'
-    "endif
-    "let gdb = {}
-    "" gdbserver port
-    "let gdb._mode = a:mode
-    "let gdb._server_addr = a:server_addr
-    "let gdb._reconnect = a:reconnect
-    "let gdb._initialized = 0
-    "" window number that will be displaying the current file
-    "let gdb._jump_window = 1
-    "let gdb._current_buf = -1
-    "let gdb._current_line = -1
-    "let gdb._has_breakpoints = 0
-    "let gdb._server_exited = 0
-    "let gdb._gdb_bt_qf = s:gdb_bt_qf
-    "let gdb._gdb_break_qf = s:gdb_break_qf
-    "let gdb._gdb_source_break = s:gdb_source_break
-    "return gdb
+    if exists('g:gdb')
+        throw 'Gdb already running'
+    endif
+    let gdb = {}
+    " gdbserver port
+    let gdb._mode = a:mode
+    let gdb._server_addr = a:server_addr
+    let gdb._reconnect = a:reconnect
+    let gdb._initialized = 0
+    " window number that will be displaying the current file
+    let gdb._jump_window = 1
+    let gdb._current_buf = -1
+    let gdb._current_line = -1
+    let gdb._has_breakpoints = 0
+    let gdb._server_exited = 0
+    let gdb._gdb_bt_qf = s:gdb_bt_qf
+    let gdb._gdb_break_qf = s:gdb_break_qf
+    let gdb._gdb_source_break = s:gdb_source_break
 
     let conf = gdb#SchemeConfigSample()
-    let g:gdb_runtime = state#Open(conf)
+    call state#Open(conf)
+    if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
+        return
+    endif
+    if !has_key(g:state_ctx.window, 'gdb')
+        return
+    endif
+    let win_gdb = g:state_ctx.window['gdb']
+    let win_gdbserver = g:state_ctx.window['gdbserver']
+    let gdb._win_gdb = win_gdb
+    let gdb._win_gdbserver = win_gdbserver
+    let gdb._client_id = win_gdb._client_id
+    let gdb._server_id = win_gdbserver._client_id
+    let g:gdb = gdb
 endfunction
 
 
@@ -352,15 +332,15 @@ endfunction
 function! gdb#RefreshBreakpoints()
     "{
     if !exists('g:gdb')
-        return
+        throw 'Gdb is not running'
     endif
-    if g:gdb.statename ==# "running"
+    if g:gdb._win_gdb._state.name ==# "running"
         " pause first
         call jobsend(g:gdb._client_id, "\<c-c>")
     endif
 
     if g:gdb._has_breakpoints
-        call g:gdb.send('delete')
+        call gdb#Send('delete')
     endif
 
     let g:gdb._has_breakpoints = 0
@@ -368,23 +348,15 @@ function! gdb#RefreshBreakpoints()
         if next_val['state'] && !empty(next_val['cmd'])
             if ! g:gdb._has_breakpoints
                 let g:gdb._has_breakpoints = 1
-                call g:gdb.send('silent_on')
+                call gdb#Send('silent_on')
             endif
-            call g:gdb.send('break '.next_val['cmd'])
+            call gdb#Send('break '.next_val['cmd'])
         endif
     endfor
     if g:gdb._has_breakpoints
-        call g:gdb.send('silent_off')
+        call gdb#Send('silent_off')
     endif
     "}
-endfunction
-
-
-function! gdb#Send(data)
-    if !exists('g:gdb')
-        throw 'Gdb is not running'
-    endif
-    call g:gdb.send(a:data)
 endfunction
 
 
@@ -392,11 +364,46 @@ function! gdb#Jump(file, line)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
-    call g:gdb.send('parser_bt')
+    if tabpagenr() != g:state_ctx._tab
+        " Don't jump if we are not in the debugger tab
+        return
+    endif
+
+    let file = a:file
+    if !filereadable(file) && file[0] != '/'
+        let file = '/' . file
+    endif
+    if !filereadable(file)
+        echomsg "File not exist: " . file
+    endif
+
+    call gdb#Send('parser_bt')
     if filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf
     endif
-    call g:gdb.on_jump(a:file, a:line)
+
+    let cwindow = win_getid()
+    if cwindow != g:state_ctx._win_main
+        if win_gotoid(g:state_ctx._win_main) != 1
+            return
+        endif
+    endif
+
+    stopinsert
+    let g:gdb._current_buf = bufnr('%')
+    let target_buf = bufnr(a:file, 1)
+    if bufnr('%') != target_buf
+        exe 'buffer ' target_buf
+        let g:gdb._current_buf = target_buf
+    endif
+    exe ':' a:line
+    "normal 
+    let g:gdb._current_line = a:line
+
+    if cwindow != g:state_ctx._win_main
+        call win_gotoid(cwindow)
+    endif
+    call gdb#Update_current_line_sign(1)
 endfunction
 
 
@@ -441,14 +448,6 @@ function! gdb#Interrupt()
         throw 'Gdb is not running'
     endif
     call jobsend(g:gdb._client_id, "\<c-c>info line\<cr>")
-endfunction
-
-
-function! gdb#Kill()
-    if !exists('g:gdb')
-        throw 'Gdb is not running'
-    endif
-    call g:gdb.kill()
 endfunction
 
 
@@ -554,7 +553,7 @@ endfunction
 
 function! gdb#TBreak()
     let file_breakpoints = bufname('%') .':'. line('.')
-    call g:gdb.send("tbreak ". file_breakpoints. "\nc")
+    call gdb#Send("tbreak ". file_breakpoints. "\nc")
 endfunction
 
 

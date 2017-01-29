@@ -28,7 +28,8 @@ function! state#Open(config) abort
     endif
     let scheme = Creator()
     call s:Debug("Open". conf['scheme'])
-    call state#CreateRuntime(scheme, conf)
+    let g:state_ctx = state#CreateRuntime(scheme, conf)
+    return g:state_ctx
 endfunc
 
 
@@ -43,7 +44,6 @@ function! state#CreateRuntime(scheme, config) abort
         \}
     let ctx.scheme = scheme
     let ctx.conf = conf
-    let g:state_ctx = ctx
 
     " Merge conf.state into scheme.state
     if has_key(conf, 'state')
@@ -70,8 +70,15 @@ function! state#CreateRuntime(scheme, config) abort
     for [k,v] in items(scheme.state)
         let patterns = []
         for i in v
-            call add(patterns, [ i.match, 'on_call',
-                        \ [i.window, i.action, i.arg0] ])
+            let matches = i.match
+            if type(matches) != type([])
+                throw printf("neogdb.state#CreateRuntime: state '%s' match '%s' should be list"
+                        \ ,k, string(matches))
+            endif
+            for match in matches
+                call add(patterns, [ match, 'on_call'
+                            \ , [i.window, i.action, i.arg0] ])
+            endfor
         endfor
 
         let state = expect#State(k, patterns)
@@ -97,15 +104,15 @@ function! state#CreateRuntime(scheme, config) abort
     let windows = scheme.window
     for conf_win in windows
         if has_key(ctx.window, conf_win.name)
-            throw printf("neogdb.state#CreateRuntime: window duplicate '%s'",
-                        \ conf_win.name)
+            throw printf("neogdb.state#CreateRuntime: window duplicate '%s'"
+                        \ , conf_win.name)
         endif
         let window = {}
         let ctx.window[conf_win.name] = window
         let window._name = conf_win.name
         if !has_key(ctx.state, conf_win.state)
-            throw printf("neogdb.state#CreateRuntime: window ''%s' initstate '%s' not exist",
-                        \ conf_win.name, conf_win.state)
+            throw printf("neogdb.state#CreateRuntime: window ''%s' initstate '%s' not exist"
+                        \ , conf_win.name, conf_win.state)
         endif
         let state0 = copy(ctx.state[conf_win.state])
         let window._state = state0
@@ -159,33 +166,18 @@ function! state#CreateRuntime(scheme, config) abort
                 if has_key(scheme, matched[2])
                     call call(scheme[matched[2]], a:000, window)
                 else
-                    call s:Debug(printf("Scheme '%s' call function '%s' not exist",
-                                \ scheme.name, matched[2]))
+                    call s:Debug(printf("Scheme '%s' call function '%s' not exist"
+                                \ , scheme.name, matched[2]))
                 endif
             elseif matched[1] ==# 'send'
                 let str = call("printf", [matched[2]] + a:000)
                 call jobsend(window._client_id, str."\<cr>")
             elseif matched[1] ==# 'switch'
-                if has_key(ctx.state, matched[2])
-                    call window._target._parser.switch(ctx.state[matched[2]])
-                else
-                    call s:Debug(printf("Window '%s' switch State '%s' not exist",
-                                \ window._name, matched[2]))
-                endif
+                call state#Switch(window._name, matched[2], 0)
             elseif matched[1] ==# 'push'
-                if has_key(ctx.state, matched[2])
-                    call window._target._parser.push(ctx.state[matched[2]])
-                else
-                    call s:Debug(printf("Window '%s' push State '%s' not exist",
-                                \ window._name, matched[2]))
-                endif
+                call state#Switch(window._name, matched[2], 1)
             elseif matched[1] ==# 'pop'
-                if has_key(ctx.state, matched[2])
-                    call window._target._parser.pop(ctx.state[matched[2]])
-                else
-                    call s:Debug(printf("Window '%s' pop State '%s' not exist",
-                                \ window._name, matched[2]))
-                endif
+                call state#Switch(window._name, matched[2], 2)
             endif
         catch
             call s:Debug(string(matched). " trigger " .string(v:exception))
@@ -193,6 +185,32 @@ function! state#CreateRuntime(scheme, config) abort
     endfunc
 
 
+    return ctx
+endfunc
+
+
+" @mode 0 switch, 1 push, 2 pop
+function! state#Switch(win_name, state_name, mode) abort
+    if !exists('g:state_ctx')
+        throw 'stateRuntime is not running'
+    endif
+    if !has_key(g:state_ctx, 'window') || !has_key(g:state_ctx, 'state')
+        throw 'stateRuntime have no windows or states'
+    endif
+    if !has_key(g:state_ctx.window, a:win_name)
+        throw 'stateRuntime have no window=' . a:win_name
+    endif
+    if !has_key(g:state_ctx.state, a:state_name)
+        throw 'stateRuntime have no state=' . a:state_name
+    endif
+
+    if a:mode == 0
+        call g:state_ctx.window[a:win_name]._target._parser.switch(g:state_ctx.state[a:state_name])
+    elseif a:mode == 1
+        call g:state_ctx.window[a:win_name]._target._parser.push(g:state_ctx.state[a:state_name])
+    elseif a:mode == 2
+        call g:state_ctx.window[a:win_name]._target._parser.pop()
+    endif
 endfunc
 
 
