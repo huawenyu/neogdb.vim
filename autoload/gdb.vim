@@ -6,7 +6,7 @@ function! s:__init__()
 
     sign define GdbBreakpointEn text=● texthl=Search
     sign define GdbBreakpointDis text=● texthl=Function
-    "sign define GdbBreakpointDis text=● texthl=Identifier
+    sign define GdbBreakpointDel text=● texthl=Comment
 
     sign define GdbCurrentLine text=☛ texthl=Error
     "sign define GdbCurrentLine text=☛ texthl=Keyword
@@ -17,9 +17,12 @@ function! s:__init__()
     set errorformat+=#%.%#\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
 
     let s:gdb_port = 7778
-    let s:max_breakpoint_sign_id = 0
+    let s:breakpoint_signid_start = 5000
+    let s:breakpoint_signid_max = 0
+
     let s:breakpoints = {}
     let s:toggle_all = 0
+    let s:gdbcmd = "gdb -q -f "
     let s:gdb_bt_qf = '/tmp/gdb.bt'
     let s:gdb_break_qf = '/tmp/gdb.break'
     let s:gdb_source_break = './.gdb.break'
@@ -33,7 +36,7 @@ function! gdb#SchemeCreate() abort
         \ "name" : "SchemeGDB",
         \ "window" : [
         \   {   "name":   "gdb",
-        \       "state":  "pause",
+        \       "state":  "init",
         \       "layout": ["conf_gdb_layout", "vsp"],
         \       "cmd":    ["conf_gdb_cmd", "$SHELL"],
         \   },
@@ -45,6 +48,15 @@ function! gdb#SchemeCreate() abort
         \   },
         \ ],
         \ "state" : {
+        \   "init": [
+        \       {   "match":   [
+        \                       '(gdb)',
+        \                      ],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_init",
+        \       },
+        \   ],
         \   "pause": [
         \       {   "match":   ["Continuing."],
         \           "window":  "",
@@ -67,7 +79,7 @@ function! gdb#SchemeCreate() abort
         \   "running": [
         \       {   "match":   ['\v^Breakpoint \d+',
         \                       '\v^Temporary breakpoint \d+',
-        \                       "(gdb)",
+        \                       '(gdb)',
         \                      ],
         \           "window":  "",
         \           "action":  "call",
@@ -108,9 +120,8 @@ function! gdb#SchemeCreate() abort
         call gdb#Send('continue')
     endfunction
 
-    function this.on_pause(...)
-        call state#Switch('gdb', 'pause', 0)
 
+    function this.on_init(...)
         if !g:gdb._initialized
             "set filename-display absolute
             let cmdstr_bt = "set confirm off\n
@@ -118,7 +129,7 @@ function! gdb#SchemeCreate() abort
                         \ set verbose off\n
                         \ set print pretty on\n
                         \ set print array off\n
-                        \ print array-indexes on\n
+                        \ set print array-indexes on\n
                         \"
             call gdb#Send(cmdstr_bt)
 
@@ -154,15 +165,15 @@ function! gdb#SchemeCreate() abort
             "if !empty(g:gdb._server_addr)
             "    call gdb#SendSvr('set remotetimeout 50')
             "    call gdb#Attach()
-            "    call gdb#RefreshBreakpoints()
+            "    call gdb#RefreshBreakpoints(0)
             "    call gdb#Send('c')
             "endif
 
             let g:gdb._initialized = 1
             if !empty(s:breakpoints)
                 call gdb#Breaks2Qf()
-                call gdb#RefreshBreakpointSigns()
-                call gdb#RefreshBreakpoints()
+                call gdb#RefreshBreakpointSigns(0)
+                call gdb#RefreshBreakpoints(0)
             endif
 
             if g:gdb._mode == 1
@@ -171,12 +182,18 @@ function! gdb#SchemeCreate() abort
                 call gdb#Send(cmdstr)
             endif
         endif
+
+        call state#Switch('gdb', 'pause', 0)
+    endfunction
+
+    function this.on_pause(...)
+        call state#Switch('gdb', 'pause', 0)
     endfunction
 
     function this.on_disconnected(...)
         if !g:gdb._server_exited && g:gdb._reconnect
             " Refresh to force a delete of all watchpoints
-            call gdb#RefreshBreakpoints()
+            "call gdb#RefreshBreakpoints(2)
             sleep 1
             call gdb#Attach()
             call gdb#Send('continue')
@@ -196,7 +213,7 @@ function! gdb#SchemeConfigSample() abort
     " user special config
     let this = {
         \ "scheme" : "gdb#SchemeCreate",
-        \ "conf_gdb_cmd" : "gdb -q -f sysinit/init",
+        \ "conf_gdb_cmd" : "gdb -q -f ",
         \ "conf_server_cmd" : "$SHELL",
         \ "conf_server_addr" : "10.1.1.125",
         \ "state" : {
@@ -264,9 +281,9 @@ function! gdb#Update_current_line_sign(add)
 endfunction
 
 
-function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
-    if exists('g:gdb')
-        throw 'Gdb already running'
+function! gdb#Spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
+    if exists('g:gdb') || empty(a:client_cmd)
+        throw 'Gdb already running or gdb target empty'
     endif
     let gdb = {}
     " gdbserver port
@@ -283,8 +300,10 @@ function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     let gdb._gdb_bt_qf = s:gdb_bt_qf
     let gdb._gdb_break_qf = s:gdb_break_qf
     let gdb._gdb_source_break = s:gdb_source_break
+    let cword = expand("<cword>")
 
     let conf = gdb#SchemeConfigSample()
+    let conf.conf_gdb_cmd = s:gdbcmd . a:client_cmd
     call state#Open(conf)
     if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
         return
@@ -298,30 +317,74 @@ function! gdb#spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     let gdb._win_gdbserver = win_gdbserver
     let gdb._client_id = win_gdb._client_id
     let gdb._server_id = win_gdbserver._client_id
-    let g:gdb = gdb
+
+    " Create quickfix: lgetfile, cgetfile
+    if win_gotoid(g:state_ctx._wid_main) == 1
+        if !filereadable(gdb._gdb_bt_qf)
+            exec "silent! vimgrep " . cword ." ". expand("%")
+        else
+            exec "silent cgetfile " . gdb._gdb_bt_qf
+        endif
+        silent! copen
+        let gdb._win_qf = win_getid()
+    endif
+
+    if win_gotoid(g:state_ctx._wid_main) == 1
+        if !filereadable(gdb._gdb_break_qf)
+            exec "silent! lvimgrep " . cword ." ". expand("%")
+        else
+            exec "silent lgetfile " . gdb._gdb_break_qf
+        endif
+        silent! lopen
+        let gdb._win_lqf = win_getid()
+    endif
+
+    " Create gdb terminal
+    if win_gotoid(gdb._win_gdb._wid) == 1
+        let gdb._server_buf = -1
+        let gdb._client_buf = bufnr('%')
+        call gdb#Map("tmap")
+    endif
+
+    if win_gotoid(g:state_ctx._wid_main) == 1
+        stopinsert
+        let g:gdb = gdb
+    endif
 endfunction
 
 
-function! gdb#RefreshBreakpointSigns()
+" @mode 0 refresh-all, 1 only-change
+function! gdb#RefreshBreakpointSigns(mode)
     "{
-    let i = 5000
-    while i <= s:max_breakpoint_sign_id
-        exe 'sign unplace '.i
-        let i += 1
-    endwhile
+    if a:mode == 0
+        let i = s:breakpoint_signid_start
+        while i <= s:breakpoint_signid_max
+            exe 'sign unplace '.i
+            let i += 1
+        endwhile
+    endif
 
-    let s:max_breakpoint_sign_id = 0
-    let id = 5000
+    let s:breakpoint_signid_max = 0
+    let id = s:breakpoint_signid_start
     for [next_key, next_val] in items(s:breakpoints)
         let buf = bufnr(next_val['file'])
         let linenr = next_val['line']
-        if next_val['state']
-            exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
-        else
-            exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
+
+        if a:mode == 1 && next_val['change']
+           \ && has_key(next_val, 'sign_id')
+            exe 'sign unplace '. next_val['sign_id']
         endif
-        let s:max_breakpoint_sign_id = id
-        let id += 1
+
+        if a:mode == 0 || (a:mode == 1 && next_val['change'])
+            if next_val['state']
+                exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
+            else
+                exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
+            endif
+            let next_val['sign_id'] = id
+            let s:breakpoint_signid_max = id
+            let id += 1
+        endif
     endfor
     "}
 endfunction
@@ -329,32 +392,54 @@ endfunction
 
 " Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
 " Then add breakpoints backto gdb
-function! gdb#RefreshBreakpoints()
+" @mode 0 reset-all, 1 enable-only-change
+"       2 delete-all
+function! gdb#RefreshBreakpoints(mode)
     "{
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
+
+    let is_running = 0
     if g:gdb._win_gdb._state.name ==# "running"
         " pause first
+        let is_running = 1
         call jobsend(g:gdb._client_id, "\<c-c>")
     endif
 
-    if g:gdb._has_breakpoints
-        call gdb#Send('delete')
+    if a:mode == 0 || a:mode == 2
+        if g:gdb._has_breakpoints
+            call gdb#Send('delete')
+            let g:gdb._has_breakpoints = 0
+        endif
     endif
 
-    let g:gdb._has_breakpoints = 0
-    for [next_key, next_val] in items(s:breakpoints)
-        if next_val['state'] && !empty(next_val['cmd'])
-            if ! g:gdb._has_breakpoints
-                let g:gdb._has_breakpoints = 1
-                call gdb#Send('silent_on')
-            endif
-            call gdb#Send('break '.next_val['cmd'])
+    if a:mode == 0 || a:mode == 1
+        let is_silent = 1
+        if a:mode == 1
+            let is_silent = 0
         endif
-    endfor
-    if g:gdb._has_breakpoints
-        call gdb#Send('silent_off')
+
+        for [next_key, next_val] in items(s:breakpoints)
+            if next_val['state'] && !empty(next_val['cmd'])
+                if is_silent == 1
+                    let is_silent = 2
+                    call gdb#Send('silent_on')
+                endif
+
+                if a:mode == 0 || (a:mode == 1 && next_val['change'])
+                    let g:gdb._has_breakpoints = 1
+                    call gdb#Send('break '. next_val['cmd'])
+                endif
+            endif
+        endfor
+        if is_silent == 2
+            call gdb#Send('silent_off')
+        endif
+    endif
+
+    if is_running
+        call gdb#Send('c')
     endif
     "}
 endfunction
@@ -383,8 +468,8 @@ function! gdb#Jump(file, line)
     endif
 
     let cwindow = win_getid()
-    if cwindow != g:state_ctx._win_main
-        if win_gotoid(g:state_ctx._win_main) != 1
+    if cwindow != g:state_ctx._wid_main
+        if win_gotoid(g:state_ctx._wid_main) != 1
             return
         endif
     endif
@@ -400,7 +485,7 @@ function! gdb#Jump(file, line)
     "normal 
     let g:gdb._current_line = a:line
 
-    if cwindow != g:state_ctx._win_main
+    if cwindow != g:state_ctx._wid_main
         call win_gotoid(cwindow)
     endif
     call gdb#Update_current_line_sign(1)
@@ -424,22 +509,6 @@ function! gdb#Stack(file)
     if filereadable(a:file)
         exec "silent cgetfile " . a:file
     endif
-endfunction
-
-
-function! gdb#OnContinue()
-    if !exists('g:gdb')
-        throw 'Gdb is not running'
-    endif
-    echo "gdb#OnContinue"
-endfunction
-
-
-function! gdb#OnExit()
-    if !exists('g:gdb')
-        throw 'Gdb is not running'
-    endif
-    echo "gdb#OnExit"
 endfunction
 
 
@@ -499,7 +568,6 @@ function! gdb#ToggleBreak()
     let cword = expand("<cword>")
     let cfuncline = gdb#GetCFunLinenr()
 
-    Decho "FunctionLinenr=" . cfuncline
     let type = 0
     if linenr == cfuncline
         let type = 1
@@ -508,37 +576,52 @@ function! gdb#ToggleBreak()
         let file_breakpoints = filenm .':'.linenr
     endif
 
+    let mode = 0
     let old_value = get(s:breakpoints, file_breakpoints, {})
     if empty(old_value)
         let break_new = input("[break] ", file_breakpoints)
         if !empty(break_new)
-            let s:breakpoints[file_breakpoints] = {'file':filenm,
-                        \'type':type, 'line':linenr, 'col':colnr,
-                        \'fn' : '', 'state':1, 'cmd' : break_new}
-            Decho break_new
+            let old_value = {
+                        \'file':filenm,
+                        \'type':type,
+                        \'line':linenr, 'col':colnr,
+                        \'fn' : '',
+                        \'state' : 1,
+                        \'cmd' : break_new,
+                        \'change' : 1,
+                        \}
+            "Decho break_new
+            let mode = 1
+            let s:breakpoints[file_breakpoints] = old_value
         endif
     elseif old_value['state']
-        let break_new = input("[disable break] ", file_breakpoints)
+        let break_new = input("[disable break] ", old_value['cmd'])
         if !empty(break_new)
             let old_value['state'] = 0
-            Decho break_new
+            let old_value['change'] = 1
+            "Decho break_new
         endif
     else
-        let break_new = input("(delete break) ", file_breakpoints)
+        let break_new = input("(delete break) ", old_value['cmd'])
         if !empty(break_new)
             call remove(s:breakpoints, file_breakpoints)
-            Decho break_new
+            "Decho break_new
         endif
+        let old_value = {}
     endif
     call gdb#SaveVariable(s:breakpoints, s:gdb_source_break)
     call gdb#Breaks2Qf()
-    call gdb#RefreshBreakpointSigns()
-    call gdb#RefreshBreakpoints()
+    call gdb#RefreshBreakpointSigns(mode)
+    call gdb#RefreshBreakpoints(mode)
+    if !empty(old_value)
+        let old_value['change'] = 0
+    endif
 endfunction
 
 
 function! gdb#ToggleBreakAll()
     let s:toggle_all = ! s:toggle_all
+    let mode = 0
     for v in values(s:breakpoints)
         if s:toggle_all
             let v['state'] = 0
@@ -546,8 +629,8 @@ function! gdb#ToggleBreakAll()
             let v['state'] = 1
         endif
     endfor
-    call gdb#RefreshBreakpointSigns()
-    call gdb#RefreshBreakpoints()
+    call gdb#RefreshBreakpointSigns(0)
+    call gdb#RefreshBreakpoints(0)
 endfunction
 
 
@@ -559,8 +642,8 @@ endfunction
 
 function! gdb#ClearBreak()
     let s:breakpoints = {}
-    call gdb#RefreshBreakpointSigns()
-    call gdb#RefreshBreakpoints()
+    call gdb#RefreshBreakpointSigns(0)
+    call gdb#RefreshBreakpoints(2)
 endfunction
 
 

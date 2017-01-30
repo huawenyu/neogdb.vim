@@ -99,7 +99,7 @@ function! state#CreateRuntime(scheme, config) abort
     tabnew
     let ctx._tab = tabpagenr()
     silent! ball 1
-    let ctx._win_main = win_getid()
+    let ctx._wid_main = win_getid()
 
     let windows = scheme.window
     for conf_win in windows
@@ -130,16 +130,17 @@ function! state#CreateRuntime(scheme, config) abort
         let window._wid = win_getid()
 
         if has_key(conf, conf_win.cmd[0])
-            enew | let window._client_id = termopen(conf[conf_win.cmd[0]], target)
+            let cmdstr = conf[conf_win.cmd[0]]
         else
-            enew | let window._client_id = termopen(conf_win.cmd[1], target)
+            let cmdstr = conf_win.cmd[1]
         endif
+        enew | let window._client_id = termopen(cmdstr, target)
         let window._bufnr = bufnr('%')
     endfor
 
     " Backto main windows
-    if win_gotoid(ctx._win_main) == 1
-        let ctx._jump_window = win_id2win(ctx._win_main)
+    if win_gotoid(ctx._wid_main) == 1
+        let ctx._jump_window = win_id2win(ctx._wid_main)
         stopinsert
     endif
 
