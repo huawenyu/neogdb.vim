@@ -70,6 +70,11 @@ function! gdb#SchemeCreate() abort
         \           "action":  "call",
         \           "arg0":    "on_jump",
         \       },
+        \       {   "match":   ['\v^type = (.*)'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_whatis",
+        \       },
         \       {   "match":   ["Remote communication error.  Target disconnected.:"],
         \           "window":  "",
         \           "action":  "call",
@@ -111,6 +116,10 @@ function! gdb#SchemeCreate() abort
         call gdb#Jump(a:file, a:line)
     endfunction
 
+    function this.on_whatis(type, ...)
+        call gdb#Whatis(a:type)
+    endfunction
+
     function this.on_retry(...)
         if g:gdb._server_exited
             return
@@ -127,6 +136,7 @@ function! gdb#SchemeCreate() abort
             let cmdstr_bt = "set confirm off\n
                         \ set pagination off\n
                         \ set verbose off\n
+                        \ set print elements 500\n
                         \ set print pretty on\n
                         \ set print array off\n
                         \ set print array-indexes on\n
@@ -658,7 +668,33 @@ endfunction
 
 
 function! gdb#Eval(expr)
-    call gdb#Send(printf('print %s', a:expr))
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+
+    if g:gdb._win_gdb._state.name !=# "pause"
+        throw 'Gdb eval only under "pause" state'
+    endif
+
+    "call gdb#Send(printf('print %s', a:expr))
+    " Enable smart-eval base-on the special project
+    let s:expr = a:expr
+    call gdb#Send(printf('whatis %s', a:expr))
+endfunction
+
+
+" Enable smart-eval base-on the special project
+function! gdb#Whatis(type)
+    if !exists('g:gdb')
+        throw 'Gdb is not running'
+    endif
+
+    if g:gdb._win_gdb._state.name !=# "pause"
+        throw 'Gdb eval only under "pause" state'
+    endif
+
+    let expr = symbol1#GetEval(a:type, s:expr)
+    call gdb#Send(expr)
 endfunction
 
 
