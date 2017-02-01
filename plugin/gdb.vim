@@ -14,8 +14,8 @@ endif
 "let s:run_gdb = "gdb -q -f a.out"
 
 
-command! -nargs=1 GdbLocal  call gdb#Spawn(0, <q-args>, 0, 0, 1)
-command! -nargs=1 GdbRemote call gdb#Spawn("$SHELL", <q-args>, 0, 0, 0)
+command! -nargs=* GdbLocal  call gdb#Spawn(<f-args>)
+command! -nargs=* GdbRemote call gdb#Spawn(<f-args>)
 "
 "command! GdbDebugNvim call gdb_expect#spawn(printf('make && gdbserver localhost:%d a.out', s:gdb_port), s:run_gdb, printf('localhost:%d', s:gdb_port), 0, 0)
 "command! -nargs=1 GdbDebugServer call gdb_expect#spawn(0, s:run_gdb, 'localhost:'.<q-args>, 0, 0)
@@ -40,7 +40,7 @@ command! GdbWatchWord call gdb#Watch(expand('<cword>')
 command! -range GdbWatchRange call gdb#Watch(gdb#GetExpression(<f-args>))
 
 
-nnoremap <F2> :GdbRemote sysinit/init
+nnoremap <F2> :GdbRemote "confos#Conf" sysinit/init 10.1.1.125:444
 "nnoremap <silent> <m-pageup> :GdbFrameUp<cr>
 "nnoremap <silent> <m-pagedown> :GdbFrameDown<cr>
 "nnoremap <silent> <m-f9> :GdbWatchWord<cr>

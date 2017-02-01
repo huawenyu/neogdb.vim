@@ -122,15 +122,17 @@ function! state#CreateRuntime(scheme, config) abort
         let window._target = target
         let window._ctx = ctx
 
+        " layout
         if has_key(conf, conf_win.layout[0])
-            exec conf[conf_win.layout[0]]
+            exec join(conf[conf_win.layout[0]])
         else
             exec conf_win.layout[1]
         endif
         let window._wid = win_getid()
 
+        " cmd
         if has_key(conf, conf_win.cmd[0])
-            let cmdstr = conf[conf_win.cmd[0]]
+            let cmdstr = join(conf[conf_win.cmd[0]])
         else
             let cmdstr = conf_win.cmd[1]
         endif

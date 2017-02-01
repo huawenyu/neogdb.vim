@@ -22,7 +22,6 @@ function! s:__init__()
 
     let s:breakpoints = {}
     let s:toggle_all = 0
-    let s:gdbcmd = "gdb -q -f "
     let s:gdb_bt_qf = '/tmp/gdb.bt'
     let s:gdb_break_qf = '/tmp/gdb.break'
     let s:gdb_source_break = './.gdb.break'
@@ -44,17 +43,26 @@ function! gdb#SchemeCreate() abort
         \       "state":  "gdbserver",
         \       "layout": ["conf_server_layout", "sp"],
         \       "cmd":    ["conf_server_cmd", "$SHELL"],
-        \       "addr":   ["conf_server_addr", "localhost"],
         \   },
         \ ],
         \ "state" : {
         \   "init": [
-        \       {   "match":   [
-        \                       '(gdb)',
-        \                      ],
+        \       {   "match":   [ '(gdb)', ],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_init",
+        \       },
+        \   ],
+        \   "remoteconn": [
+        \       {   "match":   [ '\v^Remote debugging using \d+\.\d+\.\d+\.\d+:\d+', ],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_remoteconn_succ",
+        \       },
+        \       {   "match":   [ '\v^\d+\.\d+\.\d+\.\d+:\d+: Connection timed out.', ],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_remoteconn_fail",
         \       },
         \   ],
         \   "pause": [
@@ -69,6 +77,11 @@ function! gdb#SchemeCreate() abort
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_jump",
+        \       },
+        \       {   "match":   ['The program is not being run.'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_unexpect",
         \       },
         \       {   "match":   ['\v^type = (.*)'],
         \           "window":  "",
@@ -113,6 +126,9 @@ function! gdb#SchemeCreate() abort
     endfunction
 
     function this.on_jump(file, line, ...)
+        if g:gdb._win_gdb._state.name !=# "pause"
+            call state#Switch('gdb', 'pause', 0)
+        endif
         call gdb#Jump(a:file, a:line)
     endfunction
 
@@ -186,7 +202,7 @@ function! gdb#SchemeCreate() abort
                 call gdb#RefreshBreakpoints(0)
             endif
 
-            if g:gdb._mode == 1
+            if g:gdb._autorun
                 let cmdstr = "br main\n
                             \ r"
                 call gdb#Send(cmdstr)
@@ -219,34 +235,6 @@ endfunc
 
 
 
-function! gdb#SchemeConfigSample() abort
-    " user special config
-    let this = {
-        \ "scheme" : "gdb#SchemeCreate",
-        \ "conf_gdb_cmd" : "gdb -q -f ",
-        \ "conf_server_cmd" : "$SHELL",
-        \ "conf_server_addr" : "10.1.1.125",
-        \ "state" : {
-        \   "gdbserver": [
-        \       {   "match":   ['\vListening on port (\d+)$'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_accept",
-        \       },
-        \   ]
-        \ }
-        \ }
-
-    function this.on_accept(port, ...)
-        call gdb#Send(printf("target remote %s:%d\nc",
-                    \ g:gdb._server_addr, a:port))
-    endfunction
-
-
-    return this
-endfunc
-
-
 function! gdb#Kill()
     call gdb#Map("unmap")
     call gdb#Update_current_line_sign(0)
@@ -261,7 +249,12 @@ endfunction
 
 
 function! gdb#Send(data)
-    call jobsend(g:gdb._client_id, a:data."\<cr>")
+    if g:gdb._win_gdb._state.name ==# "running"
+        \|| g:gdb._win_gdb._state.name ==# "remoteconn"
+        echomsg "Disable send data when state='". g:gdb._win_gdb._state.name. "'"
+    else
+        call jobsend(g:gdb._client_id, a:data."\<cr>")
+    endif
 endfunction
 
 
@@ -272,7 +265,10 @@ endfunction
 
 function! gdb#Attach()
     if !empty(g:gdb._server_addr)
-        call jobsend(g:gdb._server_id, printf('target remote %s', g:gdb._server_addr))
+        call gdb#Send(g:gdb._server_id,
+                    \printf('target remote %s',
+                    \join(g:gdb._server_addr, ":")))
+        call state#Switch('gdb', 'remoteconn', 0)
     endif
 endfunction
 
@@ -291,16 +287,42 @@ function! gdb#Update_current_line_sign(add)
 endfunction
 
 
-function! gdb#Spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
-    if exists('g:gdb') || empty(a:client_cmd)
-        throw 'Gdb already running or gdb target empty'
+function! gdb#Spawn(conf, client_cmd, server_addr)
+    if exists('g:gdb')
+        throw 'Gdb already running'
     endif
+
     let gdb = {}
-    " gdbserver port
-    let gdb._mode = a:mode
-    let gdb._server_addr = a:server_addr
-    let gdb._reconnect = a:reconnect
     let gdb._initialized = 0
+    let Conf = function(a:conf)
+    if empty(Conf)
+        throw "gdb#Spawn: no Conf '". a:conf ."'."
+    endif
+    let conf = Conf()
+    if type(conf) != type({})
+        throw "gdb#Spawn: Conf '". a:conf ."' should return a dictionary not ". type(conf). "."
+    endif
+
+    let gdb._autorun = 0
+    if has_key(conf, 'autorun')
+        let gdb._autorun = conf.autorun
+    endif
+
+    let gdb._reconnect = 0
+    if has_key(conf, 'reconnect')
+        let gdb._reconnect = conf.reconnect
+    endif
+
+    if !empty(a:client_cmd)
+        let conf.conf_gdb_cmd[1] = a:client_cmd
+    endif
+
+    let gdb._server_addr = []
+    " 10.1.1.125:444 -> ["10.1.1.125", "444"]
+    if !empty(a:server_addr)
+        let gdb._server_addr = split(a:server_addr, ":")
+    endif
+
     " window number that will be displaying the current file
     let gdb._jump_window = 1
     let gdb._current_buf = -1
@@ -312,8 +334,6 @@ function! gdb#Spawn(server_cmd, client_cmd, server_addr, reconnect, mode)
     let gdb._gdb_source_break = s:gdb_source_break
     let cword = expand("<cword>")
 
-    let conf = gdb#SchemeConfigSample()
-    let conf.conf_gdb_cmd = s:gdbcmd . a:client_cmd
     call state#Open(conf)
     if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
         return
@@ -415,6 +435,7 @@ function! gdb#RefreshBreakpoints(mode)
         " pause first
         let is_running = 1
         call jobsend(g:gdb._client_id, "\<c-c>")
+        call state#Switch('gdb', 'pause', 0)
     endif
 
     if a:mode == 0 || a:mode == 2
@@ -673,7 +694,7 @@ function! gdb#Eval(expr)
     endif
 
     if g:gdb._win_gdb._state.name !=# "pause"
-        throw 'Gdb eval only under "pause" state'
+        throw 'Gdb eval only under "pause" but state="'. g:gdb._win_gdb._state.name .'"'
     endif
 
     "call gdb#Send(printf('print %s', a:expr))
