@@ -40,7 +40,7 @@ command! GdbWatchWord call gdb#Watch(expand('<cword>')
 command! -range GdbWatchRange call gdb#Watch(gdb#GetExpression(<f-args>))
 
 
-nnoremap <F2> :GdbRemote "confos#Conf" sysinit/init 10.1.1.125:444
+nnoremap <F2> :GdbRemote confos#me sysinit/init 10.1.1.125:444
 "nnoremap <silent> <m-pageup> :GdbFrameUp<cr>
 "nnoremap <silent> <m-pagedown> :GdbFrameDown<cr>
 "nnoremap <silent> <m-f9> :GdbWatchWord<cr>

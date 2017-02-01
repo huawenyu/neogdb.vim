@@ -83,7 +83,7 @@ function! gdb#SchemeCreate() abort
         \           "action":  "call",
         \           "arg0":    "on_unexpect",
         \       },
-        \       {   "match":   ['\v^type = (.*)'],
+        \       {   "match":   ['\v^type \= (\p+)',],
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_whatis",
@@ -97,7 +97,7 @@ function! gdb#SchemeCreate() abort
         \   "running": [
         \       {   "match":   ['\v^Breakpoint \d+',
         \                       '\v^Temporary breakpoint \d+',
-        \                       '(gdb)',
+        \                       '\v^\(gdb\) ',
         \                      ],
         \           "window":  "",
         \           "action":  "call",
@@ -127,6 +127,9 @@ function! gdb#SchemeCreate() abort
 
     function this.on_jump(file, line, ...)
         if g:gdb._win_gdb._state.name !=# "pause"
+            echomsg "State "
+                \ . g:gdb._win_gdb._state.name
+                \ . " => pause"
             call state#Switch('gdb', 'pause', 0)
         endif
         call gdb#Jump(a:file, a:line)
@@ -148,8 +151,9 @@ function! gdb#SchemeCreate() abort
 
     function this.on_init(...)
         if !g:gdb._initialized
-            "set filename-display absolute
-            let cmdstr_bt = "set confirm off\n
+            " set filename-display absolute
+            " set remotetimeout 50
+            let cmdstr = "set confirm off\n
                         \ set pagination off\n
                         \ set verbose off\n
                         \ set print elements 500\n
@@ -157,9 +161,9 @@ function! gdb#SchemeCreate() abort
                         \ set print array off\n
                         \ set print array-indexes on\n
                         \"
-            call gdb#Send(cmdstr_bt)
+            call gdb#Send(cmdstr)
 
-            let cmdstr_bt = "define parser_bt\n
+            let cmdstr = "define parser_bt\n
                         \ set logging off\n
                         \ set logging file /tmp/gdb.bt\n
                         \ set logging overwrite on\n
@@ -168,38 +172,35 @@ function! gdb#SchemeCreate() abort
                         \ bt\n
                         \ set logging off\n
                         \ end"
-            call gdb#Send(cmdstr_bt)
+            call gdb#Send(cmdstr)
 
-            let cmdstr_bt = "define silent_on\n
+            let cmdstr = "define silent_on\n
                         \ set logging off\n
                         \ set logging file /dev/null\n
                         \ set logging overwrite off\n
                         \ set logging redirect on\n
                         \ set logging on\n
                         \ end"
-            call gdb#Send(cmdstr_bt)
+            call gdb#Send(cmdstr)
 
-            let cmdstr_bt = "define silent_off\n
+            let cmdstr = "define silent_off\n
                         \ set logging off\n
                         \ end"
-            call gdb#Send(cmdstr_bt)
+            call gdb#Send(cmdstr)
 
             if filereadable(s:gdb_source_break)
                 call gdb#ReadVariable("s:breakpoints", s:gdb_source_break)
             endif
-
-            "if !empty(g:gdb._server_addr)
-            "    call gdb#SendSvr('set remotetimeout 50')
-            "    call gdb#Attach()
-            "    call gdb#RefreshBreakpoints(0)
-            "    call gdb#Send('c')
-            "endif
 
             let g:gdb._initialized = 1
             if !empty(s:breakpoints)
                 call gdb#Breaks2Qf()
                 call gdb#RefreshBreakpointSigns(0)
                 call gdb#RefreshBreakpoints(0)
+            endif
+
+            if !empty(g:gdb._server_addr)
+                "call gdb#SendSvr('gdbserver :444 --attach <pid>')
             endif
 
             if g:gdb._autorun
@@ -211,6 +212,17 @@ function! gdb#SchemeCreate() abort
 
         call state#Switch('gdb', 'pause', 0)
     endfunction
+
+
+    function this.on_remoteconn_succ(...)
+        call state#Switch('gdb', 'pause', 0)
+    endfunction
+
+
+    function this.on_remoteconn_fail(...)
+        echoerr "Remote connect gdbserver fail!"
+    endfunction
+
 
     function this.on_pause(...)
         call state#Switch('gdb', 'pause', 0)
@@ -265,8 +277,7 @@ endfunction
 
 function! gdb#Attach()
     if !empty(g:gdb._server_addr)
-        call gdb#Send(g:gdb._server_id,
-                    \printf('target remote %s',
+        call gdb#Send(printf('target remote %s',
                     \join(g:gdb._server_addr, ":")))
         call state#Switch('gdb', 'remoteconn', 0)
     endif
@@ -298,9 +309,15 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     if empty(Conf)
         throw "gdb#Spawn: no Conf '". a:conf ."'."
     endif
+    "let Conf = function('confos#Conf')
     let conf = Conf()
     if type(conf) != type({})
         throw "gdb#Spawn: Conf '". a:conf ."' should return a dictionary not ". type(conf). "."
+    endif
+
+    let gdb._symbol = 0
+    if has_key(conf, 'symbol')
+        let gdb._symbol = function(conf.symbol)
     endif
 
     let gdb._autorun = 0
@@ -422,8 +439,7 @@ endfunction
 
 " Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
 " Then add breakpoints backto gdb
-" @mode 0 reset-all, 1 enable-only-change
-"       2 delete-all
+" @mode 0 reset-all, 1 enable-only-change, 2 delete-all
 function! gdb#RefreshBreakpoints(mode)
     "{
     if !exists('g:gdb')
@@ -694,7 +710,8 @@ function! gdb#Eval(expr)
     endif
 
     if g:gdb._win_gdb._state.name !=# "pause"
-        throw 'Gdb eval only under "pause" but state="'. g:gdb._win_gdb._state.name .'"'
+        throw 'Gdb eval only under "pause" but state="'
+                \. g:gdb._win_gdb._state.name .'"'
     endif
 
     "call gdb#Send(printf('print %s', a:expr))
@@ -709,13 +726,21 @@ function! gdb#Whatis(type)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
-
     if g:gdb._win_gdb._state.name !=# "pause"
         throw 'Gdb eval only under "pause" state'
     endif
+    if empty(s:expr)
+        throw 'Gdb eval expr is empty'
+    endif
 
-    let expr = symbol1#GetEval(a:type, s:expr)
-    call gdb#Send(expr)
+    if !empty(g:gdb._symbol)
+        echomsg "wilson forward to getsymbol"
+        let expr = g:gdb._symbol(a:type, s:expr)
+        call gdb#Send(expr)
+    else
+        call gdb#Send(printf('p %s', s:expr))
+    endif
+    let s:expr = ""
 endfunction
 
 

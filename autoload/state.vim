@@ -207,12 +207,16 @@ function! state#Switch(win_name, state_name, mode) abort
         throw 'stateRuntime have no state=' . a:state_name
     endif
 
+    echomsg "State => ". a:state_name
     if a:mode == 0
         call g:state_ctx.window[a:win_name]._target._parser.switch(g:state_ctx.state[a:state_name])
+        let g:state_ctx.window[a:win_name]._state = g:state_ctx.window[a:win_name]._target._parser._stack[-1]
     elseif a:mode == 1
         call g:state_ctx.window[a:win_name]._target._parser.push(g:state_ctx.state[a:state_name])
+        let g:state_ctx.window[a:win_name]._state = g:state_ctx.window[a:win_name]._target._parser._stack[-1]
     elseif a:mode == 2
         call g:state_ctx.window[a:win_name]._target._parser.pop()
+        let g:state_ctx.window[a:win_name]._state = g:state_ctx.window[a:win_name]._target._parser._stack[-1]
     endif
 endfunc
 
