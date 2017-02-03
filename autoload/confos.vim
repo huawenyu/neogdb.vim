@@ -10,9 +10,9 @@ call s:__init__()
 function! confos#me() abort
     " user special config
     let this = {
-        \ "scheme" : 'gdb#SchemeCreate',
-        \ "symbol" : 'confos#Symbol',
-        \ "server_init" : 'confos#InitSvr',
+        \ "Scheme" : 'gdb#SchemeCreate',
+        \ "ServerInit" : 'confos#InitSvr',
+        \ "Symbol" : 'confos#Symbol',
         \ "autorun" : 0,
         \ "reconnect" : 0,
         \ "conf_gdb_cmd" : ['gdb -q -f', 'sysinit/init'],
@@ -20,21 +20,124 @@ function! confos#me() abort
         \ "conf_server_addr" : ["",],
         \ "state" : {
         \   "gdbserver": [
-        \       {   "match":   ['\vListening on port (\d+)'],
+        \       {   "match":   ['\v^--More-- ', '\v^--more-- '],
         \           "window":  "",
         \           "action":  "call",
-        \           "arg0":    "on_accept",
+        \           "arg0":    "on_gdbserver_more",
+        \       },
+        \       {   "match":   ['\v^System time: ',],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_getsystemstatus_end",
+        \       },
+        \       {   "match":   ['\vVirtual domain configuration: disable'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_vdom_disable",
+        \       },
+        \       {   "match":   ['\VVirtual domain configuration: enable'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_vdom_enable",
+        \       },
+        \
+        \       {   "match":   ['\vProcess \[1\]: type\=wanopt\(2\) index\=0 pid\=(\d+) state\=running',
+        \                       '\v^(\d+).*/bin/wad 7 0'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_worker_pid",
+        \       },
+        \       {   "match":   ['\VSet watchdog enable.'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_watchdog_enable",
+        \       },
+        \       {   "match":   ['\VSet watchdog disable.'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_watchdog_disable",
+        \       },
+        \       {   "match":   ['\v^wad debug level is (\d+) \(0x'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_wad_debug_level",
+        \       },
+        \       {   "match":   ['\v^Remote debugging from host '],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_remote_debugging",
         \       },
         \   ]
         \ }
         \ }
 
 
-    function this.on_accept(port, ...)
-        if a:port
-            let g:gdb._server_addr[1] = a:port
-            call gdb#Attach()
+    function this.on_gdbserver_more(...)
+        if g:gdb._remote_debugging
+            return
         endif
+        call gdb#SendSvr('')
+    endfunction
+
+    function this.on_getsystemstatus_end(...)
+        if g:gdb._remote_debugging
+            return
+        endif
+        if g:gdb._vdom
+        else
+            call gdb#SendSvr('diag debug app wad 0')
+            call gdb#SendSvr('diag debug enable')
+            call gdb#SendSvr('diag test app wad 1000')
+        endif
+    endfunction
+
+    function this.on_vdom_disable(...)
+        let g:gdb._vdom = 0
+    endfunction
+
+    function this.on_vdom_enable(...)
+        let g:gdb._vdom = 1
+    endfunction
+
+    function this.on_worker_pid(pid, ...)
+        let g:gdb._worker_pid = a:pid
+        if g:gdb._remote_debugging
+            return
+        endif
+        call gdb#SendSvr('diag test app wad 2200')
+        call gdb#SendSvr('diag test app wad 7')
+    endfunction
+
+    function this.on_watchdog_enable(...)
+        if g:gdb._remote_debugging
+            return
+        endif
+        call gdb#SendSvr('diag test app wad 7')
+    endfunction
+
+    function this.on_watchdog_disable(...)
+        if g:gdb._remote_debugging
+            return
+        endif
+        call gdb#SendSvr('diag test app wad 2200')
+        call gdb#SendSvr('diag debug app wad '. g:gdb._debug_level)
+        call gdb#SendSvr('diag debug disable')
+
+        if g:gdb._worker_pid
+            call gdb#SendSvr('sys sh')
+            call gdb#SendSvr('gdbserver :444 --attach '. g:gdb._worker_pid)
+        endif
+    endfunction
+
+    function this.on_wad_debug_level(level, ...)
+        if g:gdb._remote_debugging
+            return
+        endif
+        let g:gdb._debug_level = a:level
+    endfunction
+
+    function this.on_remote_debugging(...)
+        let g:gdb._remote_debugging = 1
     endfunction
 
 
@@ -43,19 +146,34 @@ endfunc
 
 
 function! confos#InitSvr() abort
-    "call gdb#SendSvr('gdbserver :444 --attach <pid>')
+    if empty(g:gdb._server_addr)
+        echoerr "Gdbserver's address is empty"
+    endif
+
+    let g:gdb._vdom = 0
+    let g:gdb._worker_pid = 0
+    let g:gdb._debug_level = 0
+    let g:gdb._remote_debugging = 0
+
+    echomsg printf("GdbserverInit(%s-%s) starting ..."
+                \, string(g:gdb._server_addr), string(g:gdb._server_id))
+    call gdb#SendSvr('telnet '. g:gdb._server_addr[0])
+    sleep 1
+    call gdb#SendSvr('admin')
+    sleep 1
+    call gdb#SendSvr('')
+    sleep 1
+    call gdb#SendSvr('get system status')
 endfunc
 
 
 function! confos#Symbol(type, expr) abort
     let expr = get(s:symbols, a:type, '')
     if !empty(expr)
-        echomsg "wilson call getsymbol"
         let Expr = function(expr)
         let expr = Expr(a:expr)
         return expr
     else
-        echomsg "wilson getsymbol not find ". a:type
         return printf('p %s', a:expr)
     endif
 endfunc

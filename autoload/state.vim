@@ -18,16 +18,16 @@ endfunc
 function! state#Open(config) abort
     let conf = a:config
     if type(conf) != type({})
-       \ || ! has_key(conf, "scheme")
-        throw "neogdb.state#Open: config not dict or have no 'scheme'."
+       \ || ! has_key(conf, "Scheme")
+        throw "neogdb.state#Open: config not dict or have no 'Scheme'."
     endif
 
-    let Creator = function(conf.scheme)
+    let Creator = function(conf.Scheme)
     if empty(Creator)
-        throw "neogdb.state#Open: no Creator '". conf['scheme'] ."'."
+        throw "neogdb.state#Open: no Creator '". conf['Scheme'] ."'."
     endif
     let scheme = Creator()
-    call s:Debug("Open". conf['scheme'])
+    call s:Debug("Open". conf['Scheme'])
     let g:state_ctx = state#CreateRuntime(scheme, conf)
     return g:state_ctx
 endfunc

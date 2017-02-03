@@ -2,7 +2,7 @@
 function! confnvim#Conf() abort
     " user special config
     let this = {
-        \ "scheme" : "gdb#SchemeCreate",
+        \ "Scheme" : "gdb#SchemeCreate",
         \ "autorun" : 0,
         \ "reconnect" : 0,
         \ "conf_gdb_cmd" : ["gdb -q -f", "sysinit/init"],

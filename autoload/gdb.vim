@@ -110,6 +110,11 @@ function! gdb#SchemeCreate() abort
         \       },
         \   ],
         \   "gdbserver": [
+        \       {   "match":   ['\vListening on port (\d+)'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_accept",
+        \       },
         \       {   "match":   ['\vDetaching from process \d+'],
         \           "window":  "",
         \           "action":  "call",
@@ -156,6 +161,7 @@ function! gdb#SchemeCreate() abort
             let cmdstr = "set confirm off\n
                         \ set pagination off\n
                         \ set verbose off\n
+                        \ set logging off\n
                         \ set print elements 500\n
                         \ set print pretty on\n
                         \ set print array off\n
@@ -188,19 +194,24 @@ function! gdb#SchemeCreate() abort
                         \ end"
             call gdb#Send(cmdstr)
 
+            echomsg "Load breaks ..."
             if filereadable(s:gdb_source_break)
                 call gdb#ReadVariable("s:breakpoints", s:gdb_source_break)
             endif
 
             let g:gdb._initialized = 1
+            echomsg "Load set breaks ..."
             if !empty(s:breakpoints)
                 call gdb#Breaks2Qf()
                 call gdb#RefreshBreakpointSigns(0)
                 call gdb#RefreshBreakpoints(0)
             endif
 
-            if !empty(g:gdb._server_addr)
-                "call gdb#SendSvr('gdbserver :444 --attach <pid>')
+            if !empty(g:gdb.ServerInit)
+                echomsg "Gdbserver call Init()=". string(g:gdb.ServerInit)
+                call g:gdb.ServerInit()
+            else
+                echomsg "Gdbserver Init() is null"
             endif
 
             if g:gdb._autorun
@@ -211,6 +222,14 @@ function! gdb#SchemeCreate() abort
         endif
 
         call state#Switch('gdb', 'pause', 0)
+    endfunction
+
+
+    function this.on_accept(port, ...)
+        if a:port
+            let g:gdb._server_addr[1] = a:port
+            call gdb#Attach()
+        endif
     endfunction
 
 
@@ -315,9 +334,14 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
         throw "gdb#Spawn: Conf '". a:conf ."' should return a dictionary not ". type(conf). "."
     endif
 
-    let gdb._symbol = 0
-    if has_key(conf, 'symbol')
-        let gdb._symbol = function(conf.symbol)
+    let gdb.ServerInit = 0
+    if has_key(conf, 'ServerInit')
+        let gdb.ServerInit = function(conf.ServerInit)
+    endif
+
+    let gdb.Symbol = 0
+    if has_key(conf, 'Symbol')
+        let gdb.Symbol = function(conf.Symbol)
     endif
 
     let gdb._autorun = 0
@@ -733,9 +757,9 @@ function! gdb#Whatis(type)
         throw 'Gdb eval expr is empty'
     endif
 
-    if !empty(g:gdb._symbol)
+    if !empty(g:gdb.Symbol)
         echomsg "wilson forward to getsymbol"
-        let expr = g:gdb._symbol(a:type, s:expr)
+        let expr = g:gdb.Symbol(a:type, s:expr)
         call gdb#Send(expr)
     else
         call gdb#Send(printf('p %s', s:expr))
