@@ -162,7 +162,7 @@ function! gdb#SchemeCreate() abort
                         \ set pagination off\n
                         \ set verbose off\n
                         \ set logging off\n
-                        \ set print elements 500\n
+                        \ set print elements 2048\n
                         \ set print pretty on\n
                         \ set print array off\n
                         \ set print array-indexes on\n
