@@ -73,6 +73,7 @@ function! gdb#SchemeCreate() abort
         \       },
         \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
         \                       '\v/([\h\d/]+):(\d+):\d+',
+        \                       '\v at /([\h\d/]+):(\d+)',
         \                      ],
         \           "window":  "",
         \           "action":  "call",
@@ -136,6 +137,8 @@ function! gdb#SchemeCreate() abort
                 \ . g:gdb._win_gdb._state.name
                 \ . " => pause"
             call state#Switch('gdb', 'pause', 0)
+            call gdb#Send('parser_bt')
+            call gdb#Send('info line')
         endif
         call gdb#Jump(a:file, a:line)
     endfunction
@@ -533,6 +536,20 @@ function! gdb#Jump(file, line)
         echomsg "File not exist: " . file
     endif
 
+    "if filereadable(s:gdb_bt_qf)
+    "    call delete(s:gdb_bt_qf)
+    "endif
+    "for i in range(1,200)
+    "    call gdb#Send('parser_bt')
+    "    if filereadable(s:gdb_bt_qf)
+    "        exec "cgetfile " . s:gdb_bt_qf
+    "        break
+    "    else
+    "        echomsg "Breakpoint File not exist: " . s:gdb_bt_qf
+    "        sleep 300m
+    "    endif
+    "endfor
+
     call gdb#Send('parser_bt')
     if filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf
@@ -782,6 +799,7 @@ endfunction
 function! gdb#Map(type)
     "{
     if a:type ==# "unmap"
+        unmap <f3>
         unmap <f4>
         unmap <f5>
         unmap <f6>
@@ -793,19 +811,22 @@ function! gdb#Map(type)
         cunmap <f9>
         unmap <c-n>
         unmap <c-p>
+        tunmap <f3>
         tunmap <f4>
         tunmap <f5>
         tunmap <f6>
         tunmap <f7>
         tunmap <f10>
     elseif a:type ==# "tmap"
-        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
+        tnoremap <silent> <f3> <c-\><c-n>:GdbContinue<cr>i
+        tnoremap <silent> <f4> <c-\><c-n>:GdbRefresh<cr>i
         tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
         tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
         tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
         tnoremap <silent> <f10> <c-\><c-n>:GdbToggleBreakAll<cr>i
     elseif a:type ==# "nmap"
-        nnoremap <silent> <f4> :GdbContinue<cr>
+        nnoremap <silent> <f3> :GdbContinue<cr>
+        nnoremap <silent> <f4> :GdbRefresh<cr>
         nnoremap <silent> <f5> :GdbNext<cr>
         nnoremap <silent> <f6> :GdbStep<cr>
         nnoremap <silent> <f7> :GdbFinish<cr>
