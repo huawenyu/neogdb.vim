@@ -96,7 +96,7 @@ function! state#CreateRuntime(scheme, config) abort
 
     " Load window
     " Create new tab as FSM's view
-    tabnew
+    tabnew | silent! b2
     let ctx._tab = tabpagenr()
     silent! ball 1
     let ctx._wid_main = win_getid()

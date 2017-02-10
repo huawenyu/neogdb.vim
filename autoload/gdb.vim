@@ -552,7 +552,7 @@ function! gdb#Jump(file, line)
         exe 'buffer ' target_buf
         let g:gdb._current_buf = target_buf
     endif
-    exe ':' a:line
+    exe ':' a:line | m'
     "normal 
     let g:gdb._current_line = a:line
 
@@ -790,30 +790,32 @@ function! gdb#Map(type)
         unmap <f9>
         unmap <f10>
         vunmap <f9>
-        cunmap <silent> <f9> <cr>
+        cunmap <f9>
+        unmap <c-n>
+        unmap <c-p>
         tunmap <f4>
         tunmap <f5>
         tunmap <f6>
         tunmap <f7>
         tunmap <f10>
     elseif a:type ==# "tmap"
-        tmap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
-        tmap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
-        tmap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
-        tmap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
-        tmap <silent> <f10> <c-\><c-n>:GdbToggleBreakAll<cr>i
+        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
+        tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
+        tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
+        tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
+        tnoremap <silent> <f10> <c-\><c-n>:GdbToggleBreakAll<cr>i
     elseif a:type ==# "nmap"
-        nmap <silent> <f4> :GdbContinue<cr>
-        nmap <silent> <f5> :GdbNext<cr>
-        nmap <silent> <f6> :GdbStep<cr>
-        nmap <silent> <f7> :GdbFinish<cr>
-        nmap <silent> <f8> :GdbUntil<cr>
-        nmap <silent> <f9> :GdbToggleBreak<cr>
-        nmap <silent> <f10> :GdbToggleBreakAll<cr>
+        nnoremap <silent> <f4> :GdbContinue<cr>
+        nnoremap <silent> <f5> :GdbNext<cr>
+        nnoremap <silent> <f6> :GdbStep<cr>
+        nnoremap <silent> <f7> :GdbFinish<cr>
+        nnoremap <silent> <f8> :GdbUntil<cr>
+        nnoremap <silent> <f9> :GdbToggleBreak<cr>
+        nnoremap <silent> <f10> :GdbToggleBreakAll<cr>
         cnoremap <silent> <f9> <cr>
         vnoremap <silent> <f9> :GdbEvalRange<cr>
-        nmap <silent> <C-Up>   :GdbFrameUp<CR>
-        nmap <silent> <C-Down> :GdbFrameDown<CR>
+        nnoremap <silent> <c-n> :GdbFrameUp<cr>
+        nnoremap <silent> <c-p> :GdbFrameDown<cr>
     endif
     "}
 endfunction
