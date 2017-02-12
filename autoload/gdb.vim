@@ -24,7 +24,9 @@ function! s:__init__()
     let s:toggle_all = 0
     let s:gdb_bt_qf = '/tmp/gdb.bt'
     let s:gdb_break_qf = '/tmp/gdb.break'
-    let s:gdb_source_break = './.gdb.break'
+    let s:brk_file = './.gdb.break'
+    let s:fl_file = './.gdb.file'
+    let s:file_list = {}
     "}
 endfunction
 call s:__init__()
@@ -43,6 +45,11 @@ function! gdb#SchemeCreate() abort
         \       "state":  "gdbserver",
         \       "layout": ["conf_server_layout", "sp"],
         \       "cmd":    ["conf_server_cmd", "$SHELL"],
+        \   },
+        \   {   "name":   "job",
+        \       "state":  "job",
+        \       "layout": ["conf_job_layout", "tabnew"],
+        \       "cmd":    ["conf_job_cmd", "$SHELL"],
         \   },
         \ ],
         \ "state" : {
@@ -122,9 +129,27 @@ function! gdb#SchemeCreate() abort
         \           "arg0":    "on_exit",
         \       },
         \   ],
+        \   "job": [
+        \       {   "match":   ['call_jobfunc1'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_jobfunc1",
+        \       },
+        \       {   "match":   ['\v^jobDoneLoadBacktrace'],
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_load_bt",
+        \       },
+        \   ],
         \ }
         \}
 
+    function this.on_load_bt(...)
+        if filereadable(s:gdb_bt_qf)
+            exec "cgetfile " . s:gdb_bt_qf
+            "call utilquickfix#RelativePath()
+        endif
+    endfunction
 
     function this.on_continue(...)
         call state#Switch('gdb', 'running', 0)
@@ -198,8 +223,8 @@ function! gdb#SchemeCreate() abort
             call gdb#Send(cmdstr)
 
             echomsg "Load breaks ..."
-            if filereadable(s:gdb_source_break)
-                call gdb#ReadVariable("s:breakpoints", s:gdb_source_break)
+            if filereadable(s:brk_file)
+                call gdb#ReadVariable("s:breakpoints", s:brk_file)
             endif
 
             let g:gdb._initialized = 1
@@ -208,6 +233,24 @@ function! gdb#SchemeCreate() abort
                 call gdb#Breaks2Qf()
                 call gdb#RefreshBreakpointSigns(0)
                 call gdb#RefreshBreakpoints(0)
+            endif
+
+            " Load all files from backtrace to solve relative-path
+            echomsg "Load open files ..."
+            "if filereadable(s:gdb_bt_qf)
+            "    exec "cgetfile " . s:gdb_bt_qf
+            "    let list = getqflist()
+            "    for i in range(len(list))
+            "        exec "e ". fnamemodify(list[i].filename, ':p:.')
+            "    endfor
+            "endif
+            if filereadable(s:brk_file)
+                call gdb#ReadVariable("s:file_list", s:brk_file)
+                for [next_key, next_val] in items(s:file_list)
+                    if filereadable(next_key)
+                        exec "e ". fnamemodify(next_key, ':p:.')
+                    endif
+                endfor
             endif
 
             if !empty(g:gdb.ServerInit)
@@ -297,6 +340,11 @@ function! gdb#SendSvr(data)
 endfunction
 
 
+function! gdb#SendJob(data)
+    call jobsend(g:gdb._job_id, a:data."\<cr>")
+endfunction
+
+
 function! gdb#Attach()
     if !empty(g:gdb._server_addr)
         call gdb#Send(printf('target remote %s',
@@ -375,7 +423,6 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     let gdb._server_exited = 0
     let gdb._gdb_bt_qf = s:gdb_bt_qf
     let gdb._gdb_break_qf = s:gdb_break_qf
-    let gdb._gdb_source_break = s:gdb_source_break
     let cword = expand("<cword>")
 
     call state#Open(conf)
@@ -387,17 +434,20 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     endif
     let win_gdb = g:state_ctx.window['gdb']
     let win_gdbserver = g:state_ctx.window['gdbserver']
+    let win_job = g:state_ctx.window['job']
     let gdb._win_gdb = win_gdb
     let gdb._win_gdbserver = win_gdbserver
+    let gdb._win_job = win_job
     let gdb._client_id = win_gdb._client_id
     let gdb._server_id = win_gdbserver._client_id
+    let gdb._job_id = win_job._client_id
 
     " Create quickfix: lgetfile, cgetfile
     if win_gotoid(g:state_ctx._wid_main) == 1
         if !filereadable(gdb._gdb_bt_qf)
             exec "silent! vimgrep " . cword ." ". expand("%")
         else
-            exec "silent cgetfile " . gdb._gdb_bt_qf
+            "exec "silent cgetfile " . gdb._gdb_bt_qf
         endif
         silent! copen
         let gdb._win_qf = win_getid()
@@ -536,23 +586,14 @@ function! gdb#Jump(file, line)
         echomsg "File not exist: " . file
     endif
 
-    "if filereadable(s:gdb_bt_qf)
-    "    call delete(s:gdb_bt_qf)
-    "endif
-    "for i in range(1,200)
-    "    call gdb#Send('parser_bt')
-    "    if filereadable(s:gdb_bt_qf)
-    "        exec "cgetfile " . s:gdb_bt_qf
-    "        break
-    "    else
-    "        echomsg "Breakpoint File not exist: " . s:gdb_bt_qf
-    "        sleep 300m
-    "    endif
-    "endfor
-
+    if filereadable(s:gdb_bt_qf)
+        call delete(s:gdb_bt_qf)
+    endif
     call gdb#Send('parser_bt')
+    call gdb#SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
     if filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf
+        "call utilquickfix#RelativePath()
     endif
 
     let cwindow = win_getid()
@@ -561,8 +602,8 @@ function! gdb#Jump(file, line)
             return
         endif
     endif
-
     stopinsert
+
     let g:gdb._current_buf = bufnr('%')
     let target_buf = bufnr(a:file, 1)
     if bufnr('%') != target_buf
@@ -570,9 +611,18 @@ function! gdb#Jump(file, line)
         let g:gdb._current_buf = target_buf
     endif
     exe ':' a:line | m'
-    "normal 
-    let g:gdb._current_line = a:line
 
+    let fname = fnamemodify(a:file, ':p:.')
+    if !has_key(s:file_list, fname)
+        let s:file_list[fname] = 1
+        call gdb#SaveVariable(s:file_list, s:fl_file)
+    endif
+
+    "let fname = fnamemodify(a:file, ':p:.')
+    "exec "e ". fname
+    "exec ':' a:line | m'
+
+    let g:gdb._current_line = a:line
     if cwindow != g:state_ctx._wid_main
         call win_gotoid(cwindow)
     endif
@@ -697,7 +747,7 @@ function! gdb#ToggleBreak()
         endif
         let old_value = {}
     endif
-    call gdb#SaveVariable(s:breakpoints, s:gdb_source_break)
+    call gdb#SaveVariable(s:breakpoints, s:brk_file)
     call gdb#Breaks2Qf()
     call gdb#RefreshBreakpointSigns(mode)
     call gdb#RefreshBreakpoints(mode)
@@ -818,15 +868,15 @@ function! gdb#Map(type)
         tunmap <f7>
         tunmap <f10>
     elseif a:type ==# "tmap"
-        tnoremap <silent> <f3> <c-\><c-n>:GdbContinue<cr>i
-        tnoremap <silent> <f4> <c-\><c-n>:GdbRefresh<cr>i
+        tnoremap <silent> <f3> <c-\><c-n>:GdbRefresh<cr>i
+        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
         tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
         tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
         tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
         tnoremap <silent> <f10> <c-\><c-n>:GdbToggleBreakAll<cr>i
     elseif a:type ==# "nmap"
-        nnoremap <silent> <f3> :GdbContinue<cr>
-        nnoremap <silent> <f4> :GdbRefresh<cr>
+        nnoremap <silent> <f3> :GdbRefresh<cr>
+        nnoremap <silent> <f4> :GdbContinue<cr>
         nnoremap <silent> <f5> :GdbNext<cr>
         nnoremap <silent> <f6> :GdbStep<cr>
         nnoremap <silent> <f7> :GdbFinish<cr>

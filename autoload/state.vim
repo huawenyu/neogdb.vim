@@ -123,12 +123,12 @@ function! state#CreateRuntime(scheme, config) abort
         let window._ctx = ctx
 
         " layout
+        let layout = ''
         if has_key(conf, conf_win.layout[0])
-            exec join(conf[conf_win.layout[0]])
+            let layout = join(conf[conf_win.layout[0]])
         else
-            exec conf_win.layout[1]
+            let layout = conf_win.layout[1]
         endif
-        let window._wid = win_getid()
 
         " cmd
         if has_key(conf, conf_win.cmd[0])
@@ -136,8 +136,24 @@ function! state#CreateRuntime(scheme, config) abort
         else
             let cmdstr = conf_win.cmd[1]
         endif
-        enew | let window._client_id = termopen(cmdstr, target)
-        let window._bufnr = bufnr('%')
+
+        " if no layout, only start job, no window
+        if empty(layout)
+            let window._wid = 0
+            let window._bufnr = 0
+            let argv = ['bash']
+            if !empty(cmdstr)
+                let argv += ['-c', cmdstr]
+            endif
+
+            let window._client_id = jobstart(cmdstr, target)
+        else
+            exec layout
+            let window._wid = win_getid()
+
+            enew | let window._client_id = termopen(cmdstr, target)
+            let window._bufnr = bufnr('%')
+        endif
     endfor
 
     " Backto main windows
