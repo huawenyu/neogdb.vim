@@ -398,14 +398,22 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     endif
 
     " Load all files from backtrace to solve relative-path
-    echomsg "Load open files ..."
+    " echomsg "Load open files ..."
     "if filereadable(s:gdb_bt_qf)
     "    exec "cgetfile " . s:gdb_bt_qf
     "    let list = getqflist()
+    "    echomsg "wilson: ". string(list)
     "    for i in range(len(list))
-    "        exec "e ". fnamemodify(list[i].filename, ':p:.')
+    "        if has_key(list[i], 'bufnr')
+    "            let list[i].filename = fnamemodify(bufname(list[i].bufnr), ':p:.')
+    "            unlet list[i].bufnr
+    "        else
+    "            let list[i].filename = fnamemodify(list[i].filename, ':p:.')
+    "        endif
+    "        exec "e ". list[i].filename
     "    endfor
     "endif
+
     if filereadable(s:fl_file)
         call gdb#ReadVariable("s:file_list", s:fl_file)
         for [next_key, next_val] in items(s:file_list)
