@@ -235,24 +235,6 @@ function! gdb#SchemeCreate() abort
                 call gdb#RefreshBreakpoints(0)
             endif
 
-            " Load all files from backtrace to solve relative-path
-            echomsg "Load open files ..."
-            "if filereadable(s:gdb_bt_qf)
-            "    exec "cgetfile " . s:gdb_bt_qf
-            "    let list = getqflist()
-            "    for i in range(len(list))
-            "        exec "e ". fnamemodify(list[i].filename, ':p:.')
-            "    endfor
-            "endif
-            if filereadable(s:brk_file)
-                call gdb#ReadVariable("s:file_list", s:brk_file)
-                for [next_key, next_val] in items(s:file_list)
-                    if filereadable(next_key)
-                        exec "e ". fnamemodify(next_key, ':p:.')
-                    endif
-                endfor
-            endif
-
             if !empty(g:gdb.ServerInit)
                 echomsg "Gdbserver call Init()=". string(g:gdb.ServerInit)
                 call g:gdb.ServerInit()
@@ -413,6 +395,24 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     " 10.1.1.125:444 -> ["10.1.1.125", "444"]
     if !empty(a:server_addr)
         let gdb._server_addr = split(a:server_addr, ":")
+    endif
+
+    " Load all files from backtrace to solve relative-path
+    echomsg "Load open files ..."
+    "if filereadable(s:gdb_bt_qf)
+    "    exec "cgetfile " . s:gdb_bt_qf
+    "    let list = getqflist()
+    "    for i in range(len(list))
+    "        exec "e ". fnamemodify(list[i].filename, ':p:.')
+    "    endfor
+    "endif
+    if filereadable(s:fl_file)
+        call gdb#ReadVariable("s:file_list", s:fl_file)
+        for [next_key, next_val] in items(s:file_list)
+            if filereadable(next_key)
+                exec "e ". fnamemodify(next_key, ':p:.')
+            endif
+        endfor
     endif
 
     " window number that will be displaying the current file
