@@ -1,18 +1,8 @@
-
-function! s:__init__()
-    if exists("s:init")
-        return
-    endif
-    let s:path = expand('<sfile>:p')
-
-endfunc
-call s:__init__()
-
-function! s:Debug(msg)
-    if &verbose
-        echomsg s:path. ": ". string(a:msg)
-    endif
-endfunc
+if !exists("s:init")
+    let s:init = 1
+    " exists("*logger#getLogger")
+    silent! let s:log = logger#getLogger(expand('<sfile>:t'))
+endif
 
 
 function! state#Open(config) abort
@@ -27,7 +17,7 @@ function! state#Open(config) abort
         throw "neogdb.state#Open: no Creator '". conf['Scheme'] ."'."
     endif
     let scheme = Creator()
-    call s:Debug("Open". conf['Scheme'])
+    silent! call s:log.info("Open ", conf['Scheme'])
     let g:state_ctx = state#CreateRuntime(scheme, conf)
     return g:state_ctx
 endfunc
@@ -167,7 +157,7 @@ function! state#CreateRuntime(scheme, config) abort
     " @match1: [i.window, i.action, i.arg0]
     function! ctx.on_call(match1, ...)
         let matched = a:match1
-        call s:Debug(matched)
+        silent! call s:log.info("matched: ", matched)
 
         if empty(matched[1]) || empty(matched[2])
             throw "neogdb.state#CreateRuntime: have no 'action','arg0' with " . string(matched)
@@ -185,8 +175,8 @@ function! state#CreateRuntime(scheme, config) abort
                 if has_key(scheme, matched[2])
                     call call(scheme[matched[2]], a:000, window)
                 else
-                    call s:Debug(printf("Scheme '%s' call function '%s' not exist"
-                                \ , scheme.name, matched[2]))
+                    silent! call s:log.info("Scheme '", scheme.name,
+                                \"' call function '", matched[2], "' not exist")
                 endif
             elseif matched[1] ==# 'send'
                 let str = call("printf", [matched[2]] + a:000)
@@ -199,7 +189,7 @@ function! state#CreateRuntime(scheme, config) abort
                 call state#Switch(window._name, matched[2], 2)
             endif
         catch
-            call s:Debug(string(matched). " trigger " .string(v:exception))
+            silent! call s:log.info(matched, " trigger ", v:exception)
         endtry
     endfunc
 

@@ -1,3 +1,8 @@
+if !exists("s:init")
+    let s:init = 1
+    " exists("*logger#getLogger")
+    silent! let s:log = logger#getLogger(expand('<sfile>:t'))
+endif
 
 function! confnvim#Conf() abort
     " user special config

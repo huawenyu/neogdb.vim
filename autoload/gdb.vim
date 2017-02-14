@@ -1,8 +1,7 @@
-function! s:__init__()
-    "{
-    if exists("s:init")
-        return
-    endif
+if !exists("s:init")
+    let s:init = 1
+    " exists("*logger#getLogger")
+    silent! let s:log = logger#getLogger(expand('<sfile>:t'))
 
     sign define GdbBreakpointEn text=● texthl=Search
     sign define GdbBreakpointDis text=● texthl=Function
@@ -27,9 +26,9 @@ function! s:__init__()
     let s:brk_file = './.gdb.break'
     let s:fl_file = './.gdb.file'
     let s:file_list = {}
-    "}
-endfunction
-call s:__init__()
+
+    call gdb#Map("nmap")
+endif
 
 
 function! gdb#SchemeCreate() abort
@@ -158,9 +157,8 @@ function! gdb#SchemeCreate() abort
 
     function this.on_jump(file, line, ...)
         if g:gdb._win_gdb._state.name !=# "pause"
-            echomsg "State "
-                \ . g:gdb._win_gdb._state.name
-                \ . " => pause"
+    silent! call s:log.info(gdb)
+            silent! call s:log.info("State ", g:gdb._win_gdb._state.name, " => pause")
             call state#Switch('gdb', 'pause', 0)
             call gdb#Send('parser_bt')
             call gdb#Send('info line')
@@ -222,13 +220,13 @@ function! gdb#SchemeCreate() abort
                         \ end"
             call gdb#Send(cmdstr)
 
-            echomsg "Load breaks ..."
+            silent! call s:log.info("Load breaks ...")
             if filereadable(s:brk_file)
                 call gdb#ReadVariable("s:breakpoints", s:brk_file)
             endif
 
             let g:gdb._initialized = 1
-            echomsg "Load set breaks ..."
+            silent! call s:log.info("Load set breaks ...")
             if !empty(s:breakpoints)
                 call gdb#Breaks2Qf()
                 call gdb#RefreshBreakpointSigns(0)
@@ -236,10 +234,10 @@ function! gdb#SchemeCreate() abort
             endif
 
             if !empty(g:gdb.ServerInit)
-                echomsg "Gdbserver call Init()=". string(g:gdb.ServerInit)
+                silent! call s:log.info("Gdbserver call Init()=", g:gdb.ServerInit)
                 call g:gdb.ServerInit()
             else
-                echomsg "Gdbserver Init() is null"
+                silent! call s:log.info("Gdbserver Init() is null")
             endif
 
             if g:gdb._autorun
@@ -267,7 +265,7 @@ function! gdb#SchemeCreate() abort
 
 
     function this.on_remoteconn_fail(...)
-        echoerr "Remote connect gdbserver fail!"
+        silent! call s:log.error("Remote connect gdbserver fail!")
     endfunction
 
 
@@ -433,6 +431,7 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     let gdb._gdb_break_qf = s:gdb_break_qf
     let cword = expand("<cword>")
 
+    silent! call s:log.trace("wilson: ", gdb)
     call state#Open(conf)
     if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
         return
@@ -833,7 +832,7 @@ function! gdb#Whatis(type)
     endif
 
     if !empty(g:gdb.Symbol)
-        echomsg "wilson forward to getsymbol"
+        silent! call s:log.trace("forward to getsymbol")
         let expr = g:gdb.Symbol(a:type, s:expr)
         call gdb#Send(expr)
     else
@@ -898,16 +897,3 @@ function! gdb#Map(type)
     endif
     "}
 endfunction
-
-
-function! s:__fini__()
-    "{
-    if exists("s:init")
-        return
-    endif
-    call gdb#Map("nmap")
-    "}
-endfunction
-call s:__fini__()
-let s:init = 1
-

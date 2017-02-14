@@ -1,10 +1,10 @@
-function! s:__init__()
-    if exists("s:init")
-        return
-    endif
+if !exists("s:init")
+    let s:init = 1
+    " exists("*logger#getLogger")
+    silent! let s:log = logger#getLogger(expand('<sfile>:t'))
+
     let s:symbols = {}
-endfunction
-call s:__init__()
+endif
 
 
 function! confos#me() abort
