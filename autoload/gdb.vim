@@ -431,7 +431,6 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     let gdb._gdb_break_qf = s:gdb_break_qf
     let cword = expand("<cword>")
 
-    silent! call s:log.trace("wilson: ", gdb)
     call state#Open(conf)
     if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
         return
