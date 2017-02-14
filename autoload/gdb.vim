@@ -11,7 +11,7 @@ if !exists("s:init")
     "sign define GdbCurrentLine text=☛ texthl=Keyword
     "sign define GdbCurrentLine text=⇒ texthl=String
 
-    set errorformat+=#0\ \ %m\ \(%.%#\)\ at\ %f:%l
+    set errorformat+=#%c\ \ %m\ \(%.%#\)\ at\ %f:%l
     set errorformat+=#%.%#\ \ %.%#\ in\ %m\ \(%.%#\)\ at\ %f:%l
     set errorformat+=#%.%#\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
 
@@ -396,11 +396,11 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     endif
 
     " Load all files from backtrace to solve relative-path
-    " echomsg "Load open files ..."
+    silent! call s:log.trace("Load open files ...")
+
     "if filereadable(s:gdb_bt_qf)
     "    exec "cgetfile " . s:gdb_bt_qf
     "    let list = getqflist()
-    "    echomsg "wilson: ". string(list)
     "    for i in range(len(list))
     "        if has_key(list[i], 'bufnr')
     "            let list[i].filename = fnamemodify(bufname(list[i].bufnr), ':p:.')
@@ -408,8 +408,11 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
     "        else
     "            let list[i].filename = fnamemodify(list[i].filename, ':p:.')
     "        endif
-    "        exec "e ". list[i].filename
+    "        if filereadable(list[i].filename)
+    "            exec "e ". list[i].filename
+    "        endif
     "    endfor
+    "    "silent! call s:log.trace("old backtrace:<cr>", list)
     "endif
 
     if filereadable(s:fl_file)
