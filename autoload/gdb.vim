@@ -306,11 +306,10 @@ endfunction
 
 
 function! gdb#Send(data)
-    if g:gdb._win_gdb._state.name ==# "running"
-        \|| g:gdb._win_gdb._state.name ==# "remoteconn"
-        echomsg "Disable send data when state='". g:gdb._win_gdb._state.name. "'"
-    else
+    if g:gdb._win_gdb._state.name ==# "pause"
         call jobsend(g:gdb._client_id, a:data."\<cr>")
+    else
+        echomsg "Disable send data when state='". g:gdb._win_gdb._state.name. "'"
     endif
 endfunction
 
@@ -791,6 +790,15 @@ function! gdb#ClearBreak()
     let s:breakpoints = {}
     call gdb#RefreshBreakpointSigns(0)
     call gdb#RefreshBreakpoints(2)
+endfunction
+
+
+function! gdb#FrameUp()
+    call gdb#Send("up")
+endfunction
+
+function! gdb#FrameDown()
+    call gdb#Send("down")
 endfunction
 
 
