@@ -11,9 +11,9 @@ if !exists("s:init")
     "sign define GdbCurrentLine text=☛ texthl=Keyword
     "sign define GdbCurrentLine text=⇒ texthl=String
 
+    set errorformat+=#%c\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
+    set errorformat+=#%c\ \ %.%#\ in\ %m\ \(%.%#\)\ at\ %f:%l
     set errorformat+=#%c\ \ %m\ \(%.%#\)\ at\ %f:%l
-    set errorformat+=#%.%#\ \ %.%#\ in\ %m\ \(%.%#\)\ at\ %f:%l
-    set errorformat+=#%.%#\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
 
     let s:gdb_port = 7778
     let s:breakpoint_signid_start = 5000
