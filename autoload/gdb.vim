@@ -306,10 +306,10 @@ endfunction
 
 
 function! gdb#Send(data)
-    if g:gdb._win_gdb._state.name ==# "pause"
+    if g:gdb._win_gdb._state.name ==# "pause" || g:gdb._win_gdb._state.name ==# "init"
         call jobsend(g:gdb._client_id, a:data."\<cr>")
     else
-        echomsg "Disable send data when state='". g:gdb._win_gdb._state.name. "'"
+        silent! call s:log.error("Cann't send data when state='". g:gdb._win_gdb._state.name. "'")
     endif
 endfunction
 
@@ -591,7 +591,7 @@ function! gdb#Jump(file, line)
         let file = '/' . file
     endif
     if !filereadable(file)
-        echomsg "File not exist: " . file
+        silent! call s:log.error("Jump File not exist: " . file)
     endif
 
     if filereadable(s:gdb_bt_qf)
