@@ -714,12 +714,13 @@ function! gdb#ToggleBreak()
     let cword = expand("<cword>")
     let cfuncline = gdb#GetCFunLinenr()
 
+    let fname = fnamemodify(filenm, ':p:.')
     let type = 0
     if linenr == cfuncline
         let type = 1
-        let file_breakpoints = filenm .':'.cword
+        let file_breakpoints = fname .':'.cword
     else
-        let file_breakpoints = filenm .':'.linenr
+        let file_breakpoints = fname .':'.linenr
     endif
 
     let mode = 0
@@ -728,7 +729,7 @@ function! gdb#ToggleBreak()
         let break_new = input("[break] ", file_breakpoints)
         if !empty(break_new)
             let old_value = {
-                        \'file':filenm,
+                        \'file':fname,
                         \'type':type,
                         \'line':linenr, 'col':colnr,
                         \'fn' : '',
