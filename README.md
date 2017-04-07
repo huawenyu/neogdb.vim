@@ -37,6 +37,16 @@ The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib
 ```
 ## Screen Demo
 
+### gdb local
+
+    :GdbLocal confloc#me a.out ""
+
+### gdb remote
+
+    :GdbRemote confos#me sysinit/init 10.1.1.125:444
+
+### gif
+
 [![screen](./screen.gif)](#features)
 
 # Install
