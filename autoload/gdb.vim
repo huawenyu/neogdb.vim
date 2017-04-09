@@ -37,16 +37,19 @@ function! gdb#SchemeCreate() abort
         \ "window" : [
         \   {   "name":   "gdb",
         \       "state":  "init",
+        \       "status":  1,
         \       "layout": ["conf_gdb_layout", "vsp"],
         \       "cmd":    ["conf_gdb_cmd", "$SHELL"],
         \   },
         \   {   "name":   "gdbserver",
         \       "state":  "gdbserver",
+        \       "status":  1,
         \       "layout": ["conf_server_layout", "sp"],
         \       "cmd":    ["conf_server_cmd", "$SHELL"],
         \   },
         \   {   "name":   "job",
         \       "state":  "job",
+        \       "status":  0,
         \       "layout": ["conf_job_layout", "tabnew"],
         \       "cmd":    ["conf_job_cmd", "$SHELL"],
         \   },
@@ -221,6 +224,21 @@ function! gdb#SchemeCreate() abort
                         \ end"
             call gdb#Send(cmdstr)
 
+            let cmdstr = "define hook-stop\n
+                        \ handle SIGALRM nopass\n
+                        \ parser_bt\n
+                        \ end\n
+                        \ \n
+                        \ define hook-run\n
+                        \ handle SIGALRM pass\n
+                        \ end\n
+                        \ \n
+                        \ define hook-continue\n
+                        \ handle SIGALRM pass\n
+                        \ \n
+                        \ end"
+            call gdb#Send(cmdstr)
+
             silent! call s:log.info("Load breaks ...")
             if filereadable(s:brk_file)
                 call gdb#ReadVariable("s:breakpoints", s:brk_file)
@@ -348,10 +366,13 @@ function! gdb#Update_current_line_sign(add)
 endfunction
 
 
-function! gdb#Spawn(conf, client_cmd, server_addr)
+function! gdb#Spawn(conf, ...)
     if exists('g:gdb')
         throw 'Gdb already running'
     endif
+
+    let client_proc = (a:0 >= 1) ? a:1 : ''
+    let server_addr = (a:0 >= 2) ? a:2 : ''
 
     let gdb = {}
     let gdb._initialized = 0
@@ -385,14 +406,17 @@ function! gdb#Spawn(conf, client_cmd, server_addr)
         let gdb._reconnect = conf.reconnect
     endif
 
-    if !empty(a:client_cmd)
-        let conf.conf_gdb_cmd[1] = a:client_cmd
+    if !empty(client_proc)
+        let conf.conf_gdb_cmd[1] = client_proc
+    endif
+    if !filereadable(conf.conf_gdb_cmd[1])
+        throw "gdb#Spawn: no program '". conf.conf_gdb_cmd[1] ."'."
     endif
 
     let gdb._server_addr = []
     " 10.1.1.125:444 -> ["10.1.1.125", "444"]
-    if !empty(a:server_addr)
-        let gdb._server_addr = split(a:server_addr, ":")
+    if !empty(server_addr)
+        let gdb._server_addr = split(server_addr, ":")
     endif
 
     " Load all files from backtrace to solve relative-path
@@ -595,15 +619,20 @@ function! gdb#Jump(file, line)
         silent! call s:log.error("Jump File not exist: " . file)
     endif
 
-    if filereadable(s:gdb_bt_qf)
-        call delete(s:gdb_bt_qf)
-    endif
-    call gdb#Send('parser_bt')
-    call gdb#SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
+
+    " Method-1: Using ansync job to parse response
+    "if filereadable(s:gdb_bt_qf)
+    "    call delete(s:gdb_bt_qf)
+    "endif
+    "call gdb#Send('parser_bt')
+    "call gdb#SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
+
+    "" Method-2: Using syncronize to parse response
     if filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf
-        "call utilquickfix#RelativePath()
+        call delete(s:gdb_bt_qf)
     endif
+
 
     let cwindow = win_getid()
     if cwindow != g:state_ctx._wid_main

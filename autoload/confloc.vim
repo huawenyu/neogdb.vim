@@ -16,6 +16,11 @@ function! confloc#me() abort
         \ "conf_gdb_cmd" : ['gdb -q -f', 'a.out'],
         \ "conf_server_cmd" : ["$SHELL",],
         \ "conf_server_addr" : ["",],
+        \ "window" : [
+        \   {   "name":   "gdbserver",
+        \       "status":  0,
+        \   },
+        \ ],
         \ "state" : {
         \ }
         \ }

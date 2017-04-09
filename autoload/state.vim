@@ -49,7 +49,20 @@ function! state#CreateRuntime(scheme, config) abort
 
     " Merge conf.window into scheme.window
     if has_key(conf, 'window')
-        call extend(scheme.window, conf.window)
+        for conf_win in conf.window
+            let found = 0
+            for sch_win in scheme.window
+                if conf_win.name ==# sch_win.name
+                    let found = 1
+                    for [k,v] in items(conf_win)
+                        let sch_win[k] = v
+                    endfor
+                endif
+            endfor
+            if !found
+                call add(scheme.window, conf_win)
+            endif
+        endfor
         unlet conf['window']
     endif
 
@@ -93,6 +106,10 @@ function! state#CreateRuntime(scheme, config) abort
 
     let windows = scheme.window
     for conf_win in windows
+        if !conf_win.status
+            continue
+        endif
+
         if has_key(ctx.window, conf_win.name)
             throw printf("neogdb.state#CreateRuntime: window duplicate '%s'"
                         \ , conf_win.name)

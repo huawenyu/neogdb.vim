@@ -12,6 +12,7 @@ endif
 
 "let s:gdb_port = 7778
 "let s:run_gdb = "gdb -q -f a.out"
+let s:gdb_local_remote = 0
 
 
 command! -nargs=* GdbLocal  call gdb#Spawn(<f-args>)
@@ -43,7 +44,19 @@ command! GdbWatchWord call gdb#Watch(expand('<cword>')
 command! -range GdbWatchRange call gdb#Watch(gdb#GetExpression(<f-args>))
 
 
-nnoremap <F2> :GdbRemote confos#me sysinit/init 10.1.1.125:444
+function! GdbLocalRemoteStr()
+    if s:gdb_local_remote
+        let s:gdb_local_remote = 0
+        return 'GdbRemote confos#me sysinit/init 10.1.1.125:444'
+    else
+        let s:gdb_local_remote = 1
+        return 'GdbLocal confloc#me t1'
+    endif
+endfunction
+
+nnoremap <F2> :<c-u><C-\>e GdbLocalRemoteStr()<cr>
+cnoremap <F2> :<c-u><C-\>e GdbLocalRemoteStr()<cr>
+
 "nnoremap <silent> <m-pageup> :GdbFrameUp<cr>
 "nnoremap <silent> <m-pagedown> :GdbFrameDown<cr>
 "nnoremap <silent> <m-f9> :GdbWatchWord<cr>
