@@ -130,11 +130,11 @@ function! state#CreateRuntime(scheme, config) abort
         let window._ctx = ctx
 
         " layout
-        let layout = ''
+        let layout_list = []
         if has_key(conf, conf_win.layout[0])
-            let layout = join(conf[conf_win.layout[0]])
+            let layout_list = conf[conf_win.layout[0]]
         else
-            let layout = conf_win.layout[1]
+            let layout_list = conf_win.layout[1:100]
         endif
 
         " cmd
@@ -145,7 +145,7 @@ function! state#CreateRuntime(scheme, config) abort
         endif
 
         " if no layout, only start job, no window
-        if empty(layout)
+        if empty(layout_list)
             let window._wid = 0
             let window._bufnr = 0
             let argv = ['bash']
@@ -155,7 +155,9 @@ function! state#CreateRuntime(scheme, config) abort
 
             let window._client_id = jobstart(cmdstr, target)
         else
-            exec layout
+            for layout in layout_list
+                exec layout
+            endfor
             let window._wid = win_getid()
 
             enew | let window._client_id = termopen(cmdstr, target)

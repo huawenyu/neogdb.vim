@@ -13,9 +13,10 @@ function! confloc#me() abort
         \ "Scheme" : 'gdb#SchemeCreate',
         \ "autorun" : 1,
         \ "reconnect" : 0,
+        \ "showbreakpoint" : 0,
+        \ "showbacktrace" : 0,
+        \ "conf_gdb_layout" : ["sp"],
         \ "conf_gdb_cmd" : ['gdb -q -f', 'a.out'],
-        \ "conf_server_cmd" : ["$SHELL",],
-        \ "conf_server_addr" : ["",],
         \ "window" : [
         \   {   "name":   "gdbserver",
         \       "status":  0,
@@ -25,83 +26,14 @@ function! confloc#me() abort
         \ }
         \ }
 
-
-    function this.on_gdbserver_more(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        call gdb#SendSvr('')
-    endfunction
-
-    function this.on_getsystemstatus_end(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        if g:gdb._vdom
-        else
-            call gdb#SendSvr('diag debug app wad 0')
-            call gdb#SendSvr('diag debug enable')
-            call gdb#SendSvr('diag test app wad 1000')
-        endif
-    endfunction
-
-    function this.on_vdom_disable(...)
-        let g:gdb._vdom = 0
-    endfunction
-
-    function this.on_vdom_enable(...)
-        let g:gdb._vdom = 1
-    endfunction
-
-    function this.on_worker_pid(pid, ...)
-        let g:gdb._worker_pid = a:pid
-        if g:gdb._remote_debugging
-            return
-        endif
-        call gdb#SendSvr('diag test app wad 2200')
-        call gdb#SendSvr('diag test app wad 7')
-    endfunction
-
-    function this.on_watchdog_enable(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        call gdb#SendSvr('diag test app wad 7')
-    endfunction
-
-    function this.on_watchdog_disable(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        call gdb#SendSvr('diag test app wad 2200')
-        call gdb#SendSvr('diag debug app wad '. g:gdb._debug_level)
-        call gdb#SendSvr('diag debug disable')
-
-        if g:gdb._worker_pid
-            call gdb#SendSvr('sys sh')
-            call gdb#SendSvr('gdbserver :444 --attach '. g:gdb._worker_pid)
-        endif
-    endfunction
-
-    function this.on_wad_debug_level(level, ...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        let g:gdb._debug_level = a:level
-    endfunction
-
-    function this.on_remote_debugging(...)
-        let g:gdb._remote_debugging = 1
-    endfunction
-
-
     return this
 endfunc
 
 
 function! confloc#InitSvr() abort
-    if empty(g:gdb._server_addr)
-        echoerr "Gdbserver's address is empty"
+    if !has_key(g:gdb, "_server_id") || empty(g:gdb._server_addr)
+        echoerr "GdbServer window not exist or address is empty."
+        return
     endif
 
     let g:gdb._vdom = 0

@@ -147,7 +147,7 @@ function! gdb#SchemeCreate() abort
         \}
 
     function this.on_load_bt(...)
-        if filereadable(s:gdb_bt_qf)
+        if g:gdb._showbacktrace && filereadable(s:gdb_bt_qf)
             exec "cgetfile " . s:gdb_bt_qf
             "call utilquickfix#RelativePath()
         endif
@@ -334,12 +334,16 @@ endfunction
 
 
 function! gdb#SendSvr(data)
-    call jobsend(g:gdb._server_id, a:data."\<cr>")
+    if has_key(g:gdb, "_server_id")
+        call jobsend(g:gdb._server_id, a:data."\<cr>")
+    endif
 endfunction
 
 
 function! gdb#SendJob(data)
-    call jobsend(g:gdb._job_id, a:data."\<cr>")
+    if has_key(g:gdb, "_job_id")
+        call jobsend(g:gdb._job_id, a:data."\<cr>")
+    endif
 endfunction
 
 
@@ -406,6 +410,16 @@ function! gdb#Spawn(conf, ...)
         let gdb._reconnect = conf.reconnect
     endif
 
+    let gdb._showbreakpoint = 0
+    if has_key(conf, 'showbreakpoint')
+        let gdb._showbreakpoint = conf.showbreakpoint
+    endif
+
+    let gdb._showbacktrace = 0
+    if has_key(conf, 'showbacktrace')
+        let gdb._showbacktrace = conf.showbacktrace
+    endif
+
     if !empty(client_proc)
         let conf.conf_gdb_cmd[1] = client_proc
     endif
@@ -422,7 +436,7 @@ function! gdb#Spawn(conf, ...)
     " Load all files from backtrace to solve relative-path
     silent! call s:log.trace("Load open files ...")
 
-    "if filereadable(s:gdb_bt_qf)
+    "if gdb._showbacktrace && filereadable(s:gdb_bt_qf)
     "    exec "cgetfile " . s:gdb_bt_qf
     "    let list = getqflist()
     "    for i in range(len(list))
@@ -462,21 +476,30 @@ function! gdb#Spawn(conf, ...)
     if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
         return
     endif
-    if !has_key(g:state_ctx.window, 'gdb')
+
+    " MustExist: Gdb window
+    if has_key(g:state_ctx.window, 'gdb')
+        let win_gdb = g:state_ctx.window['gdb']
+        let gdb._win_gdb = win_gdb
+        let gdb._client_id = win_gdb._client_id
+    else
         return
     endif
-    let win_gdb = g:state_ctx.window['gdb']
-    let win_gdbserver = g:state_ctx.window['gdbserver']
-    let win_job = g:state_ctx.window['job']
-    let gdb._win_gdb = win_gdb
-    let gdb._win_gdbserver = win_gdbserver
-    let gdb._win_job = win_job
-    let gdb._client_id = win_gdb._client_id
-    let gdb._server_id = win_gdbserver._client_id
-    let gdb._job_id = win_job._client_id
+
+    if has_key(g:state_ctx.window, 'gdbserver')
+        let win_gdbserver = g:state_ctx.window['gdbserver']
+        let gdb._win_gdbserver = win_gdbserver
+        let gdb._server_id = win_gdbserver._client_id
+    endif
+
+    if has_key(g:state_ctx.window, 'job')
+        let win_job = g:state_ctx.window['job']
+        let gdb._win_job = win_job
+        let gdb._job_id = win_job._client_id
+    endif
 
     " Create quickfix: lgetfile, cgetfile
-    if win_gotoid(g:state_ctx._wid_main) == 1
+    if gdb._showbacktrace && win_gotoid(g:state_ctx._wid_main) == 1
         if !filereadable(gdb._gdb_bt_qf)
             exec "silent! vimgrep " . cword ." ". expand("%")
         else
@@ -486,7 +509,7 @@ function! gdb#Spawn(conf, ...)
         let gdb._win_qf = win_getid()
     endif
 
-    if win_gotoid(g:state_ctx._wid_main) == 1
+    if gdb._showbreakpoint && win_gotoid(g:state_ctx._wid_main) == 1
         if !filereadable(gdb._gdb_break_qf)
             exec "silent! lvimgrep " . cword ." ". expand("%")
         else
@@ -628,7 +651,7 @@ function! gdb#Jump(file, line)
     "call gdb#SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
 
     "" Method-2: Using syncronize to parse response
-    if filereadable(s:gdb_bt_qf)
+    if g:gdb._showbacktrace && filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf
         call delete(s:gdb_bt_qf)
     endif
@@ -672,7 +695,7 @@ function! gdb#Breakpoints(file)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
-    if filereadable(a:file)
+    if g:gdb._showbreakpoint && filereadable(a:file)
         exec "silent lgetfile " . a:file
     endif
 endfunction
@@ -682,7 +705,7 @@ function! gdb#Stack(file)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
-    if filereadable(a:file)
+    if g:gdb._showbacktrace && filereadable(a:file)
         exec "silent cgetfile " . a:file
     endif
 endfunction
@@ -718,7 +741,7 @@ function! gdb#Breaks2Qf()
     endfor
 
     call writefile(split(join(list2, "\n"), "\n"), s:gdb_break_qf)
-    if filereadable(s:gdb_break_qf)
+    if g:gdb._showbreakpoint && filereadable(s:gdb_break_qf)
         exec "silent lgetfile " . s:gdb_break_qf
     endif
 endfunction

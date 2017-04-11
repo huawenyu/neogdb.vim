@@ -15,6 +15,9 @@ function! confos#me() abort
         \ "Symbol" : 'confos#Symbol',
         \ "autorun" : 0,
         \ "reconnect" : 0,
+        \ "showbreakpoint" : 1,
+        \ "showbacktrace" : 1,
+        \ "conf_gdb_layout" : ["vsp"],
         \ "conf_gdb_cmd" : ['gdb -q -f', 'sysinit/init'],
         \ "conf_server_cmd" : ["$SHELL",],
         \ "conf_server_addr" : ["",],
@@ -146,8 +149,9 @@ endfunc
 
 
 function! confos#InitSvr() abort
-    if empty(g:gdb._server_addr)
-        echoerr "Gdbserver's address is empty"
+    if !has_key(g:gdb, "_server_id") || empty(g:gdb._server_addr)
+        echoerr "GdbServer window not exist or address is empty"
+        return
     endif
 
     let g:gdb._vdom = 0
