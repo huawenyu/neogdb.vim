@@ -1,6 +1,6 @@
 # neogdb.vim
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
-The code mostly stolen from https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim  
+The code reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim  
 
 ## feature
   - gdb commands maps: next, step, finish, continue, etc.
