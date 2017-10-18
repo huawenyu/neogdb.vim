@@ -162,6 +162,8 @@ function! state#CreateRuntime(scheme, config) abort
 
             enew | let window._client_id = termopen(cmdstr, target)
             let window._bufnr = bufnr('%')
+            " Scroll to the end of terminal output
+            normal G
         endif
     endfor
 
