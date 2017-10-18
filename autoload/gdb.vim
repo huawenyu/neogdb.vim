@@ -916,46 +916,70 @@ function! gdb#Watch(expr)
     call gdb#Send('watch *$')
 endfunction
 
+if !exists("g:gdb_keymap_refresh")
+    let g:gdb_keymap_refresh = '<f3>'
+endif
+if !exists("g:gdb_keymap_continue")
+    let g:gdb_keymap_continue = '<f4>'
+endif
+if !exists("g:gdb_keymap_next")
+    let g:gdb_keymap_next = '<f5>'
+endif
+if !exists("g:gdb_keymap_step")
+    let g:gdb_keymap_step = '<f6>'
+endif
+if !exists("g:gdb_keymap_finish")
+    let g:gdb_keymap_finish = '<f7>'
+endif
+if !exists("g:gdb_keymap_until")
+    let g:gdb_keymap_until = '<f8>'
+endif
+if !exists("g:gdb_keymap_toggle_break")
+    let g:gdb_keymap_toggle_break = '<f9>'
+endif
+if !exists("g:gdb_keymap_toggle_break_all")
+    let g:gdb_keymap_toggle_break_all = '<f10>'
+endif
 
 function! gdb#Map(type)
     "{
     if a:type ==# "unmap"
-        unmap <f3>
-        unmap <f4>
-        unmap <f5>
-        unmap <f6>
-        unmap <f7>
-        unmap <f8>
-        unmap <f9>
-        unmap <f10>
-        vunmap <f9>
-        cunmap <f9>
+        exe 'unmap ' . g:gdb_keymap_refresh
+        exe 'unmap ' . g:gdb_keymap_continue
+        exe 'unmap ' . g:gdb_keymap_next
+        exe 'unmap ' . g:gdb_keymap_step
+        exe 'unmap ' . g:gdb_keymap_finish
+        exe 'unmap ' . g:gdb_keymap_until
+        exe 'unmap ' . g:gdb_keymap_toggle_break
+        exe 'unmap ' . g:gdb_keymap_toggle_break_all
+        exe 'vunmap ' . g:gdb_keymap_toggle_break
+        exe 'cunmap ' . g:gdb_keymap_toggle_break
         unmap <c-n>
         unmap <c-p>
-        tunmap <f3>
-        tunmap <f4>
-        tunmap <f5>
-        tunmap <f6>
-        tunmap <f7>
-        tunmap <f10>
+        exe 'tunmap ' . g:gdb_keymap_refresh
+        exe 'tunmap ' . g:gdb_keymap_continue
+        exe 'tunmap ' . g:gdb_keymap_next
+        exe 'tunmap ' . g:gdb_keymap_step
+        exe 'tunmap ' . g:gdb_keymap_finish
+        exe 'tunmap ' . g:gdb_keymap_toggle_break_all
     elseif a:type ==# "tmap"
-        tnoremap <silent> <f3> <c-\><c-n>:GdbRefresh<cr>i
-        tnoremap <silent> <f4> <c-\><c-n>:GdbContinue<cr>i
-        tnoremap <silent> <f5> <c-\><c-n>:GdbNext<cr>i
-        tnoremap <silent> <f6> <c-\><c-n>:GdbStep<cr>i
-        tnoremap <silent> <f7> <c-\><c-n>:GdbFinish<cr>i
-        tnoremap <silent> <f10> <c-\><c-n>:GdbToggleBreakAll<cr>i
+        exe 'tnoremap <silent> ' . g:gdb_keymap_refresh . ' <c-\><c-n>:GdbRefresh<cr>i'
+        exe 'tnoremap <silent> ' . g:gdb_keymap_continue . ' <c-\><c-n>:GdbContinue<cr>i'
+        exe 'tnoremap <silent> ' . g:gdb_keymap_next . ' <c-\><c-n>:GdbNext<cr>i'
+        exe 'tnoremap <silent> ' . g:gdb_keymap_step . ' <c-\><c-n>:GdbStep<cr>i'
+        exe 'tnoremap <silent> ' . g:gdb_keymap_finish . ' <c-\><c-n>:GdbFinish<cr>i'
+        exe 'tnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' <c-\><c-n>:GdbToggleBreakAll<cr>i'
     elseif a:type ==# "nmap"
-        nnoremap <silent> <f3> :GdbRefresh<cr>
-        nnoremap <silent> <f4> :GdbContinue<cr>
-        nnoremap <silent> <f5> :GdbNext<cr>
-        nnoremap <silent> <f6> :GdbStep<cr>
-        nnoremap <silent> <f7> :GdbFinish<cr>
-        nnoremap <silent> <f8> :GdbUntil<cr>
-        nnoremap <silent> <f9> :GdbToggleBreak<cr>
-        nnoremap <silent> <f10> :GdbToggleBreakAll<cr>
-        cnoremap <silent> <f9> <cr>
-        vnoremap <silent> <f9> :GdbEvalRange<cr>
+        exe 'nnoremap <silent> ' . g:gdb_keymap_refresh . ' :GdbRefresh<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_continue . ' :GdbContinue<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_next . ' :GdbNext<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_step . ' :GdbStep<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_finish . ' :GdbFinish<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_until . ' :GdbUntil<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' :GdbToggleBreakAll<cr>'
+        exe 'cnoremap <silent> ' . g:gdb_keymap_toggle_break . ' <cr>'
+        exe 'vnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbEvalRange<cr>'
         nnoremap <silent> <c-n> :GdbFrameUp<cr>
         nnoremap <silent> <c-p> :GdbFrameDown<cr>
     endif
