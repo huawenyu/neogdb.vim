@@ -842,6 +842,7 @@ endfunction
 
 function! gdb#ClearBreak()
     let s:breakpoints = {}
+    call gdb#Breaks2Qf()
     call gdb#RefreshBreakpointSigns(0)
     call gdb#RefreshBreakpoints(2)
 endfunction
