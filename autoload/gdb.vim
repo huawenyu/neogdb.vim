@@ -995,6 +995,10 @@ function! gdb#Map(type)
         exe 'tunmap ' . g:gdb_keymap_step
         exe 'tunmap ' . g:gdb_keymap_finish
         exe 'tunmap ' . g:gdb_keymap_toggle_break_all
+
+        if exists("*NeogdbvimUnmapCallback")
+            call NeogdbvimUnmapCallback()
+        endif
     elseif a:type ==# "tmap"
         exe 'tnoremap <silent> ' . g:gdb_keymap_refresh . ' <c-\><c-n>:GdbRefresh<cr>i'
         exe 'tnoremap <silent> ' . g:gdb_keymap_continue . ' <c-\><c-n>:GdbContinue<cr>i'
@@ -1025,6 +1029,10 @@ function! gdb#Map(type)
         exe 'nnoremap <silent> ' . g:gdb_keymap_debug_stop . ' :GdbDebugStop<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_frame_up . ' :GdbFrameUp<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_frame_down . ' :GdbFrameDown<cr>'
+
+        if exists("*NeogdbvimNmapCallback")
+            call NeogdbvimNmapCallback()
+        endif
     endif
     "}
 endfunction
