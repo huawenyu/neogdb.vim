@@ -372,12 +372,12 @@ endfunction
 
 function! gdb#Spawn(conf, ...)
     if exists('g:gdb')
-		if g:restart_app_if_gdb_running
-    		call jobsend(g:gdb._client_id, "\<c-c>info line\<cr>start\<cr>")
-			return	
-		else
-			throw 'Gdb already running'
-		endif
+        if g:restart_app_if_gdb_running
+            call jobsend(g:gdb._client_id, "\<c-c>info line\<cr>start\<cr>")
+            return    
+        else
+            throw 'Gdb already running'
+        endif
     endif
 
     let client_proc = (a:0 >= 1) ? a:1 : ''
@@ -954,10 +954,10 @@ if !exists("g:gdb_keymap_toggle_break_all")
     let g:gdb_keymap_toggle_break_all = '<f10>'
 endif
 if !exists("g:gdb_keymap_toggle_break_all")
-	let g:gdb_keymap_clear_break = '<f21>'
+    let g:gdb_keymap_clear_break = '<f21>'
 endif
 if !exists("g:gdb_keymap_debug_stop")
-	let g:gdb_keymap_debug_stop = '<f17>'
+    let g:gdb_keymap_debug_stop = '<f17>'
 endif
 
 if !exists("g:gdb_keymap_frame_up")
@@ -1014,13 +1014,13 @@ function! gdb#Map(type)
         exe 'nnoremap <silent> ' . g:gdb_keymap_finish . ' :GdbFinish<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_until . ' :GdbUntil<cr>'
 
-		let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
+        let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
 
-		if !g:gdb_require_enter_after_toggling_breakpoint 
-			let toggle_break_binding = toggle_break_binding . '<cr>'
-		endif
+        if !g:gdb_require_enter_after_toggling_breakpoint 
+            let toggle_break_binding = toggle_break_binding . '<cr>'
+        endif
 
-		exe toggle_break_binding
+        exe toggle_break_binding
 
         exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' :GdbToggleBreakAll<cr>'
         exe 'cnoremap <silent> ' . g:gdb_keymap_toggle_break . ' <cr>'
