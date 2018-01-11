@@ -57,7 +57,7 @@ The file structure should be clear, just copy the github.vim into ~/.vim/plugin/
 
 ## Installing when using [Vundle](https://github.com/VundleVim/Vundle.vim)
 
-Add the following line to the plugins regions of ~/.vimrc:
+Add the following line to the plugins regions of ``~/.vimrc``:
 
 ```vim
 Plugin 'huawenyu/neogdb.vim'
@@ -96,7 +96,7 @@ Plugin 'huawenyu/neogdb.vim'
 
 # Customization
 
-Put these in your .vimrc to customize the keymaps:
+Put these in your ``~/.vimrc`` to customize the keymaps:
 
 ```vim
 let g:gdb_keymap_continue = '<f8>'
@@ -145,11 +145,11 @@ nmap <Space>p :call gdb#Send("print " . expand('<cword>'))<CR>
 You can run your own code when Neogdb sets its keymaps.  
 The plugin will call ``NeogdbvimNmapCallback`` on initialization and ``NeogdbvimUnmapCallback`` on exiting, if these functions exist.  
 
-For example, you can put this in your ``.vimrc``:
+For example, you can put this in your ``~/.vimrc``:
 
 ```vim
 function! NeogdbvimNmapCallback()
-    " Let fzf.vim open files in the current buffer by default.
+    " Let fzf.vim open files in the current window by default.
     " This is so that, when navigating files,
     " we don't switch to a new tab and thus *always* see the neogdb's splits. 
     let g:fzf_action = { 'enter': 'edit' }
