@@ -942,6 +942,14 @@ if !exists("g:gdb_keymap_toggle_break_all")
     let g:gdb_keymap_toggle_break_all = '<f10>'
 endif
 
+if !exists("g:gdb_keymap_frame_up")
+    let g:gdb_keymap_frame_up = '<c-n>'
+endif
+
+if !exists("g:gdb_keymap_frame_down")
+    let g:gdb_keymap_frame_down = '<c-p>'
+endif
+
 if !exists("g:gdb_require_enter_after_toggling_breakpoint")
     let g:gdb_require_enter_after_toggling_breakpoint = 0
 endif
@@ -959,8 +967,8 @@ function! gdb#Map(type)
         exe 'unmap ' . g:gdb_keymap_toggle_break_all
         exe 'vunmap ' . g:gdb_keymap_toggle_break
         exe 'cunmap ' . g:gdb_keymap_toggle_break
-        unmap <c-n>
-        unmap <c-p>
+        exe 'unmap ' . g:gdb_keymap_frame_up
+        exe 'unmap ' . g:gdb_keymap_frame_down
         exe 'tunmap ' . g:gdb_keymap_refresh
         exe 'tunmap ' . g:gdb_keymap_continue
         exe 'tunmap ' . g:gdb_keymap_next
@@ -993,8 +1001,8 @@ function! gdb#Map(type)
         exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' :GdbToggleBreakAll<cr>'
         exe 'cnoremap <silent> ' . g:gdb_keymap_toggle_break . ' <cr>'
         exe 'vnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbEvalRange<cr>'
-        nnoremap <silent> <c-n> :GdbFrameUp<cr>
-        nnoremap <silent> <c-p> :GdbFrameDown<cr>
+        exe 'nnoremap <silent> ' . g:gdb_keymap_frame_up . ' :GdbFrameUp<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_frame_down . ' :GdbFrameDown<cr>'
     endif
     "}
 endfunction
