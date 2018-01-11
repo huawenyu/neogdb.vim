@@ -953,6 +953,12 @@ endif
 if !exists("g:gdb_keymap_toggle_break_all")
     let g:gdb_keymap_toggle_break_all = '<f10>'
 endif
+if !exists("g:gdb_keymap_toggle_break_all")
+	let g:gdb_keymap_clear_break = '<f21>'
+endif
+if !exists("g:gdb_keymap_debug_stop")
+	let g:gdb_keymap_debug_stop = '<f17>'
+endif
 
 if !exists("g:gdb_keymap_frame_up")
     let g:gdb_keymap_frame_up = '<c-n>'
@@ -974,6 +980,8 @@ function! gdb#Map(type)
         exe 'unmap ' . g:gdb_keymap_next
         exe 'unmap ' . g:gdb_keymap_step
         exe 'unmap ' . g:gdb_keymap_finish
+        exe 'unmap ' . g:gdb_keymap_clear_break
+        exe 'unmap ' . g:gdb_keymap_debug_stop
         exe 'unmap ' . g:gdb_keymap_until
         exe 'unmap ' . g:gdb_keymap_toggle_break
         exe 'unmap ' . g:gdb_keymap_toggle_break_all
@@ -1013,6 +1021,8 @@ function! gdb#Map(type)
         exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' :GdbToggleBreakAll<cr>'
         exe 'cnoremap <silent> ' . g:gdb_keymap_toggle_break . ' <cr>'
         exe 'vnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbEvalRange<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_clear_break . ' :GdbClearBreak<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_debug_stop . ' :GdbDebugStop<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_frame_up . ' :GdbFrameUp<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_frame_down . ' :GdbFrameDown<cr>'
     endif
