@@ -372,7 +372,12 @@ endfunction
 
 function! gdb#Spawn(conf, ...)
     if exists('g:gdb')
-        throw 'Gdb already running'
+		if g:restart_app_if_gdb_running
+    		call jobsend(g:gdb._client_id, "\<c-c>info line\<cr>start\<cr>")
+			return	
+		else
+			throw 'Gdb already running'
+		endif
     endif
 
     let client_proc = (a:0 >= 1) ? a:1 : ''
@@ -916,6 +921,13 @@ function! gdb#Watch(expr)
     call gdb#Eval(expr)
     call gdb#Send('watch *$')
 endfunction
+
+" Other options
+if !exists("g:restart_app_if_gdb_running")
+    let g:restart_app_if_gdb_running = 1
+endif
+
+" Keymap options
 
 if !exists("g:gdb_keymap_refresh")
     let g:gdb_keymap_refresh = '<f3>'
