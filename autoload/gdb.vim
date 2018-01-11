@@ -942,6 +942,10 @@ if !exists("g:gdb_keymap_toggle_break_all")
     let g:gdb_keymap_toggle_break_all = '<f10>'
 endif
 
+if !exists("g:gdb_require_enter_after_toggling_breakpoint")
+    let g:gdb_require_enter_after_toggling_breakpoint = 0
+endif
+
 function! gdb#Map(type)
     "{
     if a:type ==# "unmap"
@@ -977,7 +981,15 @@ function! gdb#Map(type)
         exe 'nnoremap <silent> ' . g:gdb_keymap_step . ' :GdbStep<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_finish . ' :GdbFinish<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_until . ' :GdbUntil<cr>'
-        exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
+
+		let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
+
+		if !g:gdb_require_enter_after_toggling_breakpoint 
+			let toggle_break_binding = toggle_break_binding . '<cr>'
+		endif
+
+		exe toggle_break_binding
+
         exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' :GdbToggleBreakAll<cr>'
         exe 'cnoremap <silent> ' . g:gdb_keymap_toggle_break . ' <cr>'
         exe 'vnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbEvalRange<cr>'
