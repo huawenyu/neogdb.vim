@@ -37,6 +37,8 @@ The code reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neo
 ```
 ## Screen Demo
 
+Press <F2> to toggle gdb-local or gdb-remote.
+
 ### gdb local
 
     :GdbLocal confloc#me a.out ""
