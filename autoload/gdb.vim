@@ -953,7 +953,7 @@ endif
 if !exists("g:gdb_keymap_toggle_break_all")
     let g:gdb_keymap_toggle_break_all = '<f10>'
 endif
-if !exists("g:gdb_keymap_toggle_break_all")
+if !exists("g:gdb_keymap_clear_break")
     let g:gdb_keymap_clear_break = '<f21>'
 endif
 if !exists("g:gdb_keymap_debug_stop")
