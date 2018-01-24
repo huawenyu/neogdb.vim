@@ -7,10 +7,10 @@ if !exists("s:init")
 endif
 
 
-function! confloc#me() abort
+function! neobugger#gdb#local#me() abort
     " user special config
     let this = {
-        \ "Scheme" : 'gdb#SchemeCreate',
+        \ "Scheme" : 'neobugger#gdb#SchemeCreate',
         \ "autorun" : 1,
         \ "reconnect" : 0,
         \ "showbreakpoint" : 0,
@@ -30,7 +30,7 @@ function! confloc#me() abort
 endfunc
 
 
-function! confloc#InitSvr() abort
+function! neobugger#gdb#local#InitSvr() abort
     if !has_key(g:gdb, "_server_id") || empty(g:gdb._server_addr)
         echoerr "GdbServer window not exist or address is empty."
         return
@@ -43,17 +43,17 @@ function! confloc#InitSvr() abort
 
     echomsg printf("GdbserverInit(%s-%s) starting ..."
                 \, string(g:gdb._server_addr), string(g:gdb._server_id))
-    call gdb#SendSvr('telnet '. g:gdb._server_addr[0])
+    call neobugger#gdb#SendSvr('telnet '. g:gdb._server_addr[0])
     sleep 1
-    call gdb#SendSvr('admin')
+    call neobugger#gdb#SendSvr('admin')
     sleep 1
-    call gdb#SendSvr('')
+    call neobugger#gdb#SendSvr('')
     sleep 1
-    call gdb#SendSvr('get system status')
+    call neobugger#gdb#SendSvr('get system status')
 endfunc
 
 
-function! confloc#Symbol(type, expr) abort
+function! neobugger#gdb#local#Symbol(type, expr) abort
     let expr = get(s:symbols, a:type, '')
     if !empty(expr)
         let Expr = function(expr)

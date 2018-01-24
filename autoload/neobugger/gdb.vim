@@ -27,11 +27,11 @@ if !exists("s:init")
     let s:fl_file = './.gdb.file'
     let s:file_list = {}
 
-    call gdb#Map("nmap")
+    call neobugger#gdb#Map("nmap")
 endif
 
 
-function! gdb#SchemeCreate() abort
+function! neobugger#gdb#SchemeCreate() abort
     let this = {
         \ "name" : "SchemeGDB",
         \ "window" : [
@@ -155,7 +155,7 @@ function! gdb#SchemeCreate() abort
 
     function this.on_continue(...)
         call state#Switch('gdb', 'running', 0)
-        call gdb#Update_current_line_sign(0)
+        call neobugger#gdb#Update_current_line_sign(0)
     endfunction
 
     function this.on_jump(file, line, ...)
@@ -163,14 +163,14 @@ function! gdb#SchemeCreate() abort
     silent! call s:log.info(gdb)
             silent! call s:log.info("State ", g:gdb._win_gdb._state.name, " => pause")
             call state#Switch('gdb', 'pause', 0)
-            call gdb#Send('parser_bt')
-            call gdb#Send('info line')
+            call neobugger#gdb#Send('parser_bt')
+            call neobugger#gdb#Send('info line')
         endif
-        call gdb#Jump(a:file, a:line)
+        call neobugger#gdb#Jump(a:file, a:line)
     endfunction
 
     function this.on_whatis(type, ...)
-        call gdb#Whatis(a:type)
+        call neobugger#gdb#Whatis(a:type)
     endfunction
 
     function this.on_retry(...)
@@ -178,8 +178,8 @@ function! gdb#SchemeCreate() abort
             return
         endif
         sleep 1
-        call gdb#Attach()
-        call gdb#Send('continue')
+        call neobugger#gdb#Attach()
+        call neobugger#gdb#Send('continue')
     endfunction
 
 
@@ -189,6 +189,7 @@ function! gdb#SchemeCreate() abort
             " set remotetimeout 50
             let cmdstr = "set confirm off\n
                         \ set pagination off\n
+                        \ set width 0\n
                         \ set verbose off\n
                         \ set logging off\n
                         \ handle SIGUSR2 noprint nostop\n
@@ -197,7 +198,7 @@ function! gdb#SchemeCreate() abort
                         \ set print array off\n
                         \ set print array-indexes on\n
                         \"
-            call gdb#Send(cmdstr)
+            call neobugger#gdb#Send(cmdstr)
 
             let cmdstr = "define parser_bt\n
                         \ set logging off\n
@@ -208,7 +209,7 @@ function! gdb#SchemeCreate() abort
                         \ bt\n
                         \ set logging off\n
                         \ end"
-            call gdb#Send(cmdstr)
+            call neobugger#gdb#Send(cmdstr)
 
             let cmdstr = "define silent_on\n
                         \ set logging off\n
@@ -217,12 +218,12 @@ function! gdb#SchemeCreate() abort
                         \ set logging redirect on\n
                         \ set logging on\n
                         \ end"
-            call gdb#Send(cmdstr)
+            call neobugger#gdb#Send(cmdstr)
 
             let cmdstr = "define silent_off\n
                         \ set logging off\n
                         \ end"
-            call gdb#Send(cmdstr)
+            call neobugger#gdb#Send(cmdstr)
 
             let cmdstr = "define hook-stop\n
                         \ handle SIGALRM nopass\n
@@ -237,19 +238,19 @@ function! gdb#SchemeCreate() abort
                         \ handle SIGALRM pass\n
                         \ \n
                         \ end"
-            call gdb#Send(cmdstr)
+            call neobugger#gdb#Send(cmdstr)
 
             silent! call s:log.info("Load breaks ...")
             if filereadable(s:brk_file)
-                call gdb#ReadVariable("s:breakpoints", s:brk_file)
+                call neobugger#gdb#ReadVariable("s:breakpoints", s:brk_file)
             endif
 
             let g:gdb._initialized = 1
             silent! call s:log.info("Load set breaks ...")
             if !empty(s:breakpoints)
-                call gdb#Breaks2Qf()
-                call gdb#RefreshBreakpointSigns(0)
-                call gdb#RefreshBreakpoints(0)
+                call neobugger#gdb#Breaks2Qf()
+                call neobugger#gdb#RefreshBreakpointSigns(0)
+                call neobugger#gdb#RefreshBreakpoints(0)
             endif
 
             if !empty(g:gdb.ServerInit)
@@ -262,7 +263,7 @@ function! gdb#SchemeCreate() abort
             if g:gdb._autorun
                 let cmdstr = "br main\n
                             \ r"
-                call gdb#Send(cmdstr)
+                call neobugger#gdb#Send(cmdstr)
             endif
         endif
 
@@ -273,7 +274,7 @@ function! gdb#SchemeCreate() abort
     function this.on_accept(port, ...)
         if a:port
             let g:gdb._server_addr[1] = a:port
-            call gdb#Attach()
+            call neobugger#gdb#Attach()
         endif
     endfunction
 
@@ -295,10 +296,10 @@ function! gdb#SchemeCreate() abort
     function this.on_disconnected(...)
         if !g:gdb._server_exited && g:gdb._reconnect
             " Refresh to force a delete of all watchpoints
-            "call gdb#RefreshBreakpoints(2)
+            "call neobugger#gdb#RefreshBreakpoints(2)
             sleep 1
-            call gdb#Attach()
-            call gdb#Send('continue')
+            call neobugger#gdb#Attach()
+            call neobugger#gdb#Send('continue')
         endif
     endfunction
 
@@ -311,9 +312,9 @@ endfunc
 
 
 
-function! gdb#Kill()
-    call gdb#Map("unmap")
-    call gdb#Update_current_line_sign(0)
+function! neobugger#gdb#Kill()
+    call neobugger#gdb#Map("unmap")
+    call neobugger#gdb#Update_current_line_sign(0)
     exe 'bd! '. g:gdb._client_buf
     if g:gdb._server_buf != -1
         exe 'bd! '. g:gdb._server_buf
@@ -324,7 +325,7 @@ function! gdb#Kill()
 endfunction
 
 
-function! gdb#Send(data)
+function! neobugger#gdb#Send(data)
     if g:gdb._win_gdb._state.name ==# "pause" || g:gdb._win_gdb._state.name ==# "init"
         call jobsend(g:gdb._client_id, a:data."\<cr>")
     else
@@ -333,30 +334,30 @@ function! gdb#Send(data)
 endfunction
 
 
-function! gdb#SendSvr(data)
+function! neobugger#gdb#SendSvr(data)
     if has_key(g:gdb, "_server_id")
         call jobsend(g:gdb._server_id, a:data."\<cr>")
     endif
 endfunction
 
 
-function! gdb#SendJob(data)
+function! neobugger#gdb#SendJob(data)
     if has_key(g:gdb, "_job_id")
         call jobsend(g:gdb._job_id, a:data."\<cr>")
     endif
 endfunction
 
 
-function! gdb#Attach()
+function! neobugger#gdb#Attach()
     if !empty(g:gdb._server_addr)
-        call gdb#Send(printf('target remote %s',
+        call neobugger#gdb#Send(printf('target remote %s',
                     \join(g:gdb._server_addr, ":")))
         call state#Switch('gdb', 'remoteconn', 0)
     endif
 endfunction
 
 
-function! gdb#Update_current_line_sign(add)
+function! neobugger#gdb#Update_current_line_sign(add)
     " to avoid flicker when removing/adding the sign column(due to the change in
     " line width), we switch ids for the line sign and only remove the old line
     " sign after marking the new one
@@ -370,31 +371,40 @@ function! gdb#Update_current_line_sign(add)
 endfunction
 
 
-function! gdb#Spawn(conf, ...)
+function! neobugger#gdb#start(conf, binaryFile, args)
     if exists('g:gdb')
         if g:restart_app_if_gdb_running
             call jobsend(g:gdb._client_id, "\<c-c>info line\<cr>start\<cr>")
-            return    
+            return
         else
             throw 'Gdb already running'
         endif
     endif
 
-    let client_proc = (a:0 >= 1) ? a:1 : ''
     let server_addr = (a:0 >= 2) ? a:2 : ''
 
     let gdb = {}
     let gdb._initialized = 0
-    let Conf = function(a:conf)
-    if empty(Conf)
-        throw "gdb#Spawn: no Conf '". a:conf ."'."
-    endif
-    "let Conf = function('confos#Conf')
-    let conf = Conf()
-    if type(conf) != type({})
-        throw "gdb#Spawn: Conf '". a:conf ."' should return a dictionary not ". type(conf). "."
+
+    if a:conf == "local"
+      let Conf = function('neobugger#gdb#local#me')
+    elseif a:conf == "pid"
+      let Conf = function('neobugger#gdb#pid#me')
+    elseif a:conf == "server"
+      let Conf = function('neobugger#gdb#server#me')
+    else
+      throw 'Gdb model '.a:conf.' not exists'
     endif
 
+    if empty(Conf)
+        throw "neobugger#gdb#start: no Conf '". a:conf ."'."
+    endif
+    let conf = Conf()
+    if type(conf) != type({})
+        throw "neobugger#gdb#start: Conf '". a:conf ."' should return a dict not ". type(conf). "."
+    endif
+
+    let gdb.args = a:args
     let gdb.ServerInit = 0
     if has_key(conf, 'ServerInit')
         let gdb.ServerInit = function(conf.ServerInit)
@@ -425,18 +435,24 @@ function! gdb#Spawn(conf, ...)
         let gdb._showbacktrace = conf.showbacktrace
     endif
 
-    if !empty(client_proc)
-        let conf.conf_gdb_cmd[1] = client_proc
+    if !empty(a:binaryFile)
+        let conf.conf_gdb_cmd[1] = a:binaryFile
     endif
     if !filereadable(conf.conf_gdb_cmd[1])
-        throw "gdb#Spawn: no program '". conf.conf_gdb_cmd[1] ."'."
+        throw "neobugger#gdb#start: no program '". conf.conf_gdb_cmd[1] ."'."
     endif
 
     let gdb._server_addr = []
-    " 10.1.1.125:444 -> ["10.1.1.125", "444"]
-    if !empty(server_addr)
-        let gdb._server_addr = split(server_addr, ":")
+    if get(a:args,'pid') "Attach to process
+      "call l:debugger.writeLine('attach '.string(a:args.pid))
+    elseif has_key(a:args,'con') "Attach to gdbserver
+      "call l:debugger.writeLine('target remote '.a:args.con)
+
+      " 10.1.1.125:444 -> ["10.1.1.125", "444"]
+      let gdb._server_addr = split(a:args.con[0], ":")
+    else
     endif
+
 
     " Load all files from backtrace to solve relative-path
     silent! call s:log.trace("Load open files ...")
@@ -459,7 +475,7 @@ function! gdb#Spawn(conf, ...)
     "endif
 
     if filereadable(s:fl_file)
-        call gdb#ReadVariable("s:file_list", s:fl_file)
+        call neobugger#gdb#ReadVariable("s:file_list", s:fl_file)
         for [next_key, next_val] in items(s:file_list)
             if filereadable(next_key)
                 exec "e ". fnamemodify(next_key, ':p:.')
@@ -528,7 +544,7 @@ function! gdb#Spawn(conf, ...)
     if win_gotoid(gdb._win_gdb._wid) == 1
         let gdb._server_buf = -1
         let gdb._client_buf = bufnr('%')
-        call gdb#Map("tmap")
+        call neobugger#gdb#Map("tmap")
     endif
 
     if win_gotoid(g:state_ctx._wid_main) == 1
@@ -539,7 +555,7 @@ endfunction
 
 
 " @mode 0 refresh-all, 1 only-change
-function! gdb#RefreshBreakpointSigns(mode)
+function! neobugger#gdb#RefreshBreakpointSigns(mode)
     "{
     if a:mode == 0
         let i = s:breakpoint_signid_start
@@ -578,7 +594,7 @@ endfunction
 " Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
 " Then add breakpoints backto gdb
 " @mode 0 reset-all, 1 enable-only-change, 2 delete-all
-function! gdb#RefreshBreakpoints(mode)
+function! neobugger#gdb#RefreshBreakpoints(mode)
     "{
     if !exists('g:gdb')
         throw 'Gdb is not running'
@@ -594,7 +610,7 @@ function! gdb#RefreshBreakpoints(mode)
 
     if a:mode == 0 || a:mode == 2
         if g:gdb._has_breakpoints
-            call gdb#Send('delete')
+            call neobugger#gdb#Send('delete')
             let g:gdb._has_breakpoints = 0
         endif
     endif
@@ -609,28 +625,28 @@ function! gdb#RefreshBreakpoints(mode)
             if next_val['state'] && !empty(next_val['cmd'])
                 if is_silent == 1
                     let is_silent = 2
-                    call gdb#Send('silent_on')
+                    call neobugger#gdb#Send('silent_on')
                 endif
 
                 if a:mode == 0 || (a:mode == 1 && next_val['change'])
                     let g:gdb._has_breakpoints = 1
-                    call gdb#Send('break '. next_val['cmd'])
+                    call neobugger#gdb#Send('break '. next_val['cmd'])
                 endif
             endif
         endfor
         if is_silent == 2
-            call gdb#Send('silent_off')
+            call neobugger#gdb#Send('silent_off')
         endif
     endif
 
     if is_running
-        call gdb#Send('c')
+        call neobugger#gdb#Send('c')
     endif
     "}
 endfunction
 
 
-function! gdb#Jump(file, line)
+function! neobugger#gdb#Jump(file, line)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -652,8 +668,8 @@ function! gdb#Jump(file, line)
     "if filereadable(s:gdb_bt_qf)
     "    call delete(s:gdb_bt_qf)
     "endif
-    "call gdb#Send('parser_bt')
-    "call gdb#SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
+    "call neobugger#gdb#Send('parser_bt')
+    "call neobugger#gdb#SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
 
     "" Method-2: Using syncronize to parse response
     if g:gdb._showbacktrace && filereadable(s:gdb_bt_qf)
@@ -681,7 +697,7 @@ function! gdb#Jump(file, line)
     let fname = fnamemodify(a:file, ':p:.')
     if !has_key(s:file_list, fname)
         let s:file_list[fname] = 1
-        call gdb#SaveVariable(s:file_list, s:fl_file)
+        call neobugger#gdb#SaveVariable(s:file_list, s:fl_file)
     endif
 
     "let fname = fnamemodify(a:file, ':p:.')
@@ -692,11 +708,11 @@ function! gdb#Jump(file, line)
     if cwindow != g:state_ctx._wid_main
         call win_gotoid(cwindow)
     endif
-    call gdb#Update_current_line_sign(1)
+    call neobugger#gdb#Update_current_line_sign(1)
 endfunction
 
 
-function! gdb#Breakpoints(file)
+function! neobugger#gdb#Breakpoints(file)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -706,7 +722,7 @@ function! gdb#Breakpoints(file)
 endfunction
 
 
-function! gdb#Stack(file)
+function! neobugger#gdb#Stack(file)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -716,7 +732,7 @@ function! gdb#Stack(file)
 endfunction
 
 
-function! gdb#Interrupt()
+function! neobugger#gdb#Interrupt()
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -724,16 +740,16 @@ function! gdb#Interrupt()
 endfunction
 
 
-function! gdb#SaveVariable(var, file)
+function! neobugger#gdb#SaveVariable(var, file)
     call writefile([string(a:var)], a:file)
 endfunction
 
-function! gdb#ReadVariable(varname, file)
+function! neobugger#gdb#ReadVariable(varname, file)
     let recover = readfile(a:file)[0]
     execute "let ".a:varname." = " . recover
 endfunction
 
-function! gdb#Breaks2Qf()
+function! neobugger#gdb#Breaks2Qf()
     let list2 = []
     let i = 0
     for [next_key, next_val] in items(s:breakpoints)
@@ -752,7 +768,7 @@ function! gdb#Breaks2Qf()
 endfunction
 
 
-function! gdb#GetCFunLinenr()
+function! neobugger#gdb#GetCFunLinenr()
   let lnum = line(".")
   let col = col(".")
   let linenr = search("^[^ \t#/]\\{2}.*[^:]\s*$", 'bW')
@@ -765,12 +781,12 @@ endfunction
 " Value: empty, <or> if condition
 " @state 0 disable 1 enable, Toggle: none -> enable -> disable
 " @type 0 line-break, 1 function-break
-function! gdb#ToggleBreak()
+function! neobugger#gdb#ToggleBreak()
     let filenm = bufname("%")
     let linenr = line(".")
     let colnr = col(".")
     let cword = expand("<cword>")
-    let cfuncline = gdb#GetCFunLinenr()
+    let cfuncline = neobugger#gdb#GetCFunLinenr()
 
     let fname = fnamemodify(filenm, ':p:.')
     let type = 0
@@ -814,17 +830,17 @@ function! gdb#ToggleBreak()
         endif
         let old_value = {}
     endif
-    call gdb#SaveVariable(s:breakpoints, s:brk_file)
-    call gdb#Breaks2Qf()
-    call gdb#RefreshBreakpointSigns(mode)
-    call gdb#RefreshBreakpoints(mode)
+    call neobugger#gdb#SaveVariable(s:breakpoints, s:brk_file)
+    call neobugger#gdb#Breaks2Qf()
+    call neobugger#gdb#RefreshBreakpointSigns(mode)
+    call neobugger#gdb#RefreshBreakpoints(mode)
     if !empty(old_value)
         let old_value['change'] = 0
     endif
 endfunction
 
 
-function! gdb#ToggleBreakAll()
+function! neobugger#gdb#ToggleBreakAll()
     let s:toggle_all = ! s:toggle_all
     let mode = 0
     for v in values(s:breakpoints)
@@ -834,35 +850,35 @@ function! gdb#ToggleBreakAll()
             let v['state'] = 1
         endif
     endfor
-    call gdb#RefreshBreakpointSigns(0)
-    call gdb#RefreshBreakpoints(0)
+    call neobugger#gdb#RefreshBreakpointSigns(0)
+    call neobugger#gdb#RefreshBreakpoints(0)
 endfunction
 
 
-function! gdb#TBreak()
+function! neobugger#gdb#TBreak()
     let file_breakpoints = bufname('%') .':'. line('.')
-    call gdb#Send("tbreak ". file_breakpoints. "\nc")
+    call neobugger#gdb#Send("tbreak ". file_breakpoints. "\nc")
 endfunction
 
 
-function! gdb#ClearBreak()
+function! neobugger#gdb#ClearBreak()
     let s:breakpoints = {}
-    call gdb#Breaks2Qf()
-    call gdb#RefreshBreakpointSigns(0)
-    call gdb#RefreshBreakpoints(2)
+    call neobugger#gdb#Breaks2Qf()
+    call neobugger#gdb#RefreshBreakpointSigns(0)
+    call neobugger#gdb#RefreshBreakpoints(2)
 endfunction
 
 
-function! gdb#FrameUp()
-    call gdb#Send("up")
+function! neobugger#gdb#FrameUp()
+    call neobugger#gdb#Send("up")
 endfunction
 
-function! gdb#FrameDown()
-    call gdb#Send("down")
+function! neobugger#gdb#FrameDown()
+    call neobugger#gdb#Send("down")
 endfunction
 
 
-function! gdb#GetExpression(...) range
+function! neobugger#gdb#GetExpression(...) range
     let [lnum1, col1] = getpos("'<")[1:2]
     let [lnum2, col2] = getpos("'>")[1:2]
     let lines = getline(lnum1, lnum2)
@@ -872,7 +888,7 @@ function! gdb#GetExpression(...) range
 endfunction
 
 
-function! gdb#Eval(expr)
+function! neobugger#gdb#Eval(expr)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -882,15 +898,15 @@ function! gdb#Eval(expr)
                 \. g:gdb._win_gdb._state.name .'"'
     endif
 
-    "call gdb#Send(printf('print %s', a:expr))
+    "call neobugger#gdb#Send(printf('print %s', a:expr))
     " Enable smart-eval base-on the special project
     let s:expr = a:expr
-    call gdb#Send(printf('whatis %s', a:expr))
+    call neobugger#gdb#Send(printf('whatis %s', a:expr))
 endfunction
 
 
 " Enable smart-eval base-on the special project
-function! gdb#Whatis(type)
+function! neobugger#gdb#Whatis(type)
     if !exists('g:gdb')
         throw 'Gdb is not running'
     endif
@@ -904,22 +920,22 @@ function! gdb#Whatis(type)
     if !empty(g:gdb.Symbol)
         silent! call s:log.trace("forward to getsymbol")
         let expr = g:gdb.Symbol(a:type, s:expr)
-        call gdb#Send(expr)
+        call neobugger#gdb#Send(expr)
     else
-        call gdb#Send(printf('p %s', s:expr))
+        call neobugger#gdb#Send(printf('p %s', s:expr))
     endif
     let s:expr = ""
 endfunction
 
 
-function! gdb#Watch(expr)
+function! neobugger#gdb#Watch(expr)
     let expr = a:expr
     if expr[0] != '&'
         let expr = '&' . expr
     endif
 
-    call gdb#Eval(expr)
-    call gdb#Send('watch *$')
+    call neobugger#gdb#Eval(expr)
+    call neobugger#gdb#Send('watch *$')
 endfunction
 
 " Other options
@@ -972,7 +988,7 @@ if !exists("g:gdb_require_enter_after_toggling_breakpoint")
     let g:gdb_require_enter_after_toggling_breakpoint = 0
 endif
 
-function! gdb#Map(type)
+function! neobugger#gdb#Map(type)
     "{
     if a:type ==# "unmap"
         exe 'unmap ' . g:gdb_keymap_refresh

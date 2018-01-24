@@ -7,12 +7,12 @@ if !exists("s:init")
 endif
 
 
-function! confos#me() abort
+function! neobugger#gdb#server#me() abort
     " user special config
     let this = {
-        \ "Scheme" : 'gdb#SchemeCreate',
-        \ "ServerInit" : 'confos#InitSvr',
-        \ "Symbol" : 'confos#Symbol',
+        \ "Scheme" : 'neobugger#gdb#SchemeCreate',
+        \ "ServerInit" : 'neobugger#gdb#server#InitSvr',
+        \ "Symbol" : 'neobugger#gdb#server#Symbol',
         \ "autorun" : 0,
         \ "reconnect" : 0,
         \ "showbreakpoint" : 1,
@@ -79,7 +79,7 @@ function! confos#me() abort
         if g:gdb._remote_debugging
             return
         endif
-        call gdb#SendSvr('')
+        call neobugger#gdb#SendSvr('')
     endfunction
 
     function this.on_getsystemstatus_end(...)
@@ -88,9 +88,9 @@ function! confos#me() abort
         endif
         if g:gdb._vdom
         else
-            call gdb#SendSvr('diag debug app wad 0')
-            call gdb#SendSvr('diag debug enable')
-            call gdb#SendSvr('diag test app wad 1000')
+            call neobugger#gdb#SendSvr('diag debug app wad 0')
+            call neobugger#gdb#SendSvr('diag debug enable')
+            call neobugger#gdb#SendSvr('diag test app wad 1000')
         endif
     endfunction
 
@@ -107,28 +107,28 @@ function! confos#me() abort
         if g:gdb._remote_debugging
             return
         endif
-        call gdb#SendSvr('diag test app wad 2200')
-        call gdb#SendSvr('diag test app wad 7')
+        call neobugger#gdb#SendSvr('diag test app wad 2200')
+        call neobugger#gdb#SendSvr('diag test app wad 7')
     endfunction
 
     function this.on_watchdog_enable(...)
         if g:gdb._remote_debugging
             return
         endif
-        call gdb#SendSvr('diag test app wad 7')
+        call neobugger#gdb#SendSvr('diag test app wad 7')
     endfunction
 
     function this.on_watchdog_disable(...)
         if g:gdb._remote_debugging
             return
         endif
-        call gdb#SendSvr('diag test app wad 2200')
-        call gdb#SendSvr('diag debug app wad '. g:gdb._debug_level)
-        call gdb#SendSvr('diag debug disable')
+        call neobugger#gdb#SendSvr('diag test app wad 2200')
+        call neobugger#gdb#SendSvr('diag debug app wad '. g:gdb._debug_level)
+        call neobugger#gdb#SendSvr('diag debug disable')
 
         if g:gdb._worker_pid
-            call gdb#SendSvr('sys sh')
-            call gdb#SendSvr('gdbserver :444 --attach '. g:gdb._worker_pid)
+            call neobugger#gdb#SendSvr('sys sh')
+            call neobugger#gdb#SendSvr('gdbserver :444 --attach '. g:gdb._worker_pid)
         endif
     endfunction
 
@@ -148,7 +148,7 @@ function! confos#me() abort
 endfunc
 
 
-function! confos#InitSvr() abort
+function! neobugger#gdb#server#InitSvr() abort
     if !has_key(g:gdb, "_server_id") || empty(g:gdb._server_addr)
         echoerr "GdbServer window not exist or address is empty"
         return
@@ -161,17 +161,18 @@ function! confos#InitSvr() abort
 
     echomsg printf("GdbserverInit(%s-%s) starting ..."
                 \, string(g:gdb._server_addr), string(g:gdb._server_id))
-    call gdb#SendSvr('telnet '. g:gdb._server_addr[0])
-    sleep 1
-    call gdb#SendSvr('admin')
-    sleep 1
-    call gdb#SendSvr('')
-    sleep 1
-    call gdb#SendSvr('get system status')
+    call neobugger#gdb#SendSvr('login.exp '. g:gdb._server_addr[0].' '.join(g:gdb.args[1:], ' '))
+    "call neobugger#gdb#SendSvr('telnet '. g:gdb._server_addr[0])
+    "sleep 1
+    "call neobugger#gdb#SendSvr('admin')
+    "sleep 1
+    "call neobugger#gdb#SendSvr('')
+    "sleep 1
+    "call neobugger#gdb#SendSvr('get system status')
 endfunc
 
 
-function! confos#Symbol(type, expr) abort
+function! neobugger#gdb#server#Symbol(type, expr) abort
     let expr = get(s:symbols, a:type, '')
     if !empty(expr)
         let Expr = function(expr)

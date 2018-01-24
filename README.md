@@ -37,15 +37,15 @@ The code reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neo
 ```
 ## Screen Demo
 
-Press <F2> to toggle gdb-local or gdb-remote.
+Press <F2> to toggle Nbgdb or Nbgdbattach.
 
 ### gdb local
 
-    :GdbLocal confloc#me a.out ""
+    :Nbgdb a.out ""
 
 ### gdb remote
 
-    :GdbRemote confos#me sysinit/init 10.1.1.125:444
+    :Nbgdbattach sysinit/init 10.1.1.125:444
 
 ### gif
 
@@ -139,7 +139,7 @@ To send your own commands to GDB:
 
 ```vim
 " Prints the value of the variable under the cursor
-nmap <Space>p :call gdb#Send("print " . expand('<cword>'))<CR>
+nmap <Space>p :call neobugger#gdb#Send("print " . expand('<cword>'))<CR>
 ```
 
 ### Map and unmap callbacks
