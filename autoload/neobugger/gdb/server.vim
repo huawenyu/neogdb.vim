@@ -7,7 +7,7 @@ if !exists("s:init")
 endif
 
 
-function! neobugger#gdb#server#me() abort
+function! neobugger#gdb#server#Conf() abort
     " user special config
     let this = {
         \ "Scheme" : 'neobugger#gdb#SchemeCreate',
@@ -23,49 +23,8 @@ function! neobugger#gdb#server#me() abort
         \ "conf_server_addr" : ["",],
         \ "state" : {
         \   "gdbserver": [
-        \       {   "match":   ['\v^--More-- ', '\v^--more-- '],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_gdbserver_more",
-        \       },
-        \       {   "match":   ['\v^System time: ','Release Version Information: '],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_getsystemstatus_end",
-        \       },
-        \       {   "match":   ['\VVirtual domain configuration: disable'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_vdom_disable",
-        \       },
-        \       {   "match":   ['\VVirtual domain configuration: enable'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_vdom_enable",
-        \       },
-        \
-        \       {   "match":   ['\vProcess \[1\]: type\=wanopt\(2\) index\=0 pid\=(\d+) state\=running',
-        \                       '\v^(\d+).*/bin/wad 7 0'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_worker_pid",
-        \       },
-        \       {   "match":   ['\VSet watchdog enable.'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_watchdog_enable",
-        \       },
-        \       {   "match":   ['\VSet watchdog disable.'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_watchdog_disable",
-        \       },
-        \       {   "match":   ['\v^wad debug level is (\d+) \(0x'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_wad_debug_level",
-        \       },
         \       {   "match":   ['\v^Remote debugging from host '],
+        \           "hint":    "server.GdbClientConnected",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_remote_debugging",
@@ -75,82 +34,22 @@ function! neobugger#gdb#server#me() abort
         \ }
 
 
-    function this.on_gdbserver_more(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        call neobugger#gdb#SendSvr('')
-    endfunction
-
-    function this.on_getsystemstatus_end(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        if g:gdb._vdom
-        else
-            call neobugger#gdb#SendSvr('diag debug app wad 0')
-            call neobugger#gdb#SendSvr('diag debug enable')
-            call neobugger#gdb#SendSvr('diag test app wad 1000')
-        endif
-    endfunction
-
-    function this.on_vdom_disable(...)
-        let g:gdb._vdom = 0
-    endfunction
-
-    function this.on_vdom_enable(...)
-        let g:gdb._vdom = 1
-    endfunction
-
-    function this.on_worker_pid(pid, ...)
-        let g:gdb._worker_pid = a:pid
-        if g:gdb._remote_debugging
-            return
-        endif
-        call neobugger#gdb#SendSvr('diag test app wad 2200')
-        call neobugger#gdb#SendSvr('diag test app wad 7')
-    endfunction
-
-    function this.on_watchdog_enable(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        call neobugger#gdb#SendSvr('diag test app wad 7')
-    endfunction
-
-    function this.on_watchdog_disable(...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        call neobugger#gdb#SendSvr('diag test app wad 2200')
-        call neobugger#gdb#SendSvr('diag debug app wad '. g:gdb._debug_level)
-        call neobugger#gdb#SendSvr('diag debug disable')
-
-        if g:gdb._worker_pid
-            call neobugger#gdb#SendSvr('sys sh')
-            call neobugger#gdb#SendSvr('gdbserver :444 --attach '. g:gdb._worker_pid)
-        endif
-    endfunction
-
-    function this.on_wad_debug_level(level, ...)
-        if g:gdb._remote_debugging
-            return
-        endif
-        let g:gdb._debug_level = a:level
-    endfunction
-
     function this.on_remote_debugging(...)
         let g:gdb._remote_debugging = 1
     endfunction
-
 
     return this
 endfunc
 
 
 function! neobugger#gdb#server#InitSvr() abort
-    if !has_key(g:gdb, "_server_id") || empty(g:gdb._server_addr)
-        echoerr "GdbServer window not exist or address is empty"
+    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    if !has_key(g:gdb, "_server_id")
+        echoerr "server#InitSvr(): GdbServer window not exist"
+        return
+    endif
+    if empty(g:gdb._server_addr)
+        echoerr "server#InitSvr(): server address is empty"
         return
     endif
 
@@ -159,16 +58,10 @@ function! neobugger#gdb#server#InitSvr() abort
     let g:gdb._debug_level = 0
     let g:gdb._remote_debugging = 0
 
-    echomsg printf("GdbserverInit(%s-%s) starting ..."
-                \, string(g:gdb._server_addr), string(g:gdb._server_id))
-    call neobugger#gdb#SendSvr('login.exp '. g:gdb._server_addr[0].' '.join(g:gdb.args[1:], ' '))
-    "call neobugger#gdb#SendSvr('telnet '. g:gdb._server_addr[0])
-    "sleep 1
-    "call neobugger#gdb#SendSvr('admin')
-    "sleep 1
-    "call neobugger#gdb#SendSvr('')
-    "sleep 1
-    "call neobugger#gdb#SendSvr('get system status')
+    silent! call s:log.info(l:__func__, " args=", string(g:gdb.args))
+    let l:cmdstr = 'login.exp '. g:gdb._server_addr[0].' '.join(g:gdb.args.args[1:], ' ')
+    silent! call s:log.info(l:__func__, " cmdstr=", l:cmdstr)
+    call neobugger#gdb#SendSvr(l:cmdstr)
 endfunc
 
 

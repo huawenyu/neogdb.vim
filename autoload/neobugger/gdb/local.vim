@@ -7,7 +7,7 @@ if !exists("s:init")
 endif
 
 
-function! neobugger#gdb#local#me() abort
+function! neobugger#gdb#local#Conf() abort
     " user special config
     let this = {
         \ "Scheme" : 'neobugger#gdb#SchemeCreate',
@@ -27,29 +27,6 @@ function! neobugger#gdb#local#me() abort
         \ }
 
     return this
-endfunc
-
-
-function! neobugger#gdb#local#InitSvr() abort
-    if !has_key(g:gdb, "_server_id") || empty(g:gdb._server_addr)
-        echoerr "GdbServer window not exist or address is empty."
-        return
-    endif
-
-    let g:gdb._vdom = 0
-    let g:gdb._worker_pid = 0
-    let g:gdb._debug_level = 0
-    let g:gdb._remote_debugging = 0
-
-    echomsg printf("GdbserverInit(%s-%s) starting ..."
-                \, string(g:gdb._server_addr), string(g:gdb._server_id))
-    call neobugger#gdb#SendSvr('telnet '. g:gdb._server_addr[0])
-    sleep 1
-    call neobugger#gdb#SendSvr('admin')
-    sleep 1
-    call neobugger#gdb#SendSvr('')
-    sleep 1
-    call neobugger#gdb#SendSvr('get system status')
 endfunc
 
 

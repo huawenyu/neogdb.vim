@@ -57,6 +57,7 @@ function! neobugger#gdb#SchemeCreate() abort
         \ "state" : {
         \   "init": [
         \       {   "match":   [ '(gdb)', ],
+        \           "hint":    "gdb.Prompt",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_init",
@@ -64,11 +65,13 @@ function! neobugger#gdb#SchemeCreate() abort
         \   ],
         \   "remoteconn": [
         \       {   "match":   [ '\v^Remote debugging using \d+\.\d+\.\d+\.\d+:\d+', ],
+        \           "hint":    "gdb.RemoteConnectSucc",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_remoteconn_succ",
         \       },
         \       {   "match":   [ '\v^\d+\.\d+\.\d+\.\d+:\d+: Connection timed out.', ],
+        \           "hint":    "gdb.RemoteConnectFail",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_remoteconn_fail",
@@ -76,29 +79,35 @@ function! neobugger#gdb#SchemeCreate() abort
         \   ],
         \   "pause": [
         \       {   "match":   ["Continuing."],
+        \           "hint":    "gdb.Continue",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_continue",
         \       },
         \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
         \                       '\v/([\h\d/]+):(\d+):\d+',
+        \                       '\v^#\d+ .{-} \(\) at (.+):(\d+)',
         \                       '\v at /([\h\d/]+):(\d+)',
         \                      ],
+        \           "hint":    "gdb.Jump",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_jump",
         \       },
         \       {   "match":   ['The program is not being run.'],
+        \           "hint":    "gdb.Unexpect",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_unexpect",
         \       },
         \       {   "match":   ['\v^type \= (\p+)',],
+        \           "hint":    "gdb.Whatis",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_whatis",
         \       },
         \       {   "match":   ["Remote communication error.  Target disconnected.:"],
+        \           "hint":    "gdb.Retry",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_retry",
@@ -109,11 +118,13 @@ function! neobugger#gdb#SchemeCreate() abort
         \                       '\v^Temporary breakpoint \d+',
         \                       '\v^\(gdb\) ',
         \                      ],
+        \           "hint":    "gdb.Pause",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_pause",
         \       },
         \       {   "match":   ['\v\[Inferior\ +.{-}\ +exited\ +normally'],
+        \           "hint":    "gdb.Disconnected",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_disconnected",
@@ -121,11 +132,13 @@ function! neobugger#gdb#SchemeCreate() abort
         \   ],
         \   "gdbserver": [
         \       {   "match":   ['\vListening on port (\d+)'],
+        \           "hint":    "gdb.Accept",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_accept",
         \       },
         \       {   "match":   ['\vDetaching from process \d+'],
+        \           "hint":    "gdb.Exit",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_exit",
@@ -133,11 +146,13 @@ function! neobugger#gdb#SchemeCreate() abort
         \   ],
         \   "job": [
         \       {   "match":   ['call_jobfunc1'],
+        \           "hint":    "gdb.JobFunction1",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_jobfunc1",
         \       },
         \       {   "match":   ['\v^jobDoneLoadBacktrace'],
+        \           "hint":    "gdb.LoadBackTrace",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_load_bt",
@@ -159,8 +174,11 @@ function! neobugger#gdb#SchemeCreate() abort
     endfunction
 
     function this.on_jump(file, line, ...)
+        let l:__func__ = "gdb.on_jump"
+        silent! call s:log.info(l:__func__, ' open ', a:file, ':', a:line)
+
         if g:gdb._win_gdb._state.name !=# "pause"
-    silent! call s:log.info(gdb)
+            silent! call s:log.info(gdb)
             silent! call s:log.info("State ", g:gdb._win_gdb._state.name, " => pause")
             call state#Switch('gdb', 'pause', 0)
             call neobugger#gdb#Send('parser_bt')
@@ -261,9 +279,21 @@ function! neobugger#gdb#SchemeCreate() abort
             endif
 
             if g:gdb._autorun
-                let cmdstr = "br main\n
-                            \ r"
-                call neobugger#gdb#Send(cmdstr)
+                let l:cmdstr = ""
+                if g:gdb._mode ==# 'local'
+                    let l:cmdstr = "br main\n
+                                \ r"
+                    call neobugger#gdb#Send(l:cmdstr)
+                elseif g:gdb._mode ==# 'pid'
+                    let l:cmdstr = "attach ". g:gdb._attach_pid
+                    call neobugger#gdb#Send(l:cmdstr)
+
+                    let l:cmdstr = "symbol-file ". g:gdb._binaryFile
+                    call neobugger#gdb#Send(l:cmdstr)
+
+                    " hint backtrace
+                    call neobugger#gdb#Send("bt")
+                endif
             endif
         endif
 
@@ -335,7 +365,11 @@ endfunction
 
 
 function! neobugger#gdb#SendSvr(data)
+    echomsg printf("wilson before sendto server %s"
+                \, a:data)
     if has_key(g:gdb, "_server_id")
+        echomsg printf("wilson sendto server %s"
+                    \, a:data)
         call jobsend(g:gdb._server_id, a:data."\<cr>")
     endif
 endfunction
@@ -371,6 +405,10 @@ function! neobugger#gdb#Update_current_line_sign(add)
 endfunction
 
 
+" @param conf='local|pid|server'
+"        type 'local', 'bin-exe', {'args': [list]}
+"        type 'pid', 'bin-exe', {'pid': 3245}
+"        type 'server', 'bin-exe', {'args': [list]}
 function! neobugger#gdb#start(conf, binaryFile, args)
     if exists('g:gdb')
         if g:restart_app_if_gdb_running
@@ -380,18 +418,23 @@ function! neobugger#gdb#start(conf, binaryFile, args)
             throw 'Gdb already running'
         endif
     endif
+    if !filereadable(a:binaryFile)
+        throw "neobugger#gdb#start: no program '". a:binaryFile ."'."
+    endif
 
     let server_addr = (a:0 >= 2) ? a:2 : ''
 
     let gdb = {}
     let gdb._initialized = 0
+    let gdb._mode = a:conf
+    let gdb._binaryFile = a:binaryFile
 
     if a:conf == "local"
-      let Conf = function('neobugger#gdb#local#me')
+      let Conf = function('neobugger#gdb#local#Conf')
     elseif a:conf == "pid"
-      let Conf = function('neobugger#gdb#pid#me')
+      let Conf = function('neobugger#gdb#pid#Conf')
     elseif a:conf == "server"
-      let Conf = function('neobugger#gdb#server#me')
+      let Conf = function('neobugger#gdb#server#Conf')
     else
       throw 'Gdb model '.a:conf.' not exists'
     endif
@@ -405,6 +448,7 @@ function! neobugger#gdb#start(conf, binaryFile, args)
     endif
 
     let gdb.args = a:args
+    silent! call s:log.info("gdb#start(): args=", string(a:args))
     let gdb.ServerInit = 0
     if has_key(conf, 'ServerInit')
         let gdb.ServerInit = function(conf.ServerInit)
@@ -435,24 +479,28 @@ function! neobugger#gdb#start(conf, binaryFile, args)
         let gdb._showbacktrace = conf.showbacktrace
     endif
 
-    if !empty(a:binaryFile)
-        let conf.conf_gdb_cmd[1] = a:binaryFile
-    endif
-    if !filereadable(conf.conf_gdb_cmd[1])
-        throw "neobugger#gdb#start: no program '". conf.conf_gdb_cmd[1] ."'."
+    if len(conf.conf_gdb_cmd) >= 2
+        if !empty(a:binaryFile)
+            let conf.conf_gdb_cmd[1] = a:binaryFile
+        endif
     endif
 
     let gdb._server_addr = []
-    if get(a:args,'pid') "Attach to process
-      "call l:debugger.writeLine('attach '.string(a:args.pid))
-    elseif has_key(a:args,'con') "Attach to gdbserver
-      "call l:debugger.writeLine('target remote '.a:args.con)
-
-      " 10.1.1.125:444 -> ["10.1.1.125", "444"]
-      let gdb._server_addr = split(a:args.con[0], ":")
-    else
+    let gdb._attach_pid = "NoAttachedPid"
+    if a:conf == "pid"
+        if !get(a:args,'pid')
+            throw "neobugger#gdb#start: attach pid, but no pid."
+        endif
+        "let conf.conf_gdb_cmd[1] = a:args.pid
+        let gdb._attach_pid = a:args.pid
+    elseif a:conf == "server"
+        if !has_key(a:args,'args') "Attach to gdbserver
+            throw "neobugger#gdb#start: attach pid, but no gdbserver."
+        endif
+        "call l:debugger.writeLine('target remote '.a:args.con)
+        " 10.1.1.125:444 -> ["10.1.1.125", "444"]
+        let gdb._server_addr = split(a:args.args[0], ":")
     endif
-
 
     " Load all files from backtrace to solve relative-path
     silent! call s:log.trace("Load open files ...")
@@ -877,6 +925,16 @@ function! neobugger#gdb#FrameDown()
     call neobugger#gdb#Send("down")
 endfunction
 
+function! neobugger#gdb#Next()
+    call neobugger#gdb#Send("n")
+    if g:gdb._mode == "pid"
+        call neobugger#gdb#Send("where")
+    endif
+endfunction
+
+function! neobugger#gdb#Step()
+    call neobugger#gdb#Send("s")
+endfunction
 
 function! neobugger#gdb#GetExpression(...) range
     let [lnum1, col1] = getpos("'<")[1:2]

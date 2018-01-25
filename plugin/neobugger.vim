@@ -15,19 +15,19 @@ endif
 let s:gdb_local_remote = 0
 
 
-command! -nargs=+ -complete=file Nbgdb call neobugger#gdb#start('local', [<f-args>][0],{'args':[<f-args>][1:]})
+command! -nargs=+ -complete=file Nbgdb call neobugger#gdb#start('local', [<f-args>][0], {'args' : [<f-args>][1:]})
 function! s:attachGDB(binaryFile, args)
-	if len(a:args.args) >= 1
-		if a:args.args[0] =~ '\v^\d+$'
-			call neobugger#gdb#start('pid', a:binaryFile, {'pid': str2nr(a:args.args[0])})
-		else
-			call neobugger#gdb#start('server', a:binaryFile, {'con': a:args.args})
-		endif
-	else
-		throw "Can't call Nbgdbattach with ".a:0." arguments"
-	endif
+    if len(a:args.args) >= 1
+        if a:args.args[0] =~ '\v^\d+$'
+            call neobugger#gdb#start('pid', a:binaryFile, {'pid': str2nr(a:args.args[0])})
+        else
+            call neobugger#gdb#start('server', a:binaryFile, {'args': a:args.args})
+        endif
+    else
+        throw "Can't call Nbgdbattach with ".a:0." arguments"
+    endif
 endfunction
-command! -nargs=+ -complete=file Nbgdbattach call s:attachGDB([<f-args>][0],{'args':[<f-args>][1:]})
+command! -nargs=+ -complete=file Nbgdbattach call s:attachGDB([<f-args>][0], {'args' : [<f-args>][1:]})
 
 
 
@@ -44,8 +44,8 @@ command! GdbToggleBreak call neobugger#gdb#ToggleBreak()
 command! GdbToggleBreakAll call neobugger#gdb#ToggleBreakAll()
 command! GdbClearBreak call neobugger#gdb#ClearBreak()
 command! GdbContinue call neobugger#gdb#Send("c")
-command! GdbNext call neobugger#gdb#Send("n")
-command! GdbStep call neobugger#gdb#Send("s")
+command! GdbNext call neobugger#gdb#Next()
+command! GdbStep call neobugger#gdb#Step()
 command! GdbFinish call neobugger#gdb#Send("finish")
 "command! GdbUntil call neobugger#gdb#Send("until " . line('.'))
 command! GdbUntil call neobugger#gdb#TBreak()

@@ -7,29 +7,21 @@ endif
 function! neobugger#gdb#pid#Conf() abort
     " user special config
     let this = {
-        \ "Scheme" : "neobugger#gdb#SchemeCreate",
-        \ "autorun" : 0,
+        \ "Scheme" : 'neobugger#gdb#SchemeCreate',
+        \ "autorun" : 1,
         \ "reconnect" : 0,
-        \ "conf_gdb_cmd" : ["gdb -q -f", "sysinit/init"],
-        \ "conf_server_cmd" : ["$SHELL",],
-        \ "conf_server_addr" : ["",],
+        \ "showbreakpoint" : 0,
+        \ "showbacktrace" : 0,
+        \ "conf_gdb_layout" : ["sp"],
+        \ "conf_gdb_cmd" : ['sudo gdb'],
+        \ "window" : [
+        \   {   "name":   "gdbserver",
+        \       "status":  0,
+        \   },
+        \ ],
         \ "state" : {
-        \   "gdbserver": [
-        \       {   "match":   ['\vListening on port (\d+)'],
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_accept",
-        \       },
-        \   ]
         \ }
         \ }
-
-
-    function this.on_accept(port, ...)
-        call neobugger#gdb#Send(printf("target remote %s:%d\nc",
-                    \ g:gdb._server_addr, a:port))
-    endfunction
-
 
     return this
 endfunc
