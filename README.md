@@ -39,11 +39,18 @@ The code reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neo
 
 Press <F2> to toggle Nbgdb or Nbgdbattach.
 
-### gdb local
+### gdb directly
 
     :Nbgdb a.out ""
 
-### gdb remote
+### gdb attach pid
+
+So far, the `attach` call by `sudo`, so maybe we should input the **sudo-password**. The reason is:
+    [gdb-attach-fails-with-ptrace-operation-not-permitted](https://blog.mellenthin.de/archives/2010/10/18/gdb-attach-fails-with-ptrace-operation-not-permitted/)
+
+    :Nbgdbattach a.out <a.out-pid>
+
+### gdb remote target
 
     :Nbgdbattach sysinit/init 10.1.1.125:444
 
