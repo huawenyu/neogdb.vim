@@ -21,7 +21,6 @@ function! Bar(...)
                 \ 'bar': 4,
                 \ })
 
-    "===============================
     function! this.babble()
         echo "'Bar' babble: therefore I am ". (self.foo * self.bar) ." months old."
     endfunction
@@ -33,19 +32,21 @@ function! Bar(...)
     return this.New(a:0 >= 1 ? a:1 : {})
 endfunction
 
-let myfoo = Foo({'foo': 12})
-let mybar = Bar({'bar': 24})
-call mybar.Inherit(myfoo)
+function! Varg2(foo, ...)
+  echom a:foo
+  echom a:0
+  echom a:1
+  echo a:000
+endfunction
 
-call myfoo.babble()
-echo myfoo.IsA('FooBar')
-echo myfoo.IsA('object')
-echo myfoo.IsA('Foo')
-echo myfoo.RespondTo('babble')
-echo myfoo.RespondTo('speak')
+call Varg2("a", "b", "c")
+
+let mybar = Bar({'bar': 24})
+call mybar.Inherit(Foo({'foo': 12}))
 
 call mybar.babble()
 call mybar.speak()
+call mybar.Super('babble')
 echo mybar.IsA('FooBar')
 echo mybar.IsA('object')
 echo mybar.IsA('Foo')
