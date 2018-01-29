@@ -10,15 +10,16 @@ endif
 function! neobugger#gdb#server#Conf() abort
     " user special config
     let this = {
-        \ "Scheme" : 'neobugger#gdb#SchemeCreate',
-        \ "ServerInit" : 'neobugger#gdb#server#InitSvr',
-        \ "Symbol" : 'neobugger#gdb#server#Symbol',
+        \ "module" : "gdb",
+        \ "Scheme" : 'neobugger#gdb#default#Conf',
+        \ "Inherit": 'neobugger#gdb#server#New',
+        \
         \ "autorun" : 0,
         \ "reconnect" : 0,
         \ "showbreakpoint" : 1,
         \ "showbacktrace" : 1,
         \ "conf_gdb_layout" : ["vsp"],
-        \ "conf_gdb_cmd" : ['gdb -q -f', 'sysinit/init'],
+        \ "conf_gdb_cmd" : ["gdb -ex 'echo neobugger_starting\n' -q -f", 'sysinit/init'],
         \ "conf_server_cmd" : ["$SHELL",],
         \ "conf_server_addr" : ["",],
         \ "state" : {
@@ -34,47 +35,61 @@ function! neobugger#gdb#server#Conf() abort
         \ }
 
 
-    function this.on_remote_debugging(...)
-        let g:gdb._remote_debugging = 1
+    function this.on_remote_debugging(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction
 
     return this
 endfunc
 
 
-function! neobugger#gdb#server#InitSvr() abort
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
-    if !has_key(g:gdb, "_server_id")
-        echoerr "server#InitSvr(): GdbServer window not exist"
-        return
-    endif
-    if empty(g:gdb._server_addr)
-        echoerr "server#InitSvr(): server address is empty"
-        return
-    endif
-
-    let g:gdb._vdom = 0
-    let g:gdb._worker_pid = 0
-    let g:gdb._debug_level = 0
-    let g:gdb._remote_debugging = 0
-
-    silent! call s:log.info(l:__func__, " args=", string(g:gdb.args))
-    let l:cmdstr = 'login.exp '. g:gdb._server_addr[0].' '.join(g:gdb.args.args[1:], ' ')
-    silent! call s:log.info(l:__func__, " cmdstr=", l:cmdstr)
-    call neobugger#gdb#SendSvr(l:cmdstr)
-endfunc
+function! neobugger#gdb#server#New()
+    let this = tlib#Object#New({
+                \ '_class': ['GdbServer'],
+                \ })
 
 
-function! neobugger#gdb#server#Symbol(type, expr) abort
-    let expr = get(s:symbols, a:type, '')
-    if !empty(expr)
-        let Expr = function(expr)
-        let expr = Expr(a:expr)
-        return expr
-    else
-        return printf('p %s', a:expr)
-    endif
-endfunc
+    function! this.Init()
+        let l:__func__ = "server.Init"
+        if !has_key(self, "_server_id")
+            echoerr l:__func__. "(): GdbServer window not exist."
+            return
+        endif
+        if empty(self._server_addr)
+            echoerr l:__func__. "(): server address is empty."
+            return
+        endif
+
+        let self._vdom = 0
+        let self._worker_pid = 0
+        let self._debug_level = 0
+        let self._remote_debugging = 0
+
+        silent! call s:log.info(l:__func__, " args=", string(self.args))
+        let l:cmdstr = 'login.exp '. self._server_addr[0].' '.join(self.args.args[1:], ' ')
+        silent! call s:log.info(l:__func__, " cmdstr=", l:cmdstr)
+        call self.SendSvr(l:cmdstr)
+    endfunc
+
+
+    function! this.Symbol(type, expr)
+        let l:__func__ = "server.Symbol"
+        silent! call s:log.info(l:__func__, " type=", a:type, " expr=", a:expr)
+
+        let expr = get(s:symbols, a:type, '')
+        if !empty(expr)
+            let Expr = function(expr)
+            let expr = Expr(a:expr)
+            return expr
+        else
+            return printf('p %s', a:expr)
+        endif
+    endfunc
+
+
+    return this.New(a:0 >= 1 ? a:1 : {})
+endfunction
 
 
 function! s:cstr(pchar, len)

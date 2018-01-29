@@ -10,13 +10,13 @@ endif
 function! neobugger#gdb#local#Conf() abort
     " user special config
     let this = {
-        \ "Scheme" : 'neobugger#gdb#SchemeCreate',
+        \ "Scheme" : 'neobugger#gdb#default#Conf',
         \ "autorun" : 1,
         \ "reconnect" : 0,
         \ "showbreakpoint" : 0,
         \ "showbacktrace" : 0,
         \ "conf_gdb_layout" : ["sp"],
-        \ "conf_gdb_cmd" : ['gdb -q -f', 'a.out'],
+        \ "conf_gdb_cmd" : ["gdb -ex 'echo neobugger_starting\n' -q -f", 'a.out'],
         \ "window" : [
         \   {   "name":   "gdbserver",
         \       "status":  0,
@@ -26,19 +26,12 @@ function! neobugger#gdb#local#Conf() abort
         \ }
         \ }
 
+    function this.Restart(...)
+        silent! call s:log.info(self.module.".Restart() args=", string(a:000))
+        call jobsend(self._client_id, "\<c-c>info line\<cr>start\<cr>")
+    endfunction
+
     return this
-endfunc
-
-
-function! neobugger#gdb#local#Symbol(type, expr) abort
-    let expr = get(s:symbols, a:type, '')
-    if !empty(expr)
-        let Expr = function(expr)
-        let expr = Expr(a:expr)
-        return expr
-    else
-        return printf('p %s', a:expr)
-    endif
 endfunc
 
 

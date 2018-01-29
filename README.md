@@ -132,7 +132,7 @@ This is in order to speed up the edit-compile-test cycle.
 If you instead want an error to be thrown when GDB is already started, change this variable:
 
 ```vim
-let g:restart_app_if_gdb_running = 0
+let g:neobugger_enable_restart = 0
 ```
 
 By default, the plugin toggles the breakpoint right after pressing ``g:gdb_keymap_toggle_break``.  

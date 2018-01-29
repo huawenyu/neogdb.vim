@@ -124,6 +124,21 @@ function! s:prototype.RespondTo(name) dict "{{{3
 endf
 
 
+function! s:prototype.Call(this, method, ...) dict "{{{3
+    if this.RespondTo(a:method)
+        " let self._tmp_method = o[a:method]
+        " TLogVAR self._tmp_method
+        " return call(self._tmp_method, a:arglist, self)
+        if a:0 >= 1 && !empty(a:1)
+            return call(this[a:method], a:arglist, this)
+        else
+            return call(this[a:method], [], this)
+        endif
+    endif
+    echoerr 'tlib#Object: Does not respond to '. a:method .': '. string(this)
+endf
+
+
 function! s:prototype.Super(method, ...) dict "{{{3
     for o in self._super
         " TLogVAR o

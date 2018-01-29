@@ -2,7 +2,7 @@
 "
 
 "Returns the visually selected text
-function! neobugger#util#get_visual_selection()
+function! util#get_visual_selection()
 	"Shamefully stolen from http://stackoverflow.com/a/6271254/794380
 	" Why is this not a built-in Vim script function?!
 	let [lnum1, col1] = getpos("'<")[1:2]
@@ -15,7 +15,7 @@ endfunction
 
 "Prompts the user with a filtered list of process, and returns the process id
 "the user selects
-function! neobugger#util#selectProcessOfFile(ofFile)
+function! util#selectProcessOfFile(ofFile)
 	let l:fileName=fnamemodify(a:ofFile,':t')
 	if has('win32')
 		"Get the process data in CSV format
@@ -66,7 +66,7 @@ endfunction
 
 "Escape args(from a debugger's extra arguments) as a command line arguments
 "string
-function! neobugger#util#commandLineArgsForProgram(debuggerArgs)
+function! util#commandLineArgsForProgram(debuggerArgs)
 	if has_key(a:debuggerArgs,'args')
 		if type(a:debuggerArgs.args)==type([])
 			return join(map(a:debuggerArgs.args,'s:argEscape(v:val)'),' ')
@@ -89,7 +89,7 @@ endfunction
 
 "Return a tool's(usually debugger) full path, or revert to default if that
 "path is not defined
-function! neobugger#util#getToolFullPath(toolName,version,default)
+function! util#getToolFullPath(toolName,version,default)
 	let l:optionName='neobugger_path_'.a:toolName
 	if !empty(a:version)
 		let l:optionName=l:optionName.'_'.a:version
@@ -110,7 +110,7 @@ function! neobugger#util#getToolFullPath(toolName,version,default)
 endfunction
 
 "Checks if the path is an absolute path
-function! neobugger#util#isPathAbsolute(path)
+function! util#isPathAbsolute(path)
 	if has('win32')
 		return a:path=~':' || a:path[0]=='%' "Absolute paths in Windows contain : or start with an environment variable
 	else
@@ -118,7 +118,7 @@ function! neobugger#util#isPathAbsolute(path)
 	endif
 endfunction
 
-function! neobugger#util#listify(stringOrList)
+function! util#listify(stringOrList)
     if type(a:stringOrList) == type([])
         return copy(a:stringOrList) " so it could safely be modified by map&filter
     else

@@ -6,6 +6,9 @@ endif
 
 
 function! state#Open(config) abort
+    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    silent! call s:log.info(l:__func__. " args=", string(a:config))
+
     let conf = a:config
     if type(conf) != type({})
        \ || ! has_key(conf, "Scheme")
@@ -17,7 +20,7 @@ function! state#Open(config) abort
         throw "neogdb.state#Open: no Creator '". conf['Scheme'] ."'."
     endif
     let scheme = Creator()
-    silent! call s:log.info("Open ", conf['Scheme'])
+    silent! call s:log.info(l:__func__. " ", conf['Scheme'])
     let g:state_ctx = state#CreateRuntime(scheme, conf)
     return g:state_ctx
 endfunc
@@ -180,8 +183,10 @@ function! state#CreateRuntime(scheme, config) abort
     " self is termopen's target, here is the window, not ctx itself
     " @match1: [i.window, i.action, i.arg0]
     function! ctx.on_call(match1, ...)
+        let l:__func__ = "ctx.on_call"
         let matched = a:match1
         silent! call s:log.info("matched: ", matched)
+        "silent! call s:log.trace("self=", string(self))
 
         if empty(matched[2]) || empty(matched[3])
             throw "neogdb.state#CreateRuntime: have no 'action','arg0' with " . string(matched)
@@ -196,21 +201,27 @@ function! state#CreateRuntime(scheme, config) abort
         try
             if matched[2] ==# 'call'
                 let scheme = g:state_ctx.scheme
-                if has_key(scheme, matched[3])
-                    call call(scheme[matched[3]], a:000, window)
+                let l:funcname = matched[3]
+                if has_key(scheme, l:funcname)
+                    let l:funcargs = []
+                    call add(l:funcargs, l:funcname)
+                    call extend(l:funcargs, a:000)
+                    silent! call s:log.info(l:__func__, "func=", l:funcname,
+                                \" args=", string(l:funcargs))
+                    call call(scheme[l:funcname], l:funcargs, scheme)
                 else
                     silent! call s:log.info("Scheme '", scheme.name,
-                                \"' call function '", matched[3], "' not exist")
+                                \"' call function '", l:funcname, "' not exist")
                 endif
             elseif matched[2] ==# 'send'
-                let str = call("printf", [matched[3]] + a:000)
+                let str = call("printf", [l:funcname] + a:000)
                 call jobsend(window._client_id, str."\<cr>")
             elseif matched[2] ==# 'switch'
-                call state#Switch(window._name, matched[3], 0)
+                call state#Switch(window._name, l:funcname, 0)
             elseif matched[2] ==# 'push'
-                call state#Switch(window._name, matched[3], 1)
+                call state#Switch(window._name, l:funcname, 1)
             elseif matched[2] ==# 'pop'
-                call state#Switch(window._name, matched[3], 2)
+                call state#Switch(window._name, l:funcname, 2)
             endif
         catch
             silent! call s:log.info(matched, " trigger ", v:exception)
