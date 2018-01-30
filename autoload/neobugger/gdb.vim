@@ -283,6 +283,14 @@ function! s:prototype.Send(data)
 endfunction
 
 
+function! s:prototype._Send(data)
+    let l:__func__ = "gdb._Send"
+    silent! call s:log.trace(l:__func__. "() args=". string(a:data))
+    call jobsend(self._client_id, a:data)
+endfunction
+
+
+
 function! s:prototype.SendSvr(data)
     let l:__func__ = "gdb.SendSvr"
     silent! call s:log.trace(l:__func__. "() args=". string(a:data))
@@ -864,8 +872,8 @@ endfunction
 
 
 " Other options
-if !exists("g:neobugger_enable_restart")
-    let g:neobugger_enable_restart = 1
+if !exists("g:restart_app_if_gdb_running")
+    let g:restart_app_if_gdb_running = 1
 endif
 
 " Keymap options

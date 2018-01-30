@@ -10,7 +10,10 @@ endif
 function! neobugger#gdb#local#Conf() abort
     " user special config
     let this = {
+        \ "module" : "gdb",
         \ "Scheme" : 'neobugger#gdb#basic#Conf',
+        \ "Inherit": 'neobugger#gdb#local#New',
+        \
         \ "autorun" : 1,
         \ "reconnect" : 0,
         \ "showbreakpoint" : 0,
@@ -26,13 +29,24 @@ function! neobugger#gdb#local#Conf() abort
         \ }
         \ }
 
-    function this.Restart(...)
-        silent! call s:log.info(self.module.".Restart() args=", string(a:000))
-        call jobsend(self._client_id, "\<c-c>info line\<cr>start\<cr>")
-    endfunction
-
     return this
 endfunc
+
+
+function! neobugger#gdb#local#New()
+    let this = tlib#Object#New({
+                \ '_class': ['GdbLocal'],
+                \ })
+
+
+    function this.Restart(...)
+        silent! call s:log.info(self.module.".Restart() args=", string(a:000))
+        call self._Send("\<c-c>info line\<cr>start\<cr>")
+    endfunction
+
+
+    return this.New(a:0 >= 1 ? a:1 : {})
+endfunction
 
 
 function! s:__fini__()

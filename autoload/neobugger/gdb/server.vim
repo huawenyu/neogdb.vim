@@ -70,7 +70,7 @@ function! neobugger#gdb#server#New()
         let l:cmdstr = 'login.exp '. self._server_addr[0].' '.join(self.args.args[1:], ' ')
         silent! call s:log.info(l:__func__, " cmdstr=", l:cmdstr)
         call self.SendSvr(l:cmdstr)
-    endfunc
+    endfunction
 
 
     function! this.Symbol(type, expr)
@@ -85,7 +85,7 @@ function! neobugger#gdb#server#New()
         else
             return printf('p %s', a:expr)
         endif
-    endfunc
+    endfunction
 
 
     return this.New(a:0 >= 1 ? a:1 : {})

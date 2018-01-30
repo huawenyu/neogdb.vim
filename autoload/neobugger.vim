@@ -11,7 +11,7 @@ function! neobugger#New(module, ...)
     let l:__func__ = "neobugger#New"
     try
         if neobugger#Exists(a:module)
-            if g:neobugger_enable_restart
+            if g:restart_app_if_gdb_running
                 call neobugger#Handle(a:module, "Restart", a:000)
                 return
             endif
