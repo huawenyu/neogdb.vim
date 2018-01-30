@@ -7,7 +7,7 @@ endif
 function! neobugger#gdb#pid#Conf() abort
     " user special config
     let this = {
-        \ "Scheme" : 'neobugger#gdb#default#Conf',
+        \ "Scheme" : 'neobugger#gdb#basic#Conf',
         \ "autorun" : 1,
         \ "reconnect" : 0,
         \ "showbreakpoint" : 0,

@@ -11,7 +11,7 @@ function! neobugger#gdb#server#Conf() abort
     " user special config
     let this = {
         \ "module" : "gdb",
-        \ "Scheme" : 'neobugger#gdb#default#Conf',
+        \ "Scheme" : 'neobugger#gdb#basic#Conf',
         \ "Inherit": 'neobugger#gdb#server#New',
         \
         \ "autorun" : 0,
