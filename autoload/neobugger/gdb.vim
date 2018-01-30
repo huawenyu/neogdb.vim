@@ -52,12 +52,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
 
     let server_addr = (a:0 >= 2) ? a:2 : ''
 
-    let gdb = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let gdb.module = s:module
-    let gdb._initialized = 0
-    let gdb._mode = a:conf
-    let gdb._binaryFile = a:binaryFile
-
     let l:f_conf = 'neobugger#gdb#'.a:conf.'#Conf'
     let Conf = function(l:f_conf)
     if empty(Conf)
@@ -68,11 +62,23 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         throw l:__func__. " error: Conf '". a:conf ."' should return a dict not ". type(conf). "."
     endif
 
+    let l:parent = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let l:abstract = neobugger#std#New()
+    call l:parent.Inherit(l:abstract)
+
     if has_key(conf, 'Inherit')
-        let l:F_create = function(conf.Inherit)
-        call gdb.Inherit(l:F_create())
+        let l:ChildNew = function(conf.Inherit)
+        let l:child = l:ChildNew()
+        call l:child.Inherit(l:parent)
+        let gdb = l:child
+    else
+        let gdb = l:parent
     endif
 
+    let gdb.module = s:module
+    let gdb._initialized = 0
+    let gdb._mode = a:conf
+    let gdb._binaryFile = a:binaryFile
     let gdb.args = a:args
     silent! call s:log.info(l:__func__, ": args=", string(a:args))
 
@@ -870,57 +876,6 @@ function! s:prototype.on_exit(...)
 endfunction
 
 
-
-" Other options
-if !exists("g:restart_app_if_gdb_running")
-    let g:restart_app_if_gdb_running = 1
-endif
-
-" Keymap options
-
-if !exists("g:gdb_keymap_refresh")
-    let g:gdb_keymap_refresh = '<f3>'
-endif
-if !exists("g:gdb_keymap_continue")
-    let g:gdb_keymap_continue = '<f4>'
-endif
-if !exists("g:gdb_keymap_next")
-    let g:gdb_keymap_next = '<f5>'
-endif
-if !exists("g:gdb_keymap_step")
-    let g:gdb_keymap_step = '<f6>'
-endif
-if !exists("g:gdb_keymap_finish")
-    let g:gdb_keymap_finish = '<f7>'
-endif
-if !exists("g:gdb_keymap_until")
-    let g:gdb_keymap_until = '<f8>'
-endif
-if !exists("g:gdb_keymap_toggle_break")
-    let g:gdb_keymap_toggle_break = '<f9>'
-endif
-if !exists("g:gdb_keymap_toggle_break_all")
-    let g:gdb_keymap_toggle_break_all = '<f10>'
-endif
-if !exists("g:gdb_keymap_clear_break")
-    let g:gdb_keymap_clear_break = '<f21>'
-endif
-if !exists("g:gdb_keymap_debug_stop")
-    let g:gdb_keymap_debug_stop = '<f17>'
-endif
-
-if !exists("g:gdb_keymap_frame_up")
-    let g:gdb_keymap_frame_up = '<c-n>'
-endif
-
-if !exists("g:gdb_keymap_frame_down")
-    let g:gdb_keymap_frame_down = '<c-p>'
-endif
-
-if !exists("g:gdb_require_enter_after_toggling_breakpoint")
-    let g:gdb_require_enter_after_toggling_breakpoint = 0
-endif
-
 function! s:prototype.Map(type)
     "{
     if a:type ==# "unmap"
@@ -965,7 +920,7 @@ function! s:prototype.Map(type)
 
         let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
 
-        if !g:gdb_require_enter_after_toggling_breakpoint 
+        if !g:gdb_require_enter_after_toggling_breakpoint
             let toggle_break_binding = toggle_break_binding . '<cr>'
         endif
 

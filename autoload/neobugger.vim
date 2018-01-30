@@ -4,6 +4,7 @@ if !exists("s:init")
 
     " Every module must derive from tlib#Object
     let s:modules = {}
+    let s:current_module = ""
 endif
 
 
@@ -22,6 +23,7 @@ function! neobugger#New(module, ...)
             silent! call s:log.info(l:new. "(): args=", string(a:000))
             let l:obj = call(l:new, a:000)
             call extend(s:modules, {a:module: l:obj})
+            let s:current_module = a:module
         endif
     catch
         echomsg l:__func__. ' error:' . v:exception
@@ -40,12 +42,17 @@ endfunction
 
 function! neobugger#Handle(module, handle, ...)
     let l:__func__ = "neobugger#Handle"
+    let l:module = a:module
+    if a:module ==# 'current'
+        let l:module = s:current_module
+    endif
+
     try
-        if neobugger#Exists(a:module)
-            if s:modules[a:module].RespondTo(a:handle)
-                silent! call s:log.info(l:__func__, ': call ', a:module, '.', a:handle, '(args=', a:000,') ')
-                "s:modules[a:module].Call(s:modules[a:module], a:handle, a:000)
-                "call call(a:handle, a:000, s:modules[a:module])
+        if !empty(l:module) && neobugger#Exists(l:module)
+            if s:modules[l:module].RespondTo(a:handle)
+                silent! call s:log.info(l:__func__, ': call ', l:module, '.', a:handle, '(args=', a:000,') ')
+                "s:modules[l:module].Call(s:modules[l:module], a:handle, a:000)
+                "call call(a:handle, a:000, s:modules[l:module])
 
                 let l:args = a:000
                 if len(a:000) > 0
@@ -53,15 +60,15 @@ function! neobugger#Handle(module, handle, ...)
                         let l:args = a:000[0]
                     endif
                 endif
-                call call(s:modules[a:module][a:handle], l:args, s:modules[a:module])
+                call call(s:modules[l:module][a:handle], l:args, s:modules[l:module])
                 return
             endif
-            echomsg l:__func__. ': module['. a:module. "] function '".a:handle. "' not exist, please report a bug if possible."
+            echomsg l:__func__. ': module['. l:module. "] function '".a:handle. "' not exist, please report a bug if possible."
         else
-            echomsg l:__func__. ': module['. a:module. "] not exist, please call it's start firstly."
+            echomsg l:__func__. ': module['. l:module. "] not exist, please call it's start firstly."
         endif
     catch
-        echomsg l:__func__. ' module['. a:module. "].".a:handle. "() error:". v:exception
+        echomsg l:__func__. ' module['. l:module. "].".a:handle. "() error:". v:exception
     endtry
 endfunction
 

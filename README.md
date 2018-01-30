@@ -82,7 +82,7 @@ Plugin 'huawenyu/neogdb.vim'
 # Usage
 
 ## commands
-  - :GdbLocal my_debug_app
+  - :GdbLocal
   - :GdbDebugStop
   - :GdbToggleBreakpoint
   - :GdbClearBreakpoints
@@ -97,15 +97,42 @@ Plugin 'huawenyu/neogdb.vim'
   - :GdbWatchWord
 
 ## Default keymaps
+  - `<F2>` Helper Start
   - `<F4>` continue
   - `<F5>` next
   - `<F6>` step
   - `<F7>` finish
-  - `<F9>` print <var>
+  - `<F8>` util
+  - `<F9>` Normal-mode: breakpoints
+  - `<F9>` Select-Mode: print <var>
 
 # Customization
 
 Put these in your ``~/.vimrc`` to customize the keymaps:
+
+## keymaps leader
+
+If define *g:neobugger_leader*, will *ignore* all *g:gdb_keymap_...* customized.
+
+```vim
+let g:neobugger_leader = ';'
+```
+
+Then the keymaps will be `g:neobugger_leader` + `<char>`, the `<char>` like:
+  - `r`: GdbRefresh
+  - `c`: GdbContinue
+  - `n`: GdbNext
+  - `i`: GdbStep
+  - `N`: GdbFinish
+  - `t`: GdbUntil
+  - `b`: GdbToggleBreak
+  - `a`: GdbToggleBreakAll
+  - `C`: GdbClearBreak
+  - `x`: GdbDebugStop
+  - `k`: GdbFrameUp
+  - `j`: GdbFrameDown
+
+## keymaps without leader
 
 ```vim
 let g:gdb_keymap_continue = '<f8>'
