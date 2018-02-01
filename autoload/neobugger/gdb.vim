@@ -532,7 +532,7 @@ function! s:prototype.ToggleBreak()
     let linenr = line(".")
     let colnr = col(".")
     let cword = expand("<cword>")
-    let cfuncline = neobugger#gdb#GetCFunLinenr()
+    let cfuncline = self.GetCFunLinenr()
 
     let fname = fnamemodify(filenm, ':p:.')
     let type = 0
@@ -919,11 +919,9 @@ function! s:prototype.Map(type)
         exe 'nnoremap <silent> ' . g:gdb_keymap_until . ' :GdbUntil<cr>'
 
         let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
-
         if !g:gdb_require_enter_after_toggling_breakpoint
             let toggle_break_binding = toggle_break_binding . '<cr>'
         endif
-
         exe toggle_break_binding
 
         exe 'nnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' :GdbToggleBreakAll<cr>'
