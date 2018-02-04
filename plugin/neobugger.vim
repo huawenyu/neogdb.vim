@@ -121,7 +121,11 @@ let s:gdb_local_remote = 0
 function! NeobuggerCommandStr()
     if s:gdb_local_remote
         let s:gdb_local_remote = 0
-        return 'Nbgdbattach sysinit/init 192.168.0.180:444'
+        if exists("g:neogdb_attach_remote_str")
+            return 'Nbgdbattach '. g:neogdb_attach_remote_str
+        else
+            return 'Nbgdbattach sysinit/init 192.168.0.180:444'
+        endif
     else
         let s:gdb_local_remote = 1
         return 'Nbgdb t1'

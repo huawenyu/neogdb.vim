@@ -153,10 +153,29 @@ let g:gdb_keymap_debug_stop = '<f17>'
 
 ## Miscellaneous
 
-By default, if you run ``GdbLocal`` or ``GdbRemote`` when GDB is already started,  
+The ``Nbgdbattach`` always use `target remote` to connect a real searver which is different in everyone's env.  
+So we can specific a local host by put these into `.vimrc`:
+
+
+```vim
+if exists("$NBG_ATTACH_REMOTE_STR")
+  let g:neogdb_attach_remote_str = $NBG_ATTACH_REMOTE_STR
+else
+  let g:neogdb_attach_remote_str = 'sysinit/init 192.168.0.180:444'
+endif
+```
+
+Or define a env var `NBG_ATTACH_REMOTE_STR` by putting in `.bashrc`:
+```shell
+export NBG_ATTACH_REMOTE_STR="sysinit/init 192.168.0.180:444"
+```
+
+
+By default, if you run ``Nbgdb`` or ``Nbgdbattach`` when GDB is already started,  
 the plugin will send an interrupt (``<c-c>``) followed by a ``start``.  
 This is in order to speed up the edit-compile-test cycle.  
 If you instead want an error to be thrown when GDB is already started, change this variable:
+
 
 ```vim
 let g:restart_app_if_gdb_running = 0
