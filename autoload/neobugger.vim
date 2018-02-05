@@ -10,6 +10,10 @@ endif
 
 function! neobugger#New(module, ...)
     let l:__func__ = "neobugger#New"
+    silent! call s:log.info('')
+    silent! call s:log.info('')
+    silent! call s:log.info("=============================================")
+    silent! call s:log.info("New module [".a:module ."] creating ...")
     try
         if neobugger#Exists(a:module)
             if g:restart_app_if_gdb_running
@@ -24,6 +28,7 @@ function! neobugger#New(module, ...)
             let l:obj = call(l:new, a:000)
             call extend(s:modules, {a:module: l:obj})
             let s:current_module = a:module
+            silent! call s:log.info("New module [".s:current_module ."] added to Neobugger.")
         endif
     catch
         echomsg l:__func__. ' error:' . v:exception
@@ -63,11 +68,14 @@ function! neobugger#Handle(module, handle, ...)
                 call call(s:modules[l:module][a:handle], l:args, s:modules[l:module])
                 return
             endif
-            echomsg l:__func__. ': module['. l:module. "] function '".a:handle. "' not exist, please report a bug if possible."
+            silent! call s:log.info("Module=[".l:module ."].".a:handle. "() not exist. Please report a bug if possible.")
+            echomsg l:__func__. ': module['. l:module. "] function '".a:handle. "()' not exist. Please report a bug if possible."
         else
-            echomsg l:__func__. ': module['. l:module. "] not exist, please call it's start firstly."
+            silent! call s:log.info("Module=[".l:module ."] not existed in ", string(s:modules), " when call ".a:handle. "()")
+            echomsg l:__func__. ': module['. l:module. "] not exist, call ".a:handle "() fail. Please starter firstly."
         endif
     catch
+        silent! call s:log.info("Module=[".l:module ."].".a:handle. "() error:", string(v:exception))
         echomsg l:__func__. ' module['. l:module. "].".a:handle. "() error:". v:exception
     endtry
 endfunction
