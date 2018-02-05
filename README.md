@@ -106,6 +106,20 @@ Plugin 'huawenyu/neogdb.vim'
   - `<F9>` Normal-mode: breakpoints
   - `<F9>` Select-Mode: print <var>
 
+## Sample
+
+  There have a c file `autoload/examples/t1.c` in the plugin's dir.
+  Please copy it to your test dir.
+
+```sh
+    ### compile test
+    $ cd /dir/of/file/t1.c
+    $ gcc -g -O0 -o t1 t1.c
+    ### start gdb
+    $ vi t1.c
+      If default keymap, <F2>, the command line show `:Nbgdb t1`, <Enter> to start gdb.
+```
+
 # Customization
 
 Put these in your ``~/.vimrc`` to customize the keymaps:
@@ -216,6 +230,23 @@ function! NeogdbvimUnmapCallback()
     let g:fzf_action = { 'enter': 'tabnew' }
 endfunc
 ```
+
+## Troubleshooting by log
+
+### Enable **print c-tyle** log
+
+```vim: add plugin-log to your ~/.vimrc
+    Plug 'huawenyu/vimlogger'
+
+    " Also append this line to your ~/.vimrc to start our logfile
+    silent! call logger#init('ALL', ['/tmp/vim.log'])
+```
+
+### Check runtime log
+
+- Start vim
+- Using another terminal, off couse it's easy if you using `tmux` which you'll not regret to meet the tools.
+  watching the log by `tail -f /tmp/vim.log`
 
 # License
 Vim license, see LICENSE
