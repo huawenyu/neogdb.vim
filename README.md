@@ -167,9 +167,24 @@ let g:gdb_keymap_debug_stop = '<f17>'
 
 ## Miscellaneous
 
+### config windows
+
+Current implement only support two kinds of windows: `backtrace`, `breakpoint`.
+The default config is:
+- local-mode, diable these windows
+- attach-mode, open them
+
+But we can modify the default bahaviour by config:
+
+```vim
+let g:neogdb_window = ['backtrace', 'breakpoint']
+```
+
+
 The ``Nbgdbattach`` always use `target remote` to connect a real searver which is different in everyone's env.  
 So we can specific a local host by put these into `.vimrc`:
 
+### Customize attach parameter
 
 ```vim
 if exists("$NBG_ATTACH_REMOTE_STR")
@@ -184,6 +199,7 @@ Or define a env var `NBG_ATTACH_REMOTE_STR` by putting in `.bashrc`:
 export NBG_ATTACH_REMOTE_STR="sysinit/init 192.168.0.180:444"
 ```
 
+### Enable restart
 
 By default, if you run ``Nbgdb`` or ``Nbgdbattach`` when GDB is already started,  
 the plugin will send an interrupt (``<c-c>``) followed by a ``start``.  
@@ -197,6 +213,8 @@ let g:restart_app_if_gdb_running = 0
 
 By default, the plugin toggles the breakpoint right after pressing ``g:gdb_keymap_toggle_break``.  
 If this flag is set to 1, the plugin will require you to confirm the command with Enter which lets you edit the command before issuing it:
+
+### others
 
 ```vim
 let g:gdb_require_enter_after_toggling_breakpoint = 0

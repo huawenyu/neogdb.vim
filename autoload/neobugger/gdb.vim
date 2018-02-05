@@ -93,13 +93,31 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     endif
 
     let gdb._showbreakpoint = 0
-    if has_key(conf, 'showbreakpoint')
-        let gdb._showbreakpoint = conf.showbreakpoint
+    if exists('g:neogdb_window')
+        if index(g:neogdb_window, 'breakpoint') >= 0
+            let gdb._showbreakpoint = 1
+            if has_key(conf, 'conf_gdb_layout')
+                let conf.conf_gdb_layout = ['vsp']
+            endif
+        endif
+    else
+        if has_key(conf, 'showbreakpoint')
+            let gdb._showbreakpoint = conf.showbreakpoint
+        endif
     endif
 
     let gdb._showbacktrace = 0
-    if has_key(conf, 'showbacktrace')
-        let gdb._showbacktrace = conf.showbacktrace
+    if exists('g:neogdb_window')
+        if index(g:neogdb_window, 'backtrace') >= 0
+            let gdb._showbacktrace = 1
+            if has_key(conf, 'conf_gdb_layout')
+                let conf.conf_gdb_layout = ['vsp']
+            endif
+        endif
+    else
+        if has_key(conf, 'showbacktrace')
+            let gdb._showbacktrace = conf.showbacktrace
+        endif
     endif
 
     if len(conf.conf_gdb_cmd) >= 2
