@@ -180,11 +180,10 @@ But we can modify the default bahaviour by config:
 let g:neogdb_window = ['backtrace', 'breakpoint']
 ```
 
+### Customize attach parameter
 
 The ``Nbgdbattach`` always use `target remote` to connect a real searver which is different in everyone's env.  
 So we can specific a local host by put these into `.vimrc`:
-
-### Customize attach parameter
 
 ```vim
 if exists("$NBG_ATTACH_REMOTE_STR")
@@ -268,6 +267,3 @@ endfunc
 
 # License
 Vim license, see LICENSE
-
-# Maintainer
-Wilson Huawen Yu <[huawen.yu@gmail.com](mailto:huawen.yu@gmail.com)>
