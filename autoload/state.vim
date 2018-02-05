@@ -103,10 +103,12 @@ function! state#CreateRuntime(scheme, config) abort
 
     " Load window
     " Create new tab as FSM's view
+    silent! call s:log.info("Creating the 'main' window ...")
     tabnew | silent! b2
     let ctx._tab = tabpagenr()
     silent! ball 1
     let ctx._wid_main = win_getid()
+    silent! call s:log.info("The 'main' window-id=", ctx._wid_main)
 
     let windows = scheme.window
     for conf_win in windows
@@ -177,6 +179,8 @@ function! state#CreateRuntime(scheme, config) abort
     if win_gotoid(ctx._wid_main) == 1
         let ctx._jump_window = win_id2win(ctx._wid_main)
         stopinsert
+    else
+        silent! call s:log.info("Backto 'main' window fail with window-id=", ctx._wid_main)
     endif
 
 

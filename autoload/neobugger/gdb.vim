@@ -145,6 +145,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     "    "silent! call s:log.trace("old backtrace:<cr>", list)
     "endif
 
+    silent! call s:log.trace("  try open files from ". s:fl_file)
     if filereadable(s:fl_file)
         call gdb.ReadVariable("s:file_list", s:fl_file)
         for [next_key, next_val] in items(s:file_list)
@@ -165,18 +166,24 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     let cword = expand("<cword>")
 
     call state#Open(conf)
-    if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
+    if !exists('g:state_ctx')
+        silent! call s:log.trace("  state#Open() fail: 'g:state_ctx' not exist.")
         return
     endif
-
+    if !has_key(g:state_ctx, 'window')
+        silent! call s:log.trace("  state#Open() fail: the dict[window] not exist.")
+        return
+    endif
     " MustExist: Gdb window
     if has_key(g:state_ctx.window, 'gdb')
         let win_gdb = g:state_ctx.window['gdb']
         let gdb._win_gdb = win_gdb
         let gdb._client_id = win_gdb._client_id
     else
+        silent! call s:log.trace("  state#Open() fail: the window 'gdb' not exist in dict[window].")
         return
     endif
+
 
     if has_key(g:state_ctx.window, 'gdbserver')
         let win_gdbserver = g:state_ctx.window['gdbserver']
@@ -222,6 +229,8 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         stopinsert
         call gdb.Map("nmap")
         return gdb
+    else
+        silent! call s:log.trace("  state#Open() fail: Cann't jump back 'main' window.")
     endif
     "}
 endfunction
