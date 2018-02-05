@@ -104,9 +104,11 @@ else
         let g:gdb_keymap_frame_down = '<c-p>'
     endif
 
-    if !exists("g:gdb_require_enter_after_toggling_breakpoint")
-        let g:gdb_require_enter_after_toggling_breakpoint = 0
-    endif
+endif
+
+
+if !exists("g:gdb_require_enter_after_toggling_breakpoint")
+    let g:gdb_require_enter_after_toggling_breakpoint = 0
 endif
 " }}}
 
