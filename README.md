@@ -41,14 +41,14 @@ Press <F2> to toggle Nbgdb or Nbgdbattach.
 
 ### gdb directly
 
-    :Nbgdb a.out ""
+    :Nbgdb t1
 
 ### gdb attach pid
 
 So far, the `attach` call by `sudo`, so maybe we should input the **sudo-password**. The reason is:
     [gdb-attach-fails-with-ptrace-operation-not-permitted](https://blog.mellenthin.de/archives/2010/10/18/gdb-attach-fails-with-ptrace-operation-not-permitted/)
 
-    :Nbgdbattach a.out <a.out-pid>
+    :Nbgdbattach t1 <t1-pid>
 
 ### gdb remote target
 
