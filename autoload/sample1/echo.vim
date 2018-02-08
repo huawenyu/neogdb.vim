@@ -27,7 +27,7 @@ function! sample1#echo#New(conf, binaryFile, args)
 
     let l:parent = s:prototype.New(a:0 >= 1 ? a:1 : {})
 
-    call state#Open(conf)
+    call nelib#state#Open(conf)
     if !exists('g:state_ctx') || !has_key(g:state_ctx, 'window')
         return
     endif

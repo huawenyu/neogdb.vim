@@ -183,13 +183,13 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     let gdb._gdb_break_qf = s:gdb_break_qf
     let cword = expand("<cword>")
 
-    call state#Open(conf)
+    call nelib#state#Open(conf)
     if !exists('g:state_ctx')
-        silent! call s:log.trace("  state#Open() fail: 'g:state_ctx' not exist.")
+        silent! call s:log.trace("  nelib#state#Open() fail: 'g:state_ctx' not exist.")
         return
     endif
     if !has_key(g:state_ctx, 'window')
-        silent! call s:log.trace("  state#Open() fail: the dict[window] not exist.")
+        silent! call s:log.trace("  nelib#state#Open() fail: the dict[window] not exist.")
         return
     endif
     " MustExist: Gdb window
@@ -198,7 +198,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         let gdb._win_gdb = win_gdb
         let gdb._client_id = win_gdb._client_id
     else
-        silent! call s:log.trace("  state#Open() fail: the window 'gdb' not exist in dict[window].")
+        silent! call s:log.trace("  nelib#state#Open() fail: the window 'gdb' not exist in dict[window].")
         return
     endif
 
@@ -248,7 +248,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         call gdb.Map("nmap")
         return gdb
     else
-        silent! call s:log.trace("  state#Open() fail: Cann't jump back 'main' window.")
+        silent! call s:log.trace("  nelib#state#Open() fail: Cann't jump back 'main' window.")
     endif
     "}
 endfunction

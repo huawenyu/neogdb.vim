@@ -146,11 +146,11 @@ function! s:JobOutput(_id, lines, _event) dict
   call self._parser.feed(a:lines)
 endfunction
 
-function expect#Parser(initial_state, target)
+function nelib#expect#Parser(initial_state, target)
   return s:Parser.create(a:initial_state, a:target)
 endfunction
 
 
-function expect#State(name, patterns)
+function nelib#expect#State(name, patterns)
   return s:State.create(a:name, a:patterns)
 endfunction

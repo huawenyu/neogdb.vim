@@ -43,9 +43,9 @@ command! -nargs=0 GdbRefresh call neobugger#Handle('current', 'Send', "info line
 command! -nargs=0 GdbInfoLocal call neobugger#Handle('current', 'Send', "info local")
 command! -nargs=0 GdbInfoBreak call neobugger#Handle('current', 'Send', "info break")
 command! -nargs=0 GdbEvalWord call neobugger#Handle('current', 'Eval', expand('<cword>'))
-command! -range -nargs=0 GdbEvalRange call neobugger#Handle('current', 'Eval', util#get_visual_selection())
+command! -range -nargs=0 GdbEvalRange call neobugger#Handle('current', 'Eval', nelib#util#get_visual_selection())
 command! -nargs=0 GdbWatchWord call neobugger#Handle('current', 'Watch', expand('<cword>')
-command! -range -nargs=0 GdbWatchRange call neobugger#Handle('current', 'Watch', util#get_visual_selection())
+command! -range -nargs=0 GdbWatchRange call neobugger#Handle('current', 'Watch', nelib#util#get_visual_selection())
 " }}}
 
 

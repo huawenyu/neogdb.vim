@@ -5,28 +5,28 @@ if !exists("s:init")
 endif
 
 
-function! state#Open(config) abort
+function! nelib#state#Open(config) abort
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
     silent! call s:log.info(l:__func__. " args=", string(a:config))
 
     let conf = a:config
     if type(conf) != type({})
        \ || ! has_key(conf, "Scheme")
-        throw "neogdb.state#Open: config not dict or have no 'Scheme'."
+        throw "neogdb.nelib#state#Open: config not dict or have no 'Scheme'."
     endif
 
     let Creator = function(conf.Scheme)
     if empty(Creator)
-        throw "neogdb.state#Open: no Creator '". conf['Scheme'] ."'."
+        throw "neogdb.nelib#state#Open: no Creator '". conf['Scheme'] ."'."
     endif
     let scheme = Creator()
     silent! call s:log.info(l:__func__. " ", conf['Scheme'])
-    let g:state_ctx = state#CreateRuntime(scheme, conf)
+    let g:state_ctx = nelib#state#CreateRuntime(scheme, conf)
     return g:state_ctx
 endfunc
 
 
-function! state#CreateRuntime(scheme, config) abort
+function! nelib#state#CreateRuntime(scheme, config) abort
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
     let scheme = a:scheme
     let conf = a:config
@@ -79,7 +79,7 @@ function! state#CreateRuntime(scheme, config) abort
         for i in v
             let matches = i.match
             if type(matches) != type([])
-                throw printf("neogdb.state#CreateRuntime: state '%s' match '%s' should be list"
+                throw printf("neogdb.nelib#state#CreateRuntime: state '%s' match '%s' should be list"
                         \ ,k, string(matches))
             endif
             for match in matches
@@ -88,7 +88,7 @@ function! state#CreateRuntime(scheme, config) abort
             endfor
         endfor
 
-        let state = expect#State(k, patterns)
+        let state = nelib#expect#State(k, patterns)
         let ctx.state[k] = state
 
         " self is termopen's target, here is the window, not state itself
@@ -117,21 +117,21 @@ function! state#CreateRuntime(scheme, config) abort
         endif
 
         if has_key(ctx.window, conf_win.name)
-            throw printf("neogdb.state#CreateRuntime: window duplicate '%s'"
+            throw printf("neogdb.nelib#state#CreateRuntime: window duplicate '%s'"
                         \ , conf_win.name)
         endif
         let window = {}
         let ctx.window[conf_win.name] = window
         let window._name = conf_win.name
         if !has_key(ctx.state, conf_win.state)
-            throw printf("neogdb.state#CreateRuntime: window ''%s' initstate '%s' not exist"
+            throw printf("neogdb.nelib#state#CreateRuntime: window ''%s' initstate '%s' not exist"
                         \ , conf_win.name, conf_win.state)
         endif
         let state0 = copy(ctx.state[conf_win.state])
         let window._state = state0
         let state0._window = window
 
-        let target = expect#Parser(state0, window)
+        let target = nelib#expect#Parser(state0, window)
         let window._target = target
         let window._ctx = ctx
 
@@ -193,7 +193,7 @@ function! state#CreateRuntime(scheme, config) abort
         "silent! call s:log.trace("self=", string(self))
 
         if empty(matched[2]) || empty(matched[3])
-            throw "neogdb.state#CreateRuntime: have no 'action','arg0' with " . string(matched)
+            throw "neogdb.nelib#state#CreateRuntime: have no 'action','arg0' with " . string(matched)
         endif
 
         let window = self
