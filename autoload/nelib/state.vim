@@ -160,7 +160,7 @@ function! nelib#state#CreateRuntime(scheme, config) abort
             endif
 
             let window._client_id = jobstart(cmdstr, target)
-            silent! call s:log.info(l:__func__, " jobstart:", cmdstr)
+            silent! call s:log.info(l:__func__, " jobstart[". string(window._client_id). "]: ", cmdstr)
         else
             for layout in layout_list
                 exec layout
@@ -219,7 +219,7 @@ function! nelib#state#CreateRuntime(scheme, config) abort
                 endif
             elseif matched[2] ==# 'send'
                 let str = call("printf", [l:funcname] + a:000)
-                call jobsend(window._client_id, str."\<cr>")
+                call chansend(window._client_id, str."\<cr>")
             elseif matched[2] ==# 'switch'
                 call state#Switch(window._name, l:funcname, 0)
             elseif matched[2] ==# 'push'

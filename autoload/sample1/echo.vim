@@ -92,7 +92,7 @@ endfunction
 function! s:prototype._Send(data)
     let l:__func__ = "gdb._Send"
     silent! call s:log.trace(l:__func__. "() args=". string(a:data))
-    call jobsend(self._client_id, a:data)
+    call chansend(self._client_id, a:data)
 endfunction
 
 

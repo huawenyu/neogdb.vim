@@ -306,10 +306,10 @@ endfunction
 
 function! s:prototype.Send(data)
     let l:__func__ = "gdb.Send"
-    silent! call s:log.trace(l:__func__. "() args=". string(a:data))
+    silent! call s:log.trace(l:__func__. "[". string(self._client_id). "] args=". string(a:data))
 
     if self._win_gdb._state.name ==# "pause" || self._win_gdb._state.name ==# "init"
-        call jobsend(self._client_id, a:data."\<cr>")
+        call chansend(self._client_id, a:data."\<cr>")
     else
         silent! call s:log.error(l:__func__, ": Cann't send data when state='". self._win_gdb._state.name. "'")
     endif
@@ -319,7 +319,7 @@ endfunction
 function! s:prototype._Send(data)
     let l:__func__ = "gdb._Send"
     silent! call s:log.trace(l:__func__. "() args=". string(a:data))
-    call jobsend(self._client_id, a:data)
+    call chansend(self._client_id, a:data)
 endfunction
 
 
@@ -329,14 +329,14 @@ function! s:prototype.SendSvr(data)
     silent! call s:log.trace(l:__func__. "() args=". string(a:data))
 
     if has_key(self, "_server_id")
-        call jobsend(self._server_id, a:data."\<cr>")
+        call chansend(self._server_id, a:data."\<cr>")
     endif
 endfunction
 
 
 function! s:prototype.SendJob(data)
     if has_key(self, "_job_id")
-        call jobsend(self._job_id, a:data."\<cr>")
+        call chansend(self._job_id, a:data."\<cr>")
     endif
 endfunction
 
@@ -377,7 +377,7 @@ function! s:prototype.RefreshBreakpoints(mode)
     if self._win_gdb._state.name ==# "running"
         " pause first
         let is_running = 1
-        call jobsend(self._client_id, "\<c-c>")
+        call chansend(self._client_id, "\<c-c>")
         call state#Switch('gdb', 'pause', 0)
     endif
 
@@ -509,7 +509,7 @@ function! s:prototype.Interrupt()
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
-    call jobsend(self._client_id, "\<c-c>info line\<cr>")
+    call chansend(self._client_id, "\<c-c>info line\<cr>")
 endfunction
 
 
