@@ -219,7 +219,7 @@ function! nelib#state#CreateRuntime(scheme, config) abort
                 endif
             elseif matched[2] ==# 'send'
                 let str = call("printf", [l:funcname] + a:000)
-                call chansend(window._client_id, str."\<cr>")
+                call jobsend(window._client_id, str."\<cr>")
             elseif matched[2] ==# 'switch'
                 call state#Switch(window._name, l:funcname, 0)
             elseif matched[2] ==# 'push'

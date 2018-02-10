@@ -37,12 +37,12 @@ endfunction
 "let job2 = Job.new('2', 'for i in {1..10}; do echo hello $i!; sleep 1; done')
 "
 "
-"To send data to the job's stdin, one can use the |chansend()| function, like
+"To send data to the job's stdin, one can use the |jobsend()| function, like
 "this:
 ">
-"    :call chansend(job1, "ls\n")
-"    :call chansend(job1, "invalid-command\n")
-"    :call chansend(job1, "exit\n")
+"    :call jobsend(job1, "ls\n")
+"    :call jobsend(job1, "invalid-command\n")
+"    :call jobsend(job1, "exit\n")
 "<
 "A job may be killed at any time with the |jobstop()| function:
 ">
