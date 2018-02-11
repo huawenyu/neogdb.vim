@@ -584,7 +584,6 @@ function! s:prototype.ToggleBreak()
                         \'cmd' : break_new,
                         \'change' : 1,
                         \}
-            "Decho break_new
             let mode = 1
             let s:breakpoints[file_breakpoints] = old_value
         endif
@@ -593,13 +592,11 @@ function! s:prototype.ToggleBreak()
         if !empty(break_new)
             let old_value['state'] = 0
             let old_value['change'] = 1
-            "Decho break_new
         endif
     else
         let break_new = input("(delete break) ", old_value['cmd'])
         if !empty(break_new)
             call remove(s:breakpoints, file_breakpoints)
-            "Decho break_new
         endif
         let old_value = {}
     endif
@@ -712,6 +709,21 @@ function! s:prototype.Watch(expr)
 endfunction
 
 
+function! s:prototype.ParseBacktrace()
+  let s:lines = readfile('/tmp/gdb.bt')
+  for s:line in s:lines
+    echo s:line
+  endfor
+endfunction
+
+
+function! s:prototype.ParseVar()
+  let s:lines = readfile('/tmp/gdb.bt')
+  for s:line in s:lines
+    echo s:line
+  endfor
+endfunction
+
 
 function! s:prototype.on_load_bt(...)
     if self._showbacktrace && filereadable(s:gdb_bt_qf)
@@ -740,6 +752,10 @@ function! s:prototype.on_jump(file, line, ...)
 endfunction
 
 function! s:prototype.on_whatis(type, ...)
+    call self.Whatis(a:type)
+endfunction
+
+function! s:prototype.on_parseend(...)
     call self.Whatis(a:type)
 endfunction
 
@@ -786,6 +802,25 @@ function! s:prototype.on_init(...)
                 \ set logging on\n
                 \ bt\n
                 \ set logging off\n
+                \ echo neobugger_parseend\n
+                \ end"
+    call self.Send(cmdstr)
+
+    let cmdstr = "define parser_var_bt\n
+                \ set logging off\n
+                \ set logging file /tmp/gdb.bt\n
+                \ set logging overwrite on\n
+                \ set logging redirect on\n
+                \ set logging on\n
+                \ bt\n
+                \ set logging off\n
+                \ set logging file /tmp/gdb.var\n
+                \ set logging overwrite on\n
+                \ set logging redirect on\n
+                \ set logging on\n
+                \ info local\n
+                \ set logging off\n
+                \ echo neobugger_parseend\n
                 \ end"
     call self.Send(cmdstr)
 

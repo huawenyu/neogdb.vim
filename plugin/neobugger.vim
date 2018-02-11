@@ -105,20 +105,27 @@ else
     endif
 
 endif
-
-
-if !exists("g:gdb_require_enter_after_toggling_breakpoint")
-    let g:gdb_require_enter_after_toggling_breakpoint = 0
-endif
 " }}}
 
 
-" Helper options {{{1
+" Customization options {{{1
+"
+if !exists("g:gdb_require_enter_after_toggling_breakpoint")
+    let g:gdb_require_enter_after_toggling_breakpoint = 0
+endif
+
 if !exists("g:restart_app_if_gdb_running")
     let g:restart_app_if_gdb_running = 1
 endif
 
+if !exists("g:neobugger_other")
+    let g:neobugger_other = 1
+endif
 
+" }}}
+
+
+" Helper options {{{1
 let s:gdb_local_remote = 0
 function! NeobuggerCommandStr()
     if s:gdb_local_remote
