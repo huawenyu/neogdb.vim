@@ -27,7 +27,10 @@ if !exists("s:init")
     let s:fl_file = './.gdb.file'
     let s:file_list = {}
 
+    let s:parseBT = nelib#enum#Create(['RAWLINE', 'FRAME', 'FUNC', 'PARAM', 'FILE', 'LINE'])
+
     let s:view_var = {}
+    let s:view_backtrace = {}
 
     let s:module = 'gdb'
     let s:prototype = tlib#Object#New({
@@ -713,10 +716,35 @@ function! s:prototype.Watch(expr)
 endfunction
 
 
+
+
+" Output Sample:
+"
+" > #0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65
+" > #1  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24
+"
 function! s:prototype.ParseBacktrace()
-    let s:lines = readfile('/tmp/gdb.bt')
-    for s:line in s:lines
-        echo s:line
+    let l:__func__ = "gdb.ParseBacktrace"
+    let l:lines = readfile('/tmp/gdb.bt')
+
+    "" RunScript
+    "echomsg string(matchlist('#0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65'
+    "      \, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$'))
+    "echomsg string(matchlist('#2  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24'
+    "      \, '\v^#(\d+)  (.*) in (.*) \((.*)\) at (.*):(\d+)$'))
+
+    let frame0 = 1
+    for l:line in l:lines
+        if frame0
+            let matches = matchlist(l:line, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$')
+        else
+            let matches = matchlist(l:line, '\v^#(\d+)  (.*) in (.*) \((.*)\) at (.*):(\d+)$')
+        endif
+
+        silent! call s:log.info(l:__func__, ' line=', l:line, ' matches=', string(matches))
+        let frame0 = 0
+        "s:parseBT
+        "let s:view_backtrace[l:key] = l:val
     endfor
 endfunction
 
@@ -762,20 +790,18 @@ function! s:prototype.ParseVar()
         return 0
     endif
 
-    call self.Send('neobug_redir /tmp/gdb.vars 0')
+    " Write command backto /tmp/gdb.cmd
+    let l:lines = []
     let l:cmdstr = ""
     for [key, val] in items(s:view_var)
         if match(val, '^0x') != -1
             let l:cmdstr = printf('whatis %s', key)
-            call self.Send("echo ". l:cmdstr. '\n')
-            call self.Send(l:cmdstr)
+            call add(l:lines, "echo ". l:cmdstr. '\n')
+            call add(l:lines, l:cmdstr)
         endif
     endfor
-
-    " Hacker: add one more useless line for parse
-    call self.Send('echo "---"\n')
-
-    call self.Send('neobug_redirend "#neobug_tag_redirend#"')
+    call writefile(l:lines, '/tmp/gdb.cmd')
+    call self.Send('neobug_redir_cmd /tmp/gdb.vars "#neobug_tag_redirend#" source /tmp/gdb.cmd')
     return 1
 endfunction
 
@@ -792,17 +818,7 @@ function! s:prototype.ParseVarEnd()
         return
     endif
 
-    " Wait the file synced
-    let loop = 10
-    while loop
-        let loop -= 1
-
-        let l:lines = readfile('/tmp/gdb.vars')
-        if l:lines[len(l:lines)-1] == '"---"'
-            break
-        endif
-        sleep 100m
-    endwhile
+    let l:lines = readfile('/tmp/gdb.vars')
 
     let next_is_key = 1
     for l:line in l:lines
@@ -810,7 +826,7 @@ function! s:prototype.ParseVarEnd()
             let next_is_key = 0
 
             let matches = matchlist(l:line, 'whatis \(.*\)')
-            silent! call s:log.info(l:__func__, ' line=', l:line, ' key=', string(matches))
+            "silent! call s:log.info(l:__func__, ' line=', l:line, ' key=', string(matches))
             if len(matches) > 0
                 let l:key = matches[1]
             endif
@@ -818,7 +834,7 @@ function! s:prototype.ParseVarEnd()
             let next_is_key = 1
 
             let matches = matchlist(l:line, 'type = \(.*\)')
-            silent! call s:log.info(l:__func__, ' line=', l:line, ' val=', string(matches))
+            "silent! call s:log.info(l:__func__, ' line=', l:line, ' val=', string(matches))
             if len(matches) > 0
                 let l:val = matches[1]
                 if has_key(s:view_var, l:key)
@@ -865,6 +881,8 @@ endfunction
 
 function! s:prototype.on_parseend(...)
     let l:__func__ = "gdb.ParseEnd"
+
+    call self.ParseBacktrace()
 
     call state#Switch('gdb', 'parsevar', 1)
     let l:ret = self.ParseVar()
@@ -924,17 +942,25 @@ function! s:prototype.on_init(...)
                 \"
     call self.Send(cmdstr)
 
-    " @param logfile, commands, echomsg
+    " @param logfile, echomsg, commands
     let cmdstr = "define neobug_redir_cmd\n
                 \   set logging off\n
                 \   set logging file $arg0\n
                 \   set logging overwrite on\n
                 \   set logging redirect on\n
                 \   set logging on\n
-                \   $arg1\n
+                \   if $argc == 3\n
+                \       $arg2\n
+                \   end\n
+                \   if $argc == 4\n
+                \       $arg2 $arg3\n
+                \   end\n
+                \   if $argc == 5\n
+                \       $arg2 $arg3 $arg4\n
+                \   end\n
                 \   set logging off\n
-                \   if $arg2 != 0\n
-                \     echo $arg2\\n\n
+                \   if $arg1 != 0\n
+                \     echo $arg1\\n\n
                 \   end\n
                 \ end\n"
     call self.Send(cmdstr)
