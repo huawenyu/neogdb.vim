@@ -19,7 +19,7 @@ function! neobugger#gdb#local#Conf() abort
         \ "showbreakpoint" : 0,
         \ "showbacktrace" : 0,
         \ "conf_gdb_layout" : ["sp"],
-        \ "conf_gdb_cmd" : ["gdb -ex 'echo neobugger_starting\n' -q -f", 'a.out'],
+        \ "conf_gdb_cmd" : ["gdb -ex 'echo #neobug_tag_init#\n' -q -f", 'a.out'],
         \ "window" : [
         \   {   "name":   "gdbserver",
         \       "status":  0,

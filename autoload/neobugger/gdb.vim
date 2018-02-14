@@ -27,6 +27,8 @@ if !exists("s:init")
     let s:fl_file = './.gdb.file'
     let s:file_list = {}
 
+    let s:view_var = {}
+
     let s:module = 'gdb'
     let s:prototype = tlib#Object#New({
                 \ '_class': [s:module],
@@ -306,9 +308,11 @@ endfunction
 
 function! s:prototype.Send(data)
     let l:__func__ = "gdb.Send"
-    silent! call s:log.trace(l:__func__. "[". string(self._client_id). "] args=". string(a:data))
+    silent! call s:log.trace(l:__func__. "[". string(self._client_id). " at ". self._win_gdb._state.name. "] args=". string(a:data))
 
-    if self._win_gdb._state.name ==# "pause" || self._win_gdb._state.name ==# "init"
+    if self._win_gdb._state.name ==# "pause"
+                \ || self._win_gdb._state.name ==# "init"
+                \ || self._win_gdb._state.name ==# "parsevar"
         call jobsend(self._client_id, a:data."\<cr>")
     else
         silent! call s:log.error(l:__func__, ": Cann't send data when state='". self._win_gdb._state.name. "'")
@@ -710,18 +714,122 @@ endfunction
 
 
 function! s:prototype.ParseBacktrace()
-  let s:lines = readfile('/tmp/gdb.bt')
-  for s:line in s:lines
-    echo s:line
-  endfor
+    let s:lines = readfile('/tmp/gdb.bt')
+    for s:line in s:lines
+        echo s:line
+    endfor
 endfunction
 
 
+" @return -1 file-not-exist
+"          0 succ
+"          1 wait-end
 function! s:prototype.ParseVar()
-  let s:lines = readfile('/tmp/gdb.bt')
-  for s:line in s:lines
-    echo s:line
-  endfor
+    let l:__func__ = "gdb.ParseVar"
+    silent! call s:log.info(l:__func__, '()')
+
+    let s:view_var = {}
+    if !filereadable('/tmp/gdb.var')
+        return -1
+    endif
+    let l:check_parse = 0
+    let l:lines = readfile('/tmp/gdb.var')
+    for l:line in l:lines
+        let matches = matchlist(l:line, '\(.*\) = \(.*\)')
+        if len(matches) < 2
+            continue
+        endif
+
+        let l:key = matches[1]
+        let l:val = matches[2]
+        if match(l:val, '0x') != -1
+            let l:check_parse = 1
+        endif
+
+        if match(l:key, '__FUNCTION__') != -1
+            continue
+        endif
+
+        if match(l:val, '<optimized out>') != -1
+            continue
+        endif
+
+        "echomsg 'ParseVar '. l:key . ' = '. l:val
+        let s:view_var[l:key] = l:val
+    endfor
+
+    if !l:check_parse
+        return 0
+    endif
+
+    call self.Send('neobug_redir /tmp/gdb.vars 0')
+    let l:cmdstr = ""
+    for [key, val] in items(s:view_var)
+        if match(val, '^0x') != -1
+            let l:cmdstr = printf('whatis %s', key)
+            call self.Send("echo ". l:cmdstr. '\n')
+            call self.Send(l:cmdstr)
+        endif
+    endfor
+
+    " Hacker: add one more useless line for parse
+    call self.Send('echo "---"\n')
+
+    call self.Send('neobug_redirend "#neobug_tag_redirend#"')
+    return 1
+endfunction
+
+
+" Output Sample:
+"
+"> (gdb) whatis clt
+"> type = struct wad_http_client *
+"
+function! s:prototype.ParseVarEnd()
+    let l:__func__ = "gdb.ParseVarEnd"
+
+    if !filereadable('/tmp/gdb.vars')
+        return
+    endif
+
+    " Wait the file synced
+    let loop = 10
+    while loop
+        let loop -= 1
+
+        let l:lines = readfile('/tmp/gdb.vars')
+        if l:lines[len(l:lines)-1] == '"---"'
+            break
+        endif
+        sleep 100m
+    endwhile
+
+    let next_is_key = 1
+    for l:line in l:lines
+        if next_is_key
+            let next_is_key = 0
+
+            let matches = matchlist(l:line, 'whatis \(.*\)')
+            silent! call s:log.info(l:__func__, ' line=', l:line, ' key=', string(matches))
+            if len(matches) > 0
+                let l:key = matches[1]
+            endif
+        else
+            let next_is_key = 1
+
+            let matches = matchlist(l:line, 'type = \(.*\)')
+            silent! call s:log.info(l:__func__, ' line=', l:line, ' val=', string(matches))
+            if len(matches) > 0
+                let l:val = matches[1]
+                if has_key(s:view_var, l:key)
+                    let s:view_var[l:key] = l:val
+                endif
+            endif
+        endif
+    endfor
+
+    " view2window
+    silent! call s:log.info(l:__func__, ' vars=', string(s:view_var))
 endfunction
 
 
@@ -745,7 +853,7 @@ function! s:prototype.on_jump(file, line, ...)
         silent! call s:log.info(gdb)
         silent! call s:log.info("State ", self._win_gdb._state.name, " => pause")
         call state#Switch('gdb', 'pause', 0)
-        call self.Send('parser_bt')
+        call self.Send('parser_var_bt')
         call self.Send('info line')
     endif
     call self.Jump(a:file, a:line)
@@ -756,7 +864,28 @@ function! s:prototype.on_whatis(type, ...)
 endfunction
 
 function! s:prototype.on_parseend(...)
-    call self.Whatis(a:type)
+    let l:__func__ = "gdb.ParseEnd"
+
+    call state#Switch('gdb', 'parsevar', 1)
+    let l:ret = self.ParseVar()
+    silent! call s:log.info(l:__func__, '(): ret=', l:ret)
+    if l:ret == 0
+        " succ, parse-finish
+        call state#Switch('gdb', 'parsevar', 2)
+    elseif l:ret == -1
+        " file-not-exist
+        call state#Switch('gdb', 'parsevar', 2)
+    else
+        " wait-end
+    endif
+endfunction
+
+function! s:prototype.on_parsevarend(...)
+    call state#Switch('gdb', 'parsevar', 2)
+    call self.ParseVarEnd()
+
+    " Trigger Jump
+    call self.Send('info line')
 endfunction
 
 function! s:prototype.on_retry(...)
@@ -779,6 +908,7 @@ function! s:prototype.on_init(...)
     endif
 
     let self._initialized = 1
+    call state#Switch('gdb', 'init', 0)
     " set filename-display absolute
     " set remotetimeout 50
     let cmdstr = "set confirm off\n
@@ -794,6 +924,42 @@ function! s:prototype.on_init(...)
                 \"
     call self.Send(cmdstr)
 
+    " @param logfile, commands, echomsg
+    let cmdstr = "define neobug_redir_cmd\n
+                \   set logging off\n
+                \   set logging file $arg0\n
+                \   set logging overwrite on\n
+                \   set logging redirect on\n
+                \   set logging on\n
+                \   $arg1\n
+                \   set logging off\n
+                \   if $arg2 != 0\n
+                \     echo $arg2\\n\n
+                \   end\n
+                \ end\n"
+    call self.Send(cmdstr)
+
+    " @param logfile, commands
+    " if @param == 0, means NULL
+    let cmdstr = "define neobug_redir\n
+                \   set logging off\n
+                \   set logging file $arg0\n
+                \   set logging overwrite on\n
+                \   set logging redirect on\n
+                \   set logging on\n
+                \   if $arg1 != 0\n
+                \     $arg1\n
+                \   end\n
+                \ end\n
+                \
+                \ define neobug_redirend\n
+                \   set logging off\n
+                \   if $arg0 != 0\n
+                \     echo $arg0\\n\n
+                \   end\n
+                \ end"
+    call self.Send(cmdstr)
+
     let cmdstr = "define parser_bt\n
                 \ set logging off\n
                 \ set logging file /tmp/gdb.bt\n
@@ -802,7 +968,7 @@ function! s:prototype.on_init(...)
                 \ set logging on\n
                 \ bt\n
                 \ set logging off\n
-                \ echo neobugger_parseend\n
+                \ echo #neobug_tag_parseend#\\n\n
                 \ end"
     call self.Send(cmdstr)
 
@@ -820,7 +986,7 @@ function! s:prototype.on_init(...)
                 \ set logging on\n
                 \ info local\n
                 \ set logging off\n
-                \ echo neobugger_parseend\n
+                \ echo #neobug_tag_parseend#\\n\n
                 \ end"
     call self.Send(cmdstr)
 
@@ -840,7 +1006,7 @@ function! s:prototype.on_init(...)
 
     let cmdstr = "define hook-stop\n
                 \ handle SIGALRM nopass\n
-                \ parser_bt\n
+                \ parser_var_bt\n
                 \ end\n
                 \ \n
                 \ define hook-run\n
@@ -864,6 +1030,14 @@ function! s:prototype.on_init(...)
         call self.RefreshBreakpointSigns(0)
         call self.RefreshBreakpoints(0)
     endif
+
+    call self.Send('echo #neobug_tag_initend#\n')
+endfunction
+
+
+function! s:prototype.on_initend(...)
+    let l:__func__ = "gdb.on_initend"
+    silent! call s:log.info(l:__func__, " args=", string(a:000))
 
     if has_key(self, 'Init')
         silent! call s:log.info(l:__func__, " call Init()")

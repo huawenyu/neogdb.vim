@@ -30,7 +30,7 @@ function! sample1#mode#basic#Conf() abort
         \ ],
         \ "state" : {
         \   "init": [
-        \       {   "match":   [ 'neobugger_starting', ],
+        \       {   "match":   [ '#neobug_tag_init#', ],
         \           "hint":    "The 1st time entering gdb",
         \           "window":  "",
         \           "action":  "call",
