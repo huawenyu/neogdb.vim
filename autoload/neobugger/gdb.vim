@@ -905,6 +905,7 @@ endfunction
 
 function s:prototype.on_remote_debugging(...)
     let self._remote_debugging = 1
+    call state#Switch('gdb', 'pause', 0)
 endfunction
 
 
