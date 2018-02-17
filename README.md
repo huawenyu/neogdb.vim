@@ -1,6 +1,7 @@
 # neogdb.vim
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
-The code reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim  
+The code `expect` reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim  
+The code `window` reference: https://github.com/astashov/vim-ruby-debugger.git  
 
 ## feature
   - gdb commands maps: next, step, finish, continue, etc.

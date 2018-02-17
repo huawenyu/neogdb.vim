@@ -29,8 +29,7 @@ if !exists("s:init")
 
     let s:parseBT = nelib#enum#Create(['RAWLINE', 'FRAME', 'FUNC', 'PARAM', 'FILE', 'LINE'])
 
-    let s:view_var = {}
-    let s:view_backtrace = {}
+    let s:model_backtrace = {}
 
     let s:module = 'gdb'
     let s:prototype = tlib#Object#New({
@@ -79,6 +78,11 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     else
         let gdb = l:parent
     endif
+
+    let gdb.model_var = neobugger#model_var#New()
+    "let gdb.model_frame = neobugger#model_frame#New()
+    "let gdb.model_backtrace = neobugger#model_backtrace#New()
+    "let gdb.model_breakpoint = neobugger#model_breakpoint#New()
 
     let gdb.module = s:module
     let gdb._initialized = 0
@@ -744,108 +748,8 @@ function! s:prototype.ParseBacktrace()
         silent! call s:log.info(l:__func__, ' line=', l:line, ' matches=', string(matches))
         let frame0 = 0
         "s:parseBT
-        "let s:view_backtrace[l:key] = l:val
+        "let s:model_backtrace[l:key] = l:val
     endfor
-endfunction
-
-
-" @return -1 file-not-exist
-"          0 succ
-"          1 wait-end
-function! s:prototype.ParseVar()
-    let l:__func__ = "gdb.ParseVar"
-    silent! call s:log.info(l:__func__, '()')
-
-    let s:view_var = {}
-    if !filereadable('/tmp/gdb.var')
-        return -1
-    endif
-    let l:check_parse = 0
-    let l:lines = readfile('/tmp/gdb.var')
-    for l:line in l:lines
-        let matches = matchlist(l:line, '\(.*\) = \(.*\)')
-        if len(matches) < 2
-            continue
-        endif
-
-        let l:key = matches[1]
-        let l:val = matches[2]
-        if match(l:val, '0x') != -1
-            let l:check_parse = 1
-        endif
-
-        if match(l:key, '__FUNCTION__') != -1
-            continue
-        endif
-
-        if match(l:val, '<optimized out>') != -1
-            continue
-        endif
-
-        "echomsg 'ParseVar '. l:key . ' = '. l:val
-        let s:view_var[l:key] = l:val
-    endfor
-
-    if !l:check_parse
-        return 0
-    endif
-
-    " Write command backto /tmp/gdb.cmd
-    let l:lines = []
-    let l:cmdstr = ""
-    for [key, val] in items(s:view_var)
-        if match(val, '^0x') != -1
-            let l:cmdstr = printf('whatis %s', key)
-            call add(l:lines, "echo ". l:cmdstr. '\n')
-            call add(l:lines, l:cmdstr)
-        endif
-    endfor
-    call writefile(l:lines, '/tmp/gdb.cmd')
-    call self.Send('neobug_redir_cmd /tmp/gdb.vars "#neobug_tag_redirend#" source /tmp/gdb.cmd')
-    return 1
-endfunction
-
-
-" Output Sample:
-"
-"> (gdb) whatis clt
-"> type = struct wad_http_client *
-"
-function! s:prototype.ParseVarEnd()
-    let l:__func__ = "gdb.ParseVarEnd"
-
-    if !filereadable('/tmp/gdb.vars')
-        return
-    endif
-
-    let l:lines = readfile('/tmp/gdb.vars')
-
-    let next_is_key = 1
-    for l:line in l:lines
-        if next_is_key
-            let next_is_key = 0
-
-            let matches = matchlist(l:line, 'whatis \(.*\)')
-            "silent! call s:log.info(l:__func__, ' line=', l:line, ' key=', string(matches))
-            if len(matches) > 0
-                let l:key = matches[1]
-            endif
-        else
-            let next_is_key = 1
-
-            let matches = matchlist(l:line, 'type = \(.*\)')
-            "silent! call s:log.info(l:__func__, ' line=', l:line, ' val=', string(matches))
-            if len(matches) > 0
-                let l:val = matches[1]
-                if has_key(s:view_var, l:key)
-                    let s:view_var[l:key] = l:val
-                endif
-            endif
-        endif
-    endfor
-
-    " view2window
-    silent! call s:log.info(l:__func__, ' vars=', string(s:view_var))
 endfunction
 
 
@@ -885,7 +789,7 @@ function! s:prototype.on_parseend(...)
     call self.ParseBacktrace()
 
     call state#Switch('gdb', 'parsevar', 1)
-    let l:ret = self.ParseVar()
+    let l:ret = self.model_var.ParseVar('/tmp/gdb.var', '/tmp/gdb.cmd')
     silent! call s:log.info(l:__func__, '(): ret=', l:ret)
     if l:ret == 0
         " succ, parse-finish
@@ -894,13 +798,14 @@ function! s:prototype.on_parseend(...)
         " file-not-exist
         call state#Switch('gdb', 'parsevar', 2)
     else
-        " wait-end
+        " succ & wait-end
+        call self.Send('neobug_redir_cmd /tmp/gdb.vars "#neobug_tag_redirend#" source /tmp/gdb.cmd')
     endif
 endfunction
 
 function! s:prototype.on_parsevarend(...)
     call state#Switch('gdb', 'parsevar', 2)
-    call self.ParseVarEnd()
+    call self.model_var.ParseVarEnd('/tmp/gdb.vars')
 
     " Trigger Jump
     call self.Send('info line')
