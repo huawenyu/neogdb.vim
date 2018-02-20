@@ -753,6 +753,16 @@ function! s:prototype.ParseBacktrace()
 endfunction
 
 
+function! s:prototype.ViewVarToggle()
+    if has_key(self, 'view_var')
+        unlet self['view_var']
+    else
+        let self.view_var = neobugger#view_var#New("Var", "gdb.local.variable")
+        call self.view_var.open()
+    endif
+endfunction
+
+
 function! s:prototype.on_load_bt(...)
     if self._showbacktrace && filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf

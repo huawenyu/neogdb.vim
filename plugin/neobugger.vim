@@ -46,6 +46,8 @@ command! -nargs=0 GdbEvalWord call neobugger#Handle('current', 'Eval', expand('<
 command! -range -nargs=0 GdbEvalRange call neobugger#Handle('current', 'Eval', nelib#util#get_visual_selection())
 command! -nargs=0 GdbWatchWord call neobugger#Handle('current', 'Watch', expand('<cword>')
 command! -range -nargs=0 GdbWatchRange call neobugger#Handle('current', 'Watch', nelib#util#get_visual_selection())
+
+command! -nargs=0 GdbViewVar call neobugger#Handle('current', 'ViewVarToggle')
 " }}}
 
 

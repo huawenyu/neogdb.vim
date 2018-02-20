@@ -4,7 +4,7 @@ if !exists("s:script")
     silent! let s:log = logger#getLogger(s:script)
 
     let s:prototype = tlib#Object#New({
-                \ '_class': ['ModelVariable'],
+                \ '_class': ['ModelVar'],
                 \ })
 endif
 
@@ -21,11 +21,6 @@ function! neobugger#model_var#New()
 
     return l:model
     "}
-endfunction
-
-
-function! s:prototype.Append(var_name, var_value)
-    let l:model.vars[a:var_name] = a:var_value
 endfunction
 
 
@@ -128,7 +123,6 @@ function! s:prototype.ParseVarEnd(filename)
 endfunction
 
 
-
 " Get variable under cursor
 function! s:prototype.get_selected()
   let line = getline(".")
@@ -140,6 +134,46 @@ function! s:prototype.get_selected()
     return variable
   else
     return {}
+  endif
+endfunction
+
+
+" Output format for Breakpoints Window
+function! s:prototype.render() dict
+  let output = self.id . " " . (exists("self.debugger_id") ? self.debugger_id : '') . " " . self.file . ":" . self.line
+  if exists("self.condition")
+    let output .= " " . self.condition
+  endif
+  return output . "\n"
+endfunction
+
+
+" Open breakpoint in existed/new window
+function! s:prototype.open() dict
+  call s:jump_to_file(self.file, self.line)
+endfunction
+
+
+function! s:prototype._set_sign() dict
+  if has("signs")
+    exe ":sign place " . self.id . " line=" . self.line . " name=breakpoint file=" . self.file
+  endif
+endfunction
+
+
+function! s:prototype._unset_sign() dict
+  if has("signs")
+    exe ":sign unplace " . self.id
+  endif
+endfunction
+
+
+" Send deleting breakpoint message to debugger, if it is run
+" (e.g.: 'delete 5')
+function! s:prototype._send_delete_to_debugger() dict
+  if has_key(g:RubyDebugger, 'server') && g:RubyDebugger.server.is_running() && has_key(self, 'debugger_id')
+    let message = 'delete ' . self.debugger_id
+    call g:RubyDebugger.queue.add(message)
   endif
 endfunction
 
