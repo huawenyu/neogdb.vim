@@ -1,8 +1,6 @@
 if !exists("s:script")
     let s:script = expand('<sfile>:t')
-    " exists("*logger#getLogger")
     silent! let s:log = logger#getLogger(s:script)
-
     let s:prototype = tlib#Object#New({
                 \ '_class': ['ModelVar'],
                 \ })
@@ -10,12 +8,13 @@ endif
 
 
 " Constructor
-function! neobugger#model_var#New()
+function! neobugger#model_var#New(viewer)
     "{
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:model.vars = {}
+    let l:model.viewer = a:viewer
     let l:abstract = neobugger#model#New()
     call l:model.Inherit(l:abstract)
 
@@ -26,8 +25,8 @@ endfunction
 
 " @return -1 file-not-exist
 "          0 succ
-"          1 wait-end
-function! s:prototype.ParseVar(srcfile, dstfile)
+"          1 wait 'end'
+function! s:prototype.ParseVar(srcfile, dstfile) dict
     let l:__func__ = "model_Var.ParseVar"
     silent! call s:log.info(l:__func__, '()')
 
@@ -80,28 +79,31 @@ function! s:prototype.ParseVar(srcfile, dstfile)
 endfunction
 
 
-" Output Sample:
+" Read Sample:
 "
 "> (gdb) whatis clt
 "> type = struct wad_http_client *
 "
-function! s:prototype.ParseVarEnd(filename)
+" @return -1 file-not-exist
+"          0 succ
+"          1 wait 'end'
+function! s:prototype.ParseVarType(srcfile, dstfile) dict
     let l:__func__ = "model_Var.ParseVarEnd"
 
-    if !filereadable(a:filename)
-        return
+    if !filereadable(a:srcfile)
+        return -1
     endif
-
-    let l:lines = readfile(a:filename)
+    let l:lines = readfile(a:srcfile)
 
     let next_is_key = 1
+    let l:ParseVarValue = []
     for l:line in l:lines
         if next_is_key
             let next_is_key = 0
 
             let matches = matchlist(l:line, 'whatis \(.*\)')
             "silent! call s:log.info(l:__func__, ' line=', l:line, ' key=', string(matches))
-            if len(matches) > 0
+            if len(matches) > 0 && !empty(matches[1])
                 let l:key = matches[1]
             endif
         else
@@ -109,22 +111,54 @@ function! s:prototype.ParseVarEnd(filename)
 
             let matches = matchlist(l:line, 'type = \(.*\)')
             "silent! call s:log.info(l:__func__, ' line=', l:line, ' val=', string(matches))
-            if len(matches) > 0
+            if len(matches) > 0 && !empty(matches[1])
                 let l:val = matches[1]
                 if has_key(self.vars, l:key)
-                    let self.vars[l:key] = l:val
+                    let l:cmdstr = ''
+                    " Write command backto /tmp/gdb.cmd
+                    if exists("*NeogdbvimVarCallback")
+                        let l:plist = NeogdbvimVarCallback(l:key, l:val)
+                        if !empty(l:plist)
+                            let l:varname = printf('ValueOf %s', l:key)
+                            call add(l:ParseVarValue, "echo ". l:varname. '\n')
+
+                            for l:print in l:plist
+                                call add(l:ParseVarValue, l:print)
+                            endfor
+                        endif
+                    endif
                 endif
             endif
         endif
     endfor
 
+    if !empty(l:ParseVarValue)
+        call writefile(l:ParseVarValue, a:dstfile)
+        return 1
+    endif
+
     " view2window
     silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
+    call self.viewer.display(self.render())
+    return 0
+endfunction
+
+
+function! s:prototype.ParseVarEnd(srcfile) dict
+    let l:__func__ = "model_Var.ParseVarEnd"
+
+    if !filereadable(a:srcfile)
+        return -1
+    endif
+    " view2window
+    silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
+    call self.viewer.display(self.render())
+    return 0
 endfunction
 
 
 " Get variable under cursor
-function! s:prototype.get_selected()
+function! s:prototype.get_selected() dict
   let line = getline(".")
   " Get its id - it is last in the string
   let match = matchlist(line, '.*\t\(\d\+\)$')
@@ -140,11 +174,11 @@ endfunction
 
 " Output format for Breakpoints Window
 function! s:prototype.render() dict
-  let output = self.id . " " . (exists("self.debugger_id") ? self.debugger_id : '') . " " . self.file . ":" . self.line
-  if exists("self.condition")
-    let output .= " " . self.condition
-  endif
-  return output . "\n"
+    let output = "Variables:\n"
+    for [name, data] in items(self.vars)
+        let output .= name. ': {'. data. "}\n"
+    endfor
+    return output
 endfunction
 
 
@@ -171,9 +205,8 @@ endfunction
 " Send deleting breakpoint message to debugger, if it is run
 " (e.g.: 'delete 5')
 function! s:prototype._send_delete_to_debugger() dict
-  if has_key(g:RubyDebugger, 'server') && g:RubyDebugger.server.is_running() && has_key(self, 'debugger_id')
-    let message = 'delete ' . self.debugger_id
-    call g:RubyDebugger.queue.add(message)
-  endif
+    let l:__func__ = "model_Var._send_delete_to_debugger"
+
+    silent! call s:log.info(l:__func__)
 endfunction
 

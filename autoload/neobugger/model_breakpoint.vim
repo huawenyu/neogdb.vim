@@ -50,7 +50,7 @@ function! s:Breakpoint.new(file, line)
   let var.id = s:Breakpoint.id
 
   call var._set_sign()
-  call s:log("Set breakpoint to: " . var.file . ":" . var.line)
+  call s:log.info("Set breakpoint to: " . var.file . ":" . var.line)
   return var
 endfunction
 
@@ -77,7 +77,7 @@ endfunction
 " Send adding breakpoint message to debugger, if it is run
 function! s:Breakpoint.send_to_debugger() dict
   if has_key(g:RubyDebugger, 'server') && g:RubyDebugger.server.is_running()
-    call s:log("Server is running, so add command to Queue")
+    call s:log.info("Server is running, so add command to Queue")
     call g:RubyDebugger.queue.add(self.command())
   endif
 endfunction

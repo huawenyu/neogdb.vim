@@ -47,7 +47,7 @@ function! s:prototype.close() dict
     " If this is only one window, just quit
     :q
   endif
-  call s:log("Closed window with name: " . self.name)
+  call s:log.info("Closed window with name: " . self.name)
 endfunction
 
 
@@ -62,8 +62,8 @@ endfunction
 
 
 " Display data to the window
-function! s:prototype.display()
-  call s:log("Start displaying data in window with name: " . self.name)
+function! s:prototype.display(data) dict
+  call s:log.info("Start displaying data in window with name: " . self.name)
   call self.focus()
   setlocal modifiable
 
@@ -73,18 +73,18 @@ function! s:prototype.display()
 
   call self.clear()
 
-  call self._insert_data()
+  call self._insert_data(a:data)
   call self._restore_view(top_line, current_line, current_column)
 
   setlocal nomodifiable
-  call s:log("Complete displaying data in window with name: " . self.name)
+  call s:log.info("Complete displaying data in window with name: " . self.name)
 endfunction
 
 
 " Put cursor to the window
 function! s:prototype.focus() dict
   exe self.get_number() . " wincmd w"
-  call s:log("Set focus to window with name: " . self.name)
+  call s:log.info("Set focus to window with name: " . self.name)
 endfunction
 
 
@@ -123,21 +123,21 @@ function! s:prototype.open() dict
       setlocal nolist
       iabc <buffer>
       setlocal cursorline
-      setfiletype ruby_debugger_window
-      call s:log("Opened window with name: " . self.name)
+      setfiletype viewer_window
+      call s:log.info("Opened window with name: " . self.name)
     endif
 
     if has("syntax") && exists("g:syntax_on") && !has("syntax_items")
       call self.setup_syntax_highlighting()
     endif
 
-    call self.display()
+    call self.display("[Empty]\n")
 endfunction
 
 
 " Open/close window
 function! s:prototype.toggle() dict
-  call s:log("Toggling window with name: " . self.name)
+  call s:log.info("Toggling window with name: " . self.name)
   if self._exist_for_tab() && self.is_open()
     call self.close()
   else
@@ -162,20 +162,20 @@ endfunction
 
 
 " Insert data to the window
-function! s:prototype._insert_data() dict
+function! s:prototype._insert_data(data) dict
   let old_p = @p
   " Put data to the register and then show it by 'put' command
-  let @p = self.render()
+  let @p = a:data
   silent exe "normal \"pP"
   let @p = old_p
-  call s:log("Inserted data to window with name: " . self.name)
+  call s:log.info("Inserted data to window with name: " . self.name)
 endfunction
 
 
 " Calculate correct name for the window
 function! s:prototype._next_buffer_name() dict
-  let name = self.name . s:prototype.next_buffer_number
-  let s:prototype.next_buffer_number += 1
+  let name = self.name . self.next_buffer_number
+  let self.next_buffer_number += 1
   return name
 endfunction
 
@@ -188,7 +188,7 @@ function! s:prototype._restore_view(top_line, current_line, current_column) dict
   normal! zt
   call cursor(a:current_line, a:current_column)
   let &scrolloff = old_scrolloff
-  call s:log("Restored view of window with name: " . self.name)
+  call s:log.info("Restored view of window with name: " . self.name)
 endfunction
 
 

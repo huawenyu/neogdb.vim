@@ -20,7 +20,7 @@ function! neobugger#model#New()
 endfunction
 
 
-function! s:prototype.Purge(...)
+function! s:prototype.Purge(...) dict
     throw s:script. ': Abtract function Purge() must be implement.'
 endfunction
 

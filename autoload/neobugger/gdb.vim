@@ -79,7 +79,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         let gdb = l:parent
     endif
 
-    let gdb.model_var = neobugger#model_var#New()
+    "let gdb.model_var = neobugger#model_var#New()
     "let gdb.model_frame = neobugger#model_frame#New()
     "let gdb.model_backtrace = neobugger#model_backtrace#New()
     "let gdb.model_breakpoint = neobugger#model_breakpoint#New()
@@ -264,7 +264,7 @@ endfunction
 
 
 " @mode 0 refresh-all, 1 only-change
-function! s:prototype.RefreshBreakpointSigns(mode)
+function! s:prototype.RefreshBreakpointSigns(mode) dict
     "{
     if a:mode == 0
         let i = s:breakpoint_signid_start
@@ -300,7 +300,7 @@ function! s:prototype.RefreshBreakpointSigns(mode)
 endfunction
 
 
-function! s:prototype.Kill()
+function! s:prototype.Kill() dict
     call self.Map("unmap")
     call self.Update_current_line_sign(0)
     exe 'bd! '. self._client_buf
@@ -313,7 +313,7 @@ function! s:prototype.Kill()
 endfunction
 
 
-function! s:prototype.Send(data)
+function! s:prototype.Send(data) dict
     let l:__func__ = "gdb.Send"
     silent! call s:log.trace(l:__func__. "[". string(self._client_id). " at ". self._win_gdb._state.name. "] args=". string(a:data))
 
@@ -327,7 +327,7 @@ function! s:prototype.Send(data)
 endfunction
 
 
-function! s:prototype._Send(data)
+function! s:prototype._Send(data) dict
     let l:__func__ = "gdb._Send"
     silent! call s:log.trace(l:__func__. "() args=". string(a:data))
     call jobsend(self._client_id, a:data)
@@ -335,7 +335,7 @@ endfunction
 
 
 
-function! s:prototype.SendSvr(data)
+function! s:prototype.SendSvr(data) dict
     let l:__func__ = "gdb.SendSvr"
     silent! call s:log.trace(l:__func__. "() args=". string(a:data))
 
@@ -345,14 +345,14 @@ function! s:prototype.SendSvr(data)
 endfunction
 
 
-function! s:prototype.SendJob(data)
+function! s:prototype.SendJob(data) dict
     if has_key(self, "_job_id")
         call jobsend(self._job_id, a:data."\<cr>")
     endif
 endfunction
 
 
-function! s:prototype.Attach()
+function! s:prototype.Attach() dict
     if !empty(self._server_addr)
         call self.Send(printf('target remote %s',
                     \join(self._server_addr, ":")))
@@ -361,7 +361,7 @@ function! s:prototype.Attach()
 endfunction
 
 
-function! s:prototype.Update_current_line_sign(add)
+function! s:prototype.Update_current_line_sign(add) dict
     " to avoid flicker when removing/adding the sign column(due to the change in
     " line width), we switch ids for the line sign and only remove the old line
     " sign after marking the new one
@@ -378,7 +378,7 @@ endfunction
 " Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
 " Then add breakpoints backto gdb
 " @mode 0 reset-all, 1 enable-only-change, 2 delete-all
-function! s:prototype.RefreshBreakpoints(mode)
+function! s:prototype.RefreshBreakpoints(mode) dict
     "{
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
@@ -430,7 +430,7 @@ function! s:prototype.RefreshBreakpoints(mode)
 endfunction
 
 
-function! s:prototype.Jump(file, line)
+function! s:prototype.Jump(file, line) dict
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
@@ -496,7 +496,7 @@ function! s:prototype.Jump(file, line)
 endfunction
 
 
-function! s:prototype.Breakpoints(file)
+function! s:prototype.Breakpoints(file) dict
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
@@ -506,7 +506,7 @@ function! s:prototype.Breakpoints(file)
 endfunction
 
 
-function! s:prototype.Stack(file)
+function! s:prototype.Stack(file) dict
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
@@ -516,7 +516,7 @@ function! s:prototype.Stack(file)
 endfunction
 
 
-function! s:prototype.Interrupt()
+function! s:prototype.Interrupt() dict
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
@@ -524,16 +524,16 @@ function! s:prototype.Interrupt()
 endfunction
 
 
-function! s:prototype.SaveVariable(var, file)
+function! s:prototype.SaveVariable(var, file) dict
     call writefile([string(a:var)], a:file)
 endfunction
 
-function! s:prototype.ReadVariable(varname, file)
+function! s:prototype.ReadVariable(varname, file) dict
     let recover = readfile(a:file)[0]
     execute "let ".a:varname." = " . recover
 endfunction
 
-function! s:prototype.Breaks2Qf()
+function! s:prototype.Breaks2Qf() dict
     let list2 = []
     let i = 0
     for [next_key, next_val] in items(s:breakpoints)
@@ -552,7 +552,7 @@ function! s:prototype.Breaks2Qf()
 endfunction
 
 
-function! s:prototype.GetCFunLinenr()
+function! s:prototype.GetCFunLinenr() dict
   let lnum = line(".")
   let col = col(".")
   let linenr = search("^[^ \t#/]\\{2}.*[^:]\s*$", 'bW')
@@ -565,7 +565,7 @@ endfunction
 " Value: empty, <or> if condition
 " @state 0 disable 1 enable, Toggle: none -> enable -> disable
 " @type 0 line-break, 1 function-break
-function! s:prototype.ToggleBreak()
+function! s:prototype.ToggleBreak() dict
     let filenm = bufname("%")
     let linenr = line(".")
     let colnr = col(".")
@@ -621,7 +621,7 @@ function! s:prototype.ToggleBreak()
 endfunction
 
 
-function! s:prototype.ToggleBreakAll()
+function! s:prototype.ToggleBreakAll() dict
     let s:toggle_all = ! s:toggle_all
     let mode = 0
     for v in values(s:breakpoints)
@@ -636,13 +636,13 @@ function! s:prototype.ToggleBreakAll()
 endfunction
 
 
-function! s:prototype.TBreak()
+function! s:prototype.TBreak() dict
     let file_breakpoints = bufname('%') .':'. line('.')
     call self.Send("tbreak ". file_breakpoints. "\nc")
 endfunction
 
 
-function! s:prototype.ClearBreak()
+function! s:prototype.ClearBreak() dict
     let s:breakpoints = {}
     call self.Breaks2Qf()
     call self.RefreshBreakpointSigns(0)
@@ -650,26 +650,26 @@ function! s:prototype.ClearBreak()
 endfunction
 
 
-function! s:prototype.FrameUp()
+function! s:prototype.FrameUp() dict
     call self.Send("up")
 endfunction
 
-function! s:prototype.FrameDown()
+function! s:prototype.FrameDown() dict
     call self.Send("down")
 endfunction
 
-function! s:prototype.Next()
+function! s:prototype.Next() dict
     call self.Send("n")
     if self._mode == "pid"
         call self.Send("where")
     endif
 endfunction
 
-function! s:prototype.Step()
+function! s:prototype.Step() dict
     call self.Send("s")
 endfunction
 
-function! s:prototype.Eval(expr)
+function! s:prototype.Eval(expr) dict
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
@@ -687,7 +687,7 @@ endfunction
 
 
 " Enable smart-eval base-on the special project
-function! s:prototype.Whatis(type)
+function! s:prototype.Whatis(type) dict
     if !neobugger#Exists(s:module)
         throw 'Gdb is not running'
     endif
@@ -709,7 +709,7 @@ function! s:prototype.Whatis(type)
 endfunction
 
 
-function! s:prototype.Watch(expr)
+function! s:prototype.Watch(expr) dict
     let expr = a:expr
     if expr[0] != '&'
         let expr = '&' . expr
@@ -727,7 +727,7 @@ endfunction
 " > #0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65
 " > #1  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24
 "
-function! s:prototype.ParseBacktrace()
+function! s:prototype.ParseBacktrace() dict
     let l:__func__ = "gdb.ParseBacktrace"
     let l:lines = readfile('/tmp/gdb.bt')
 
@@ -753,29 +753,32 @@ function! s:prototype.ParseBacktrace()
 endfunction
 
 
-function! s:prototype.ViewVarToggle()
+function! s:prototype.ViewVarToggle() dict
     if has_key(self, 'view_var')
+        call self.view_var.close()
         unlet self['view_var']
+        unlet self['model_var']
     else
-        let self.view_var = neobugger#view_var#New("Var", "gdb.local.variable")
+        let self.view_var = neobugger#view_var#New("LocalVariable", "gdb.local.variable")
+        let self.model_var = neobugger#model_var#New(self.view_var)
         call self.view_var.open()
     endif
 endfunction
 
 
-function! s:prototype.on_load_bt(...)
+function! s:prototype.on_load_bt(...) dict
     if self._showbacktrace && filereadable(s:gdb_bt_qf)
         exec "cgetfile " . s:gdb_bt_qf
         "call utilquickfix#RelativePath()
     endif
 endfunction
 
-function! s:prototype.on_continue(...)
+function! s:prototype.on_continue(...) dict
     call state#Switch('gdb', 'running', 0)
     call self.Update_current_line_sign(0)
 endfunction
 
-function! s:prototype.on_jump(file, line, ...)
+function! s:prototype.on_jump(file, line, ...) dict
     let l:__func__ = "gdb.on_jump"
     silent! call s:log.info(l:__func__, ' open ', a:file, ':', a:line)
 
@@ -789,14 +792,19 @@ function! s:prototype.on_jump(file, line, ...)
     call self.Jump(a:file, a:line)
 endfunction
 
-function! s:prototype.on_whatis(type, ...)
+function! s:prototype.on_whatis(type, ...) dict
     call self.Whatis(a:type)
 endfunction
 
-function! s:prototype.on_parseend(...)
+function! s:prototype.on_parseend(...) dict
     let l:__func__ = "gdb.ParseEnd"
 
     call self.ParseBacktrace()
+
+    " Start parser the info local variables
+    if !has_key(self, 'model_var')
+      return
+    endif
 
     call state#Switch('gdb', 'parsevar', 1)
     let l:ret = self.model_var.ParseVar('/tmp/gdb.var', '/tmp/gdb.cmd')
@@ -808,12 +816,27 @@ function! s:prototype.on_parseend(...)
         " file-not-exist
         call state#Switch('gdb', 'parsevar', 2)
     else
-        " succ & wait-end
-        call self.Send('neobug_redir_cmd /tmp/gdb.vars "#neobug_tag_redirend#" source /tmp/gdb.cmd')
+        " succ & wait end
+        call self.Send('neobug_redir_cmd /tmp/gdb.var_type "#neobug_tag_var_type#" source /tmp/gdb.cmd')
     endif
 endfunction
 
-function! s:prototype.on_parsevarend(...)
+function! s:prototype.on_parse_vartype(...) dict
+    let l:ret = self.model_var.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
+
+    if l:ret == 0
+        " succ, parse-finish
+        call state#Switch('gdb', 'parsevar', 2)
+    elseif l:ret == -1
+        " file-not-exist
+        call state#Switch('gdb', 'parsevar', 2)
+    else
+        " succ & wait end
+        call self.Send('neobug_redir_cmd /tmp/gdb.vars "#neobug_tag_var_data#" source /tmp/gdb.cmd')
+    endif
+endfunction
+
+function! s:prototype.on_parse_varend(...) dict
     call state#Switch('gdb', 'parsevar', 2)
     call self.model_var.ParseVarEnd('/tmp/gdb.vars')
 
@@ -821,7 +844,7 @@ function! s:prototype.on_parsevarend(...)
     call self.Send('info line')
 endfunction
 
-function! s:prototype.on_retry(...)
+function! s:prototype.on_retry(...) dict
     if self._server_exited
         return
     endif
@@ -831,7 +854,7 @@ function! s:prototype.on_retry(...)
 endfunction
 
 
-function! s:prototype.on_init(...)
+function! s:prototype.on_init(...) dict
     let l:__func__ = "gdb.on_init"
     silent! call s:log.info(l:__func__, " args=", string(a:000))
 
@@ -976,7 +999,7 @@ function! s:prototype.on_init(...)
 endfunction
 
 
-function! s:prototype.on_initend(...)
+function! s:prototype.on_initend(...) dict
     let l:__func__ = "gdb.on_initend"
     silent! call s:log.info(l:__func__, " args=", string(a:000))
 
@@ -1010,7 +1033,7 @@ function! s:prototype.on_initend(...)
 endfunction
 
 
-function! s:prototype.on_accept(port, ...)
+function! s:prototype.on_accept(port, ...) dict
     if a:port
         let self._server_addr[1] = a:port
         call self.Attach()
@@ -1018,27 +1041,27 @@ function! s:prototype.on_accept(port, ...)
 endfunction
 
 
-function s:prototype.on_remote_debugging(...)
+function s:prototype.on_remote_debugging(...) dict
     let self._remote_debugging = 1
 endfunction
 
 
-function! s:prototype.on_remoteconn_succ(...)
+function! s:prototype.on_remoteconn_succ(...) dict
     call state#Switch('gdb', 'pause', 0)
 endfunction
 
 
-function! s:prototype.on_remoteconn_fail(...)
+function! s:prototype.on_remoteconn_fail(...) dict
     silent! call s:log.error("Remote connect gdbserver fail!")
 endfunction
 
 
-function! s:prototype.on_pause(...)
+function! s:prototype.on_pause(...) dict
     call state#Switch('gdb', 'pause', 0)
 endfunction
 
 
-function! s:prototype.on_disconnected(...)
+function! s:prototype.on_disconnected(...) dict
     if !self._server_exited && self._reconnect
         " Refresh to force a delete of all watchpoints
         "call self.RefreshBreakpoints(2)
@@ -1048,12 +1071,12 @@ function! s:prototype.on_disconnected(...)
     endif
 endfunction
 
-function! s:prototype.on_exit(...)
+function! s:prototype.on_exit(...) dict
     let self._server_exited = 1
 endfunction
 
 
-function! s:prototype.Map(type)
+function! s:prototype.Map(type) dict
     "{
     if a:type ==# "unmap"
         exe 'unmap ' . g:gdb_keymap_refresh
