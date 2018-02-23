@@ -13,6 +13,7 @@ function! neobugger#model_var#New(viewer)
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let l:model.frame = ""
     let l:model.vars = {}
     let l:model.viewer = a:viewer
     let l:abstract = neobugger#model#New()
@@ -26,11 +27,14 @@ endfunction
 " @return -1 file-not-exist
 "          0 succ
 "          1 wait 'end'
-function! s:prototype.ParseVar(srcfile, dstfile) dict
+function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
     let l:__func__ = "model_Var.ParseVar"
-    silent! call s:log.info(l:__func__, '()')
+    silent! call s:log.info(l:__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
 
-    let self.vars = {}
+    if self.frame != a:frame
+        let self.vars = {}
+    endif
+
     if !filereadable(a:srcfile)
         return -1
     endif
@@ -150,6 +154,7 @@ function! s:prototype.ParseVarEnd(srcfile) dict
     if !filereadable(a:srcfile)
         return -1
     endif
+
     " view2window
     silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
     call self.viewer.display(self.render())

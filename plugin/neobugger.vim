@@ -48,6 +48,8 @@ command! -nargs=0 GdbWatchWord call neobugger#Handle('current', 'Watch', expand(
 command! -range -nargs=0 GdbWatchRange call neobugger#Handle('current', 'Watch', nelib#util#get_visual_selection())
 
 command! -nargs=0 GdbViewVar call neobugger#Handle('current', 'ViewVarToggle')
+command! -nargs=0 GdbViewFrame call neobugger#Handle('current', 'ViewFrameToggle')
+command! -nargs=0 GdbViewBreak call neobugger#Handle('current', 'ViewBreakToggle')
 " }}}
 
 
@@ -66,6 +68,11 @@ if exists('g:neobugger_leader') && !empty(g:neobugger_leader)
         let g:gdb_keymap_debug_stop = g:neobugger_leader.'x'
         let g:gdb_keymap_frame_up = g:neobugger_leader.'k'
         let g:gdb_keymap_frame_down = g:neobugger_leader.'j'
+
+        " View
+        let g:gdb_keymap_view_var = g:neobugger_leader.'vv'
+        let g:gdb_keymap_view_break = g:neobugger_leader.'vb'
+        let g:gdb_keymap_view_frame = g:neobugger_leader.'vf'
 else
     if !exists("g:gdb_keymap_refresh")
         let g:gdb_keymap_refresh = '<f3>'
@@ -104,6 +111,16 @@ else
 
     if !exists("g:gdb_keymap_frame_down")
         let g:gdb_keymap_frame_down = '<c-p>'
+    endif
+
+    if !exists("g:gdb_keymap_view_var")
+        let g:gdb_keymap_view_var = '<a-v>'
+    endif
+    if !exists("g:gdb_keymap_view_break")
+        let g:gdb_keymap_view_break = '<a-b>'
+    endif
+    if !exists("g:gdb_keymap_view_frame")
+        let g:gdb_keymap_view_frame = '<a-f>'
     endif
 
 endif

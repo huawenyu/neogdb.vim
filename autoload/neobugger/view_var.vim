@@ -2,7 +2,6 @@ if !exists("s:script")
     let s:script = expand('<sfile>:t')
     silent! let s:log = logger#getLogger(s:script)
 
-    let s:breakpoints = {}
     let s:prototype = tlib#Object#New({
                 \ '_class': ['ViewVar'],
                 \ })

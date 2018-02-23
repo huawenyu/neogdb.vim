@@ -1,7 +1,6 @@
-if !exists("s:init")
-    let s:init = 1
-    " exists("*logger#getLogger")
-    silent! let s:log = logger#getLogger(expand('<sfile>:t'))
+if !exists("s:script")
+    let s:script = expand('<sfile>:t')
+    silent! let s:log = logger#getLogger(s:script)
 
     sign define GdbBreakpointEn text=● texthl=Search
     sign define GdbBreakpointDis text=● texthl=Function
@@ -21,16 +20,11 @@ if !exists("s:init")
 
     let s:breakpoints = {}
     let s:toggle_all = 0
-    let s:gdb_bt_qf = '/tmp/gdb.bt'
-    let s:gdb_break_qf = '/tmp/gdb.break'
-    let s:brk_file = './.gdb.break'
-    let s:fl_file = './.gdb.file'
-    let s:file_list = {}
+    let s:qf_gdb_frame = '/tmp/gdb.frame'
+    let s:qf_gdb_break = '/tmp/gdb.break'
+    let s:save_break = './.gdb.break'
 
-    let s:parseBT = nelib#enum#Create(['RAWLINE', 'FRAME', 'FUNC', 'PARAM', 'FILE', 'LINE'])
-
-    let s:model_backtrace = {}
-
+    let s:currFrame = ""
     let s:module = 'gdb'
     let s:prototype = tlib#Object#New({
                 \ '_class': [s:module],
@@ -78,11 +72,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     else
         let gdb = l:parent
     endif
-
-    "let gdb.model_var = neobugger#model_var#New()
-    "let gdb.model_frame = neobugger#model_frame#New()
-    "let gdb.model_backtrace = neobugger#model_backtrace#New()
-    "let gdb.model_breakpoint = neobugger#model_breakpoint#New()
 
     let gdb.module = s:module
     let gdb._initialized = 0
@@ -155,8 +144,8 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     " Load all files from backtrace to solve relative-path
     silent! call s:log.trace("Load open files ...")
 
-    "if gdb._showbacktrace && filereadable(s:gdb_bt_qf)
-    "    exec "cgetfile " . s:gdb_bt_qf
+    "if gdb._showbacktrace && filereadable(s:qf_gdb_frame)
+    "    exec "cgetfile " . s:qf_gdb_frame
     "    let list = getqflist()
     "    for i in range(len(list))
     "        if has_key(list[i], 'bufnr')
@@ -172,24 +161,14 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     "    "silent! call s:log.trace("old backtrace:<cr>", list)
     "endif
 
-    silent! call s:log.trace("  try open files from ". s:fl_file)
-    if filereadable(s:fl_file)
-        call gdb.ReadVariable("s:file_list", s:fl_file)
-        for [next_key, next_val] in items(s:file_list)
-            if filereadable(next_key)
-                exec "e ". fnamemodify(next_key, ':p:.')
-            endif
-        endfor
-    endif
-
     " window number that will be displaying the current file
     let gdb._jump_window = 1
     let gdb._current_buf = -1
     let gdb._current_line = -1
     let gdb._has_breakpoints = 0
     let gdb._server_exited = 0
-    let gdb._gdb_bt_qf = s:gdb_bt_qf
-    let gdb._gdb_break_qf = s:gdb_break_qf
+    let gdb._gdb_bt_qf = s:qf_gdb_frame
+    let gdb._gdb_break_qf = s:qf_gdb_break
     let cword = expand("<cword>")
 
     call nelib#state#Open(conf)
@@ -449,16 +428,16 @@ function! s:prototype.Jump(file, line) dict
 
 
     " Method-1: Using ansync job to parse response
-    "if filereadable(s:gdb_bt_qf)
-    "    call delete(s:gdb_bt_qf)
+    "if filereadable(s:qf_gdb_frame)
+    "    call delete(s:qf_gdb_frame)
     "endif
     "call self.Send('parser_bt')
-    "call self.SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.bt ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
+    "call self.SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.frame ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
 
     "" Method-2: Using syncronize to parse response
-    if self._showbacktrace && filereadable(s:gdb_bt_qf)
-        exec "cgetfile " . s:gdb_bt_qf
-        call delete(s:gdb_bt_qf)
+    if self._showbacktrace && filereadable(s:qf_gdb_frame)
+        exec "cgetfile " . s:qf_gdb_frame
+        call delete(s:qf_gdb_frame)
     endif
 
 
@@ -477,16 +456,6 @@ function! s:prototype.Jump(file, line) dict
         let self._current_buf = target_buf
     endif
     exe ':' a:line | m'
-
-    let fname = fnamemodify(a:file, ':p:.')
-    if !has_key(s:file_list, fname)
-        let s:file_list[fname] = 1
-        call self.SaveVariable(s:file_list, s:fl_file)
-    endif
-
-    "let fname = fnamemodify(a:file, ':p:.')
-    "exec "e ". fname
-    "exec ':' a:line | m'
 
     let self._current_line = a:line
     if cwindow != g:state_ctx._wid_main
@@ -545,9 +514,9 @@ function! s:prototype.Breaks2Qf() dict
         endif
     endfor
 
-    call writefile(split(join(list2, "\n"), "\n"), s:gdb_break_qf)
-    if self._showbreakpoint && filereadable(s:gdb_break_qf)
-        exec "silent lgetfile " . s:gdb_break_qf
+    call writefile(split(join(list2, "\n"), "\n"), s:qf_gdb_break)
+    if self._showbreakpoint && filereadable(s:qf_gdb_break)
+        exec "silent lgetfile " . s:qf_gdb_break
     endif
 endfunction
 
@@ -611,7 +580,7 @@ function! s:prototype.ToggleBreak() dict
         endif
         let old_value = {}
     endif
-    call self.SaveVariable(s:breakpoints, s:brk_file)
+    call self.SaveVariable(s:breakpoints, s:save_break)
     call self.Breaks2Qf()
     call self.RefreshBreakpointSigns(mode)
     call self.RefreshBreakpoints(mode)
@@ -720,39 +689,6 @@ function! s:prototype.Watch(expr) dict
 endfunction
 
 
-
-
-" Output Sample:
-"
-" > #0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65
-" > #1  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24
-"
-function! s:prototype.ParseBacktrace() dict
-    let l:__func__ = "gdb.ParseBacktrace"
-    let l:lines = readfile('/tmp/gdb.bt')
-
-    "" RunScript
-    "echomsg string(matchlist('#0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65'
-    "      \, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$'))
-    "echomsg string(matchlist('#2  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24'
-    "      \, '\v^#(\d+)  (.*) in (.*) \((.*)\) at (.*):(\d+)$'))
-
-    let frame0 = 1
-    for l:line in l:lines
-        if frame0
-            let matches = matchlist(l:line, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$')
-        else
-            let matches = matchlist(l:line, '\v^#(\d+)  (.*) in (.*) \((.*)\) at (.*):(\d+)$')
-        endif
-
-        silent! call s:log.info(l:__func__, ' line=', l:line, ' matches=', string(matches))
-        let frame0 = 0
-        "s:parseBT
-        "let s:model_backtrace[l:key] = l:val
-    endfor
-endfunction
-
-
 function! s:prototype.ViewVarToggle() dict
     if has_key(self, 'view_var')
         call self.view_var.close()
@@ -766,9 +702,35 @@ function! s:prototype.ViewVarToggle() dict
 endfunction
 
 
+function! s:prototype.ViewFrameToggle() dict
+    if has_key(self, 'view_frame')
+        call self.view_frame.close()
+        unlet self['view_frame']
+        unlet self['model_frame']
+    else
+        let self.view_frame = neobugger#view_frame#New("Frame", "gdb.Frame")
+        let self.model_frame = neobugger#model_frame#New(self.view_frame)
+        call self.view_frame.open()
+    endif
+endfunction
+
+
+function! s:prototype.ViewBreakToggle() dict
+    if has_key(self, 'view_break')
+        call self.view_break.close()
+        unlet self['view_break']
+        unlet self['model_break']
+    else
+        let self.view_break = neobugger#view_break#New("Breakpoint", "gdb.Breakpoint")
+        let self.model_break = neobugger#model_break#New(self.view_var)
+        call self.view_break.open()
+    endif
+endfunction
+
+
 function! s:prototype.on_load_bt(...) dict
-    if self._showbacktrace && filereadable(s:gdb_bt_qf)
-        exec "cgetfile " . s:gdb_bt_qf
+    if self._showbacktrace && filereadable(s:qf_gdb_frame)
+        exec "cgetfile " . s:qf_gdb_frame
         "call utilquickfix#RelativePath()
     endif
 endfunction
@@ -799,25 +761,27 @@ endfunction
 function! s:prototype.on_parseend(...) dict
     let l:__func__ = "gdb.ParseEnd"
 
-    call self.ParseBacktrace()
-
-    " Start parser the info local variables
-    if !has_key(self, 'model_var')
-      return
+    " parser frame backtrace
+    if has_key(self, 'model_frame')
+        let s:currFrame = self.model_frame.ParseFrame('/tmp/gdb.frame')
+        silent! call s:log.info(l:__func__, '(): currentFrame=', s:currFrame)
     endif
 
-    call state#Switch('gdb', 'parsevar', 1)
-    let l:ret = self.model_var.ParseVar('/tmp/gdb.var', '/tmp/gdb.cmd')
-    silent! call s:log.info(l:__func__, '(): ret=', l:ret)
-    if l:ret == 0
-        " succ, parse-finish
-        call state#Switch('gdb', 'parsevar', 2)
-    elseif l:ret == -1
-        " file-not-exist
-        call state#Switch('gdb', 'parsevar', 2)
-    else
-        " succ & wait end
-        call self.Send('neobug_redir_cmd /tmp/gdb.var_type "#neobug_tag_var_type#" source /tmp/gdb.cmd')
+    " Start parser the info local variables
+    if has_key(self, 'model_var')
+        call state#Switch('gdb', 'parsevar', 1)
+        let l:ret = self.model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
+        silent! call s:log.info(l:__func__, '(): ret=', l:ret)
+        if l:ret == 0
+            " succ, parse-finish
+            call state#Switch('gdb', 'parsevar', 2)
+        elseif l:ret == -1
+            " file-not-exist
+            call state#Switch('gdb', 'parsevar', 2)
+        else
+            " succ & wait end
+            call self.Send('neobug_redir_cmd /tmp/gdb.var_type "#neobug_tag_var_type#" source /tmp/gdb.cmd')
+        endif
     endif
 endfunction
 
@@ -926,7 +890,7 @@ function! s:prototype.on_init(...) dict
 
     let cmdstr = "define parser_bt\n
                 \ set logging off\n
-                \ set logging file /tmp/gdb.bt\n
+                \ set logging file /tmp/gdb.frame\n
                 \ set logging overwrite on\n
                 \ set logging redirect on\n
                 \ set logging on\n
@@ -938,7 +902,7 @@ function! s:prototype.on_init(...) dict
 
     let cmdstr = "define parser_var_bt\n
                 \ set logging off\n
-                \ set logging file /tmp/gdb.bt\n
+                \ set logging file /tmp/gdb.frame\n
                 \ set logging overwrite on\n
                 \ set logging redirect on\n
                 \ set logging on\n
@@ -984,8 +948,8 @@ function! s:prototype.on_init(...) dict
     call self.Send(cmdstr)
 
     silent! call s:log.info("Load breaks ...")
-    if filereadable(s:brk_file)
-        call self.ReadVariable("s:breakpoints", s:brk_file)
+    if filereadable(s:save_break)
+        call self.ReadVariable("s:breakpoints", s:save_break)
     endif
 
     silent! call s:log.info("Load set breaks ...")
@@ -1131,6 +1095,11 @@ function! s:prototype.Map(type) dict
         exe 'nnoremap <silent> ' . g:gdb_keymap_debug_stop . ' :GdbDebugStop<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_frame_up . ' :GdbFrameUp<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_frame_down . ' :GdbFrameDown<cr>'
+
+        " View
+        exe 'nnoremap <silent> ' . g:gdb_keymap_view_var . ' :GdbViewVar<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_view_break . ' :GdbViewBreak<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_view_frame . ' :GdbViewFrame<cr>'
 
         if exists("*NeogdbvimNmapCallback")
             call NeogdbvimNmapCallback()
