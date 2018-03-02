@@ -94,9 +94,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     if exists('g:neogdb_window')
         if index(g:neogdb_window, 'breakpoint') >= 0
             let gdb._showbreakpoint = 1
-            if has_key(conf, 'conf_gdb_layout')
-                let conf.conf_gdb_layout = ['vsp']
-            endif
         endif
     else
         if has_key(conf, 'showbreakpoint')
@@ -108,9 +105,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     if exists('g:neogdb_window')
         if index(g:neogdb_window, 'backtrace') >= 0
             let gdb._showbacktrace = 1
-            if has_key(conf, 'conf_gdb_layout')
-                let conf.conf_gdb_layout = ['vsp']
-            endif
         endif
     else
         if has_key(conf, 'showbacktrace')
@@ -690,41 +684,68 @@ endfunction
 
 
 function! s:prototype.ViewVarToggle() dict
-    if has_key(self, 'view_var')
+    if self._View_is_open('view_var')
         call self.view_var.close()
         unlet self['view_var']
         unlet self['model_var']
     else
-        let self.view_var = neobugger#view_var#New("LocalVariable", "gdb.local.variable")
-        let self.model_var = neobugger#model_var#New(self.view_var)
+        if !has_key(self, 'view_var')
+            let self.view_var = neobugger#view_var#New(g:state_ctx._wid_main)
+        endif
+
+        if !has_key(self, 'model_var')
+            let self.model_var = neobugger#model_var#New(self.view_var)
+        endif
+
+        " Get current frame
+        if !has_key(self, 'model_frame')
+            call self.ViewFrameToggle(0)
+        endif
+
         call self.view_var.open()
     endif
 endfunction
 
 
-function! s:prototype.ViewFrameToggle() dict
-    if has_key(self, 'view_frame')
+function! s:prototype.ViewFrameToggle(...) dict
+    if self._View_is_open('view_frame')
         call self.view_frame.close()
         unlet self['view_frame']
-        unlet self['model_frame']
+        "unlet self['model_frame']
     else
-        let self.view_frame = neobugger#view_frame#New("Frame", "gdb.Frame")
-        let self.model_frame = neobugger#model_frame#New(self.view_frame)
-        call self.view_frame.open()
+        if !has_key(self, 'view_frame')
+            let self.view_frame = neobugger#view_frame#New(g:state_ctx._wid_main)
+        endif
+        if !has_key(self, 'model_frame')
+            let self.model_frame = neobugger#model_frame#New(self.view_frame)
+        endif
+        if a:0 == 0
+            call self.view_frame.open()
+        elseif a:1
+            call self.view_frame.open()
+        endif
     endif
 endfunction
 
 
 function! s:prototype.ViewBreakToggle() dict
-    if has_key(self, 'view_break')
+    if self._View_is_open('view_break')
         call self.view_break.close()
         unlet self['view_break']
         unlet self['model_break']
     else
-        let self.view_break = neobugger#view_break#New("Breakpoint", "gdb.Breakpoint")
+        let self.view_break = neobugger#view_break#New(g:state_ctx._wid_main)
         let self.model_break = neobugger#model_break#New(self.view_var)
         call self.view_break.open()
     endif
+endfunction
+
+
+function! s:prototype._View_is_open(view) dict
+    if has_key(self, a:view)
+        return self[a:view].is_open()
+    endif
+    return 0
 endfunction
 
 
@@ -768,13 +789,14 @@ function! s:prototype.on_parseend(...) dict
     endif
 
     " Start parser the info local variables
-    if has_key(self, 'model_var')
+    if self._View_is_open('view_var')
         call state#Switch('gdb', 'parsevar', 1)
         let l:ret = self.model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
         silent! call s:log.info(l:__func__, '(): ret=', l:ret)
         if l:ret == 0
             " succ, parse-finish
             call state#Switch('gdb', 'parsevar', 2)
+            call self.model_var.ParseVarEnd('/tmp/gdb.var')
         elseif l:ret == -1
             " file-not-exist
             call state#Switch('gdb', 'parsevar', 2)
@@ -787,10 +809,10 @@ endfunction
 
 function! s:prototype.on_parse_vartype(...) dict
     let l:ret = self.model_var.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
-
     if l:ret == 0
         " succ, parse-finish
         call state#Switch('gdb', 'parsevar', 2)
+        call self.model_var.ParseVarEnd('/tmp/gdb.var')
     elseif l:ret == -1
         " file-not-exist
         call state#Switch('gdb', 'parsevar', 2)

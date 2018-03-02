@@ -15,6 +15,7 @@ function! neobugger#model_var#New(viewer)
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:model.frame = ""
     let l:model.vars = {}
+    let l:model.vars_last = {}
     let l:model.viewer = a:viewer
     let l:abstract = neobugger#model#New()
     call l:model.Inherit(l:abstract)
@@ -31,8 +32,12 @@ function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
     let l:__func__ = "model_Var.ParseVar"
     silent! call s:log.info(l:__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
 
-    if self.frame != a:frame
+    if self.frame == a:frame
+        let self.vars_last = deepcopy(self.vars)
+    else
+        let self.frame = a:frame
         let self.vars = {}
+        let self.vars_last = {}
     endif
 
     if !filereadable(a:srcfile)
@@ -181,7 +186,12 @@ endfunction
 function! s:prototype.render() dict
     let output = "Variables:\n"
     for [name, data] in items(self.vars)
-        let output .= name. ': {'. data. "}\n"
+        if has_key(self.vars_last, name)
+                    \ && self.vars_last[name] != data
+            let output .= name. ': {'. data. "} <- {". self.vars_last[name]. "}\n"
+        else
+            let output .= name. ': {'. data. "}\n"
+        endif
     endfor
     return output
 endfunction

@@ -135,14 +135,6 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         let window._target = target
         let window._ctx = ctx
 
-        " layout
-        let layout_list = []
-        if has_key(conf, conf_win.layout[0])
-            let layout_list = conf[conf_win.layout[0]]
-        else
-            let layout_list = conf_win.layout[1:100]
-        endif
-
         " cmd
         if has_key(conf, conf_win.cmd[0])
             let cmdstr = join(conf[conf_win.cmd[0]])
@@ -150,29 +142,26 @@ function! nelib#state#CreateRuntime(scheme, config) abort
             let cmdstr = conf_win.cmd[1]
         endif
 
-        " if no layout, only start job, no window
-        if empty(layout_list)
-            let window._wid = 0
-            let window._bufnr = 0
-            let argv = ['bash']
-            if !empty(cmdstr)
-                let argv += ['-c', cmdstr]
-            endif
+        " layout
+        let layout_list = NbConfGet('gdb', 'layout', [])
+        for layout in layout_list
+            exec layout
+        endfor
+        let window._wid = win_getid()
 
-            let window._client_id = jobstart(cmdstr, target)
-            silent! call s:log.info(l:__func__, " jobstart[". string(window._client_id). "]: ", cmdstr)
-        else
-            for layout in layout_list
-                exec layout
-            endfor
-            let window._wid = win_getid()
+        enew | let window._client_id = termopen(cmdstr, target)
+        let window._bufnr = bufnr('%')
+        call NbConfSet('gdb', 'wid', window._wid)
+        call NbConfSet('gdb', 'bufnr', window._bufnr)
+        " Scroll to the end of terminal output
+        normal G
 
-            enew | let window._client_id = termopen(cmdstr, target)
-            let window._bufnr = bufnr('%')
-            " Scroll to the end of terminal output
-            normal G
-            silent! call s:log.info(l:__func__, " termopen:", cmdstr)
+        let status = NbConfGet('gdb', 'status')
+        if !status
+            close
+            exe "wincmd p"
         endif
+        silent! call s:log.info(l:__func__, " termopen:", cmdstr)
     endfor
 
     " Backto main windows

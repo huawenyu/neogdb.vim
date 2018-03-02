@@ -1,5 +1,6 @@
 if !exists("s:script")
     let s:script = expand('<sfile>:t')
+    let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
 
     let s:prototype = tlib#Object#New({
@@ -9,30 +10,30 @@ endif
 
 
 " Constructor
-function! neobugger#view_var#New(name, title)
-    "{
+function! neobugger#view_var#New(wid_main)
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:abstract = neobugger#view#New(a:name, a:title)
+    let l:title = NbConfGet(s:name, 'title')
+    let l:abstract = neobugger#view#New(a:wid_main, s:name, l:title)
     call l:view.Inherit(l:abstract)
 
+    let l:view.position = NbConfGet(s:name, 'layout')
     return l:view
-    "}
 endfunction
 
 
 function! s:prototype.bind_mappings()
-  nnoremap <buffer> <2-leftmouse> :call <SID>window_variables_activate_node()<cr>
-  nnoremap <buffer> o :call <SID>window_variables_activate_node()<cr>"
+    nnoremap <buffer> <2-leftmouse> :call <SID>window_variables_activate_node()<cr>
+    nnoremap <buffer> o :call <SID>window_variables_activate_node()<cr>"
 endfunction
 
 
 " Returns string that contains all variables (for Window.display())
 function! s:prototype.render() dict
-  let variables = self.title . "\n"
-  let variables .= (g:RubyDebugger.variables == {} ? '' : g:RubyDebugger.variables.render())
-  return variables
+    let variables = self.title . "\n"
+    let variables .= (g:RubyDebugger.variables == {} ? '' : g:RubyDebugger.variables.render())
+    return variables
 endfunction
 
 
@@ -40,15 +41,15 @@ endfunction
 " command?
 " Expand/collapse variable under cursor
 function! s:window_variables_activate_node()
-  let variable = s:Var.get_selected()
-  if variable != {} && variable.type == "VarParent"
-    if variable.is_open
-      call variable.close()
-    else
-      call variable.open()
+    let variable = s:Var.get_selected()
+    if variable != {} && variable.type == "VarParent"
+        if variable.is_open
+            call variable.close()
+        else
+            call variable.open()
+        endif
     endif
-  endif
-  call g:RubyDebugger.queue.execute()
+    call g:RubyDebugger.queue.execute()
 endfunction
 
 

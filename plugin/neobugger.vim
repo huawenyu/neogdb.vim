@@ -128,7 +128,34 @@ endif
 
 
 " Customization options {{{1
+"   - The 'bufnr', 'wid' is runtime value
+let s:neobugger_conf = {
+            \'gdb': {'status': 0, 'title': "Gdb",
+            \       'layout': ['vsp new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       },
+            \'gdbserver': {'status': 1, 'title': "GdbServer",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       },
+            \'view_var': {'status': 1, 'title': "Variable",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       },
+            \'view_frame': {'status': 1, 'title': "Frame",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       },
+            \'view_break': {'status': 1, 'title': "Breakpoint",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       },
+            \}
+
+" Read from customer defined 'g:neobugger_user' first
+" <or> customer directly redefine 'g:neobugger_conf'.
 "
+if !exists("g:neobugger_conf")
+    let g:neobugger_conf = s:neobugger_conf
+endif
+
 if !exists("g:gdb_require_enter_after_toggling_breakpoint")
     let g:gdb_require_enter_after_toggling_breakpoint = 0
 endif
@@ -142,6 +169,58 @@ if !exists("g:neobugger_other")
 endif
 
 " }}}
+
+
+" Set option, type must same as default config
+function! NbConfSet(view, option, value)
+    let s:neobugger_conf[a:option] = a:value
+endfunction
+
+
+" Return value of option
+"   - if 3nd parameter exists for the default when not existed or type not correct.
+"   - If the option is not found, get from default config.
+function! NbConfGet(view, option, ...)
+    if has_key(s:neobugger_conf, a:view)
+        let l:conf_default = s:neobugger_conf[a:view]
+    else
+        throw "NbConfGet(view=". a:view. ' option='. a:option. ' a:0='. a:000. '): No default view.'
+    endif
+
+    if has_key(g:neobugger_conf, a:view)
+        let l:conf = g:neobugger_conf[a:view]
+    elseif has_key(s:neobugger_conf, a:view)
+        let l:conf = s:neobugger_conf[a:view]
+    endif
+
+    if has_key(l:conf_default, a:option)
+        let val_default = l:conf_default[a:option]
+    else
+        throw "NbConfGet(view=". a:view. ' option='. a:option. ' a:0='. a:000. '): The default view no option.'
+    endif
+
+    if has_key(l:conf, a:option)
+        let val = l:conf[a:option]
+    elseif has_key(l:conf_default, a:option)
+        let val = l:conf_default[a:option]
+    else
+        throw "NbConfGet(view=". a:view. ' option='. a:option. ' a:0='. a:000. '): The view no option.'
+    endif
+
+    " No type check
+    if a:0 == 0
+        return val
+    endif
+
+    if type(val) == type(a:1)
+        return val
+    elseif type(val_default) == type(a:1)
+        return val_default
+    else
+        throw "NbConfGet(view=". a:view. ' option='. a:option. ' a:0='. a:000. '): Type check fail.'
+    endif
+endfunction
+
 
 
 " Helper options {{{1

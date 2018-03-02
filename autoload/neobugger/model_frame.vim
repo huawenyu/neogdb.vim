@@ -52,7 +52,7 @@ function! s:prototype.ParseFrame(framefile) dict
         if frame0 == "Null"
             let matches = matchlist(l:line, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$')
             if len(matches) > 5
-                let frame0 = matches[1]
+                let frame0 = matches[2]
                 call add(self.frames, {
                             \ 'id': matches[1],
                             \ 'func': matches[2],
