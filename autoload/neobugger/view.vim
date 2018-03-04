@@ -129,7 +129,8 @@ function! s:prototype.open() dict
         setlocal nolist
         iabc <buffer>
         setlocal cursorline
-        setfiletype viewer_window
+        "setfiletype viewer_window
+        setfiletype c
         call s:log.info("Opened window with name: " . self.name)
     endif
 

@@ -703,6 +703,9 @@ function! s:prototype.ViewVarToggle() dict
         endif
 
         call self.view_var.open()
+
+        " Trigger parse
+        call self.on_parseend()
     endif
 endfunction
 
@@ -719,10 +722,10 @@ function! s:prototype.ViewFrameToggle(...) dict
         if !has_key(self, 'model_frame')
             let self.model_frame = neobugger#model_frame#New(self.view_frame)
         endif
-        if a:0 == 0
+        if a:0 == 0 || a:1
             call self.view_frame.open()
-        elseif a:1
-            call self.view_frame.open()
+            " Trigger parse
+            call self.on_parseend()
         endif
     endif
 endfunction

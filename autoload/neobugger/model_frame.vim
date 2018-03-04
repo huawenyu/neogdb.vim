@@ -90,7 +90,7 @@ function! s:prototype.render() dict
     let output = "Backtrace:\n"
     for frame in self.frames
         let l:file = tlib#file#Relative(frame.file, getcwd())
-        let output .= '#'. frame.id. ' '. frame.func. '('. frame.param. ') '. l:file. ':'.frame.line. "\n"
+        let output .= '#'. frame.id. ' '. frame.func. '('. frame.param. ')  at '. l:file. ':'.frame.line. "\n"
     endfor
     return output
 endfunction
