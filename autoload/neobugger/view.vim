@@ -11,13 +11,12 @@ endif
 
 
 " Constructor
-function! neobugger#view#New(wid_main, name, title)
+function! neobugger#view#New(name, title)
     "{
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
 
-    let l:view.wid_main = a:wid_main
     let l:view.name = a:name
     let l:view.title = a:title
 
@@ -31,6 +30,29 @@ function! neobugger#view#New(wid_main, name, title)
 endfunction
 
 
+function! neobugger#view#Toggle(name)
+    let l:__func__ = 'neobugger#view#Toggle'
+    silent! call s:log.info(l:__func__, '(', a:name, ')')
+
+    let this = NbConfGet(a:name, 'this', {})
+    if !empty(this) && this.is_open()
+        call this.close()
+        call NbConfSet(a:name, 'this', {})
+        return {}
+    else
+        let Fview_new = function('neobugger#'. a:name. '#New')
+        let this = Fview_new()
+        call this.open()
+        let l:bufnum = NbConfGet(a:name, 'bufnr')
+        if l:bufnum >=0
+            execute 'b'. l:bufnum
+        endif
+        call NbConfSet(a:name, 'this', this)
+        return this
+    endif
+endfunction
+
+
 " Clear all data from window
 function! s:prototype.clear() dict
     silent 1,$delete _
@@ -39,6 +61,8 @@ endfunction
 
 " Close window
 function! s:prototype.close() dict
+    let l:__func__ = 'open'
+    silent! call s:log.info(l:__func__, '(', self.name, ')')
     if !self.is_open()
         throw s:script. ": Window " . self.name . " is not open"
     endif
@@ -58,7 +82,8 @@ endfunction
 
 " Display data to the window
 function! s:prototype.display(data) dict
-    call s:log.info("Start displaying data in window with name: " . self.name)
+    let l:__func__ = 'display'
+    silent! call s:log.info(l:__func__, '(', self.name, ')')
     call self.focus()
     setlocal modifiable
 
@@ -77,6 +102,8 @@ endfunction
 
 
 function! s:prototype.focus() dict
+    let l:__func__ = 'focus'
+    silent! call s:log.info(l:__func__, '(', self.name, ')')
     call win_gotoid(self.wid)
 endfunction
 
@@ -88,18 +115,19 @@ endfunction
 " Open window and display data (stolen from NERDTree)
 function! s:prototype.open() dict
     let l:__func__ = 'open'
-
+    silent! call s:log.info(l:__func__, '(', self.name, ')')
     if !self.is_open()
         " create the window
         call s:log.info(s:script. ':'. l:__func__. '('. self.name.') :'. string(self.position))
         if type(self.position) == type([])
-            if win_gotoid(self.wid_main) == 1
+            let main_wid = NbConfGet('view_main', 'wid')
+            if win_gotoid(main_wid) == 1
                 for cmd in self.position
                     silent exec cmd
                 endfor
                 let self.wid = win_getid()
             else
-                call s:log.info(s:script. ':'. l:__func__. '('. self.name.')  goto wid_main fail.')
+                call s:log.info(s:script. ':'. l:__func__. '('. self.name.')  goto view_main.wid='. string(main_wid). ' fail.')
             endif
         else
             silent exec self.position . ' ' . self.size . ' new'
@@ -203,5 +231,3 @@ function! s:prototype._set_buf_name(name) dict
     let t:window_{self.name}_buf_name = a:name
 endfunction
 
-
-" *** Window class (end)

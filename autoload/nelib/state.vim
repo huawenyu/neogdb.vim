@@ -101,14 +101,16 @@ function! nelib#state#CreateRuntime(scheme, config) abort
     endfor
 
 
+    " @todo wilson: use view
     " Load window
     " Create new tab as FSM's view
     silent! call s:log.info("Creating the 'main' window ...")
-    tabnew | silent! b2
+    tabnew | silent! b1
     let ctx._tab = tabpagenr()
     silent! ball 1
     let ctx._wid_main = win_getid()
-    silent! call s:log.info("The 'main' window-id=", ctx._wid_main)
+    call NbConfSet('view_main', 'wid', ctx._wid_main)
+    silent! call s:log.info("The view_main.wid=", ctx._wid_main)
 
     let windows = scheme.window
     for conf_win in windows
@@ -143,25 +145,20 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         endif
 
         " layout
-        let layout_list = NbConfGet('gdb', 'layout', [])
-        for layout in layout_list
-            exec layout
-        endfor
-        let window._wid = win_getid()
-
-        enew | let window._client_id = termopen(cmdstr, target)
-        let window._bufnr = bufnr('%')
-        call NbConfSet('gdb', 'wid', window._wid)
-        call NbConfSet('gdb', 'bufnr', window._bufnr)
-        " Scroll to the end of terminal output
-        normal G
-
-        let status = NbConfGet('gdb', 'status')
-        if !status
-            close
-            exe "wincmd p"
+        let l:view_gdb = neobugger#view#Toggle('view_gdb')
+        if !empty(l:view_gdb)
+            silent! call s:log.info(l:__func__, " termopen:", cmdstr)
+            let window._wid = win_getid()
+            enew | let window._client_id = termopen(cmdstr, target)
+            let window._bufnr = bufnr('%')
+            let status = NbConfGet('view_gdb', 'status')
+            if empty(status)
+                neobugger#view#Toggle('view_gdb')
+            else
+                " Scroll to the end of terminal output
+                normal G
+            endif
         endif
-        silent! call s:log.info(l:__func__, " termopen:", cmdstr)
     endfor
 
     " Backto main windows

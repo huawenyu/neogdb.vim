@@ -683,26 +683,37 @@ function! s:prototype.Watch(expr) dict
 endfunction
 
 
-function! s:prototype.ViewVarToggle() dict
-    if self._View_is_open('view_var')
-        call self.view_var.close()
-        unlet self['view_var']
-        unlet self['model_var']
+function! s:prototype.ToggleViewGdb() dict
+    if self._View_is_open('view_gdb')
+        call self.view_gdb.close()
+        unlet self['view_gdb']
     else
-        if !has_key(self, 'view_var')
-            let self.view_var = neobugger#view_var#New(g:state_ctx._wid_main)
-        endif
-
-        if !has_key(self, 'model_var')
-            let self.model_var = neobugger#model_var#New(self.view_var)
-        endif
-
-        " Get current frame
-        if !has_key(self, 'model_frame')
-            call self.ViewFrameToggle(0)
+        if !has_key(self, 'view_gdb')
+            let self.view_var = neobugger#view_gdb#New(g:state_ctx._wid_main)
         endif
 
         call self.view_var.open()
+    endif
+endfunction
+
+
+function! s:prototype.ToggleViewVar() dict
+    if (has_key(self, 'model_var'))
+        unlet self['model_var']
+    endif
+
+    let l:view = neobugger#view#Toggle('view_var')
+    if !empty(l:view)
+        let self.model_var = neobugger#model_var#New(l:view)
+
+        " Get current frame
+        if !has_key(self, 'model_frame')
+            if has_key(self, 'view_frame')
+                let self.model_frame = neobugger#model_frame#New(self.view_frame)
+            else
+                let self.model_frame = neobugger#model_frame#New()
+            endif
+        endif
 
         " Trigger parse
         call self.on_parseend()
@@ -710,28 +721,20 @@ function! s:prototype.ViewVarToggle() dict
 endfunction
 
 
-function! s:prototype.ViewFrameToggle(...) dict
-    if self._View_is_open('view_frame')
-        call self.view_frame.close()
-        unlet self['view_frame']
-        "unlet self['model_frame']
-    else
-        if !has_key(self, 'view_frame')
-            let self.view_frame = neobugger#view_frame#New(g:state_ctx._wid_main)
-        endif
+function! s:prototype.ToggleViewFrame() dict
+    let l:view = neobugger#view#Toggle('view_frame')
+    if !empty(l:view)
         if !has_key(self, 'model_frame')
             let self.model_frame = neobugger#model_frame#New(self.view_frame)
         endif
-        if a:0 == 0 || a:1
-            call self.view_frame.open()
-            " Trigger parse
-            call self.on_parseend()
-        endif
+
+        " Trigger parse
+        call self.on_parseend()
     endif
 endfunction
 
 
-function! s:prototype.ViewBreakToggle() dict
+function! s:prototype.ToggleViewBreak() dict
     if self._View_is_open('view_break')
         call self.view_break.close()
         unlet self['view_break']

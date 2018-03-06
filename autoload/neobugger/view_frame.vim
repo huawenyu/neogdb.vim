@@ -10,13 +10,13 @@ endif
 
 
 " Constructor
-function! neobugger#view_frame#New(wid_main)
+function! neobugger#view_frame#New()
     "{
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:title = NbConfGet(s:name, 'title')
-    let l:abstract = neobugger#view#New(a:wid_main, s:name, l:title)
+    let l:abstract = neobugger#view#New(s:name, l:title)
     call l:view.Inherit(l:abstract)
 
     let l:view.position = NbConfGet(s:name, 'layout')

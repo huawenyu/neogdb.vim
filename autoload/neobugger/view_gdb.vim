@@ -4,13 +4,13 @@ if !exists("s:script")
     silent! let s:log = logger#getLogger(s:script)
 
     let s:prototype = tlib#Object#New({
-                \ '_class': ['ViewVar'],
+                \ '_class': ['ViewGdb'],
                 \ })
 endif
 
 
 " Constructor
-function! neobugger#view_var#New()
+function! neobugger#view_gdb#New()
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})

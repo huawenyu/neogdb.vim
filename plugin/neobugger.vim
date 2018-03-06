@@ -47,9 +47,9 @@ command! -range -nargs=0 GdbEvalRange call neobugger#Handle('current', 'Eval', n
 command! -nargs=0 GdbWatchWord call neobugger#Handle('current', 'Watch', expand('<cword>')
 command! -range -nargs=0 GdbWatchRange call neobugger#Handle('current', 'Watch', nelib#util#get_visual_selection())
 
-command! -nargs=0 GdbViewVar call neobugger#Handle('current', 'ViewVarToggle')
-command! -nargs=0 GdbViewFrame call neobugger#Handle('current', 'ViewFrameToggle')
-command! -nargs=0 GdbViewBreak call neobugger#Handle('current', 'ViewBreakToggle')
+command! -nargs=0 GdbViewVar call neobugger#Handle('current', 'ToggleViewVar')
+command! -nargs=0 GdbViewFrame call neobugger#Handle('current', 'ToggleViewFrame')
+command! -nargs=0 GdbViewBreak call neobugger#Handle('current', 'ToggleViewBreak')
 " }}}
 
 
@@ -130,22 +130,40 @@ endif
 " Customization options {{{1
 "   - The 'bufnr', 'wid' is runtime value
 let s:neobugger_conf = {
-            \'gdb': {'status': 0, 'title': "Gdb",
+            \'view_main': {
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \'view_gdb': {'status': 1, 'title': "Gdb",
             \       'layout': ['vsp new'],
             \       'bufnr': -1,
             \       'wid': -1,
+            \       'this': {},
             \       },
             \'gdbserver': {'status': 1, 'title': "GdbServer",
             \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
             \       },
             \'view_var': {'status': 1, 'title': "Variable",
             \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
             \       },
             \'view_frame': {'status': 1, 'title': "Frame",
             \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
             \       },
             \'view_break': {'status': 1, 'title': "Breakpoint",
             \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
             \       },
             \}
 
@@ -173,7 +191,7 @@ endif
 
 " Set option, type must same as default config
 function! NbConfSet(view, option, value)
-    let s:neobugger_conf[a:option] = a:value
+    let s:neobugger_conf[a:view][a:option] = a:value
 endfunction
 
 
