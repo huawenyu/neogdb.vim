@@ -250,24 +250,28 @@ function! s:prototype.RefreshBreakpointSigns(mode) dict
     let s:breakpoint_signid_max = 0
     let id = s:breakpoint_signid_start
     for [next_key, next_val] in items(s:breakpoints)
-        let buf = bufnr(next_val['file'])
-        let linenr = next_val['line']
+        try
+            let buf = bufnr(next_val['file'])
+            let linenr = next_val['line']
 
-        if a:mode == 1 && next_val['change']
-           \ && has_key(next_val, 'sign_id')
-            exe 'sign unplace '. next_val['sign_id']
-        endif
-
-        if a:mode == 0 || (a:mode == 1 && next_val['change'])
-            if next_val['state']
-                exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
-            else
-                exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
+            if a:mode == 1 && next_val['change']
+                        \ && has_key(next_val, 'sign_id')
+                exe 'sign unplace '. next_val['sign_id']
             endif
-            let next_val['sign_id'] = id
-            let s:breakpoint_signid_max = id
-            let id += 1
-        endif
+
+            if a:mode == 0 || (a:mode == 1 && next_val['change'])
+                if next_val['state']
+                    exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
+                else
+                    exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
+                endif
+                let next_val['sign_id'] = id
+                let s:breakpoint_signid_max = id
+                let id += 1
+            endif
+        catch /.*/
+            echo v:exception
+        endtry
     endfor
     "}
 endfunction
@@ -684,7 +688,7 @@ endfunction
 
 
 function! s:prototype.ToggleViewGdb() dict
-    if self._View_is_open('view_gdb')
+    if neobugger#view#IsOpen('view_gdb')
         call self.view_gdb.close()
         unlet self['view_gdb']
     else
@@ -735,7 +739,7 @@ endfunction
 
 
 function! s:prototype.ToggleViewBreak() dict
-    if self._View_is_open('view_break')
+    if neobugger#view#IsOpen('view_break')
         call self.view_break.close()
         unlet self['view_break']
         unlet self['model_break']
@@ -744,14 +748,6 @@ function! s:prototype.ToggleViewBreak() dict
         let self.model_break = neobugger#model_break#New(self.view_var)
         call self.view_break.open()
     endif
-endfunction
-
-
-function! s:prototype._View_is_open(view) dict
-    if has_key(self, a:view)
-        return self[a:view].is_open()
-    endif
-    return 0
 endfunction
 
 
@@ -786,7 +782,7 @@ function! s:prototype.on_whatis(type, ...) dict
 endfunction
 
 function! s:prototype.on_parseend(...) dict
-    let l:__func__ = "gdb.ParseEnd"
+    let l:__func__ = "on_parseend"
 
     " parser frame backtrace
     if has_key(self, 'model_frame')
@@ -795,7 +791,7 @@ function! s:prototype.on_parseend(...) dict
     endif
 
     " Start parser the info local variables
-    if self._View_is_open('view_var')
+    if neobugger#view#IsOpen('view_var')
         call state#Switch('gdb', 'parsevar', 1)
         let l:ret = self.model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
         silent! call s:log.info(l:__func__, '(): ret=', l:ret)
@@ -988,6 +984,7 @@ function! s:prototype.on_init(...) dict
     endif
 
     call self.Send('echo #neobug_tag_initend#\n')
+    silent! call s:log.info("Load set breaks wilson  finish")
 endfunction
 
 

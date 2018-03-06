@@ -45,11 +45,24 @@ function! neobugger#view#Toggle(name)
         call this.open()
         let l:bufnum = NbConfGet(a:name, 'bufnr')
         if l:bufnum >=0
-            execute 'b'. l:bufnum
+            silent! call s:log.info(l:__func__, 'backto buffer ', l:bufnum)
+            execute 'b '. l:bufnum
         endif
         call NbConfSet(a:name, 'this', this)
         return this
     endif
+endfunction
+
+
+function! neobugger#view#IsOpen(name)
+    let l:__func__ = 'neobugger#view#IsOpen'
+    silent! call s:log.info(l:__func__, '(', a:name, ')')
+
+    let this = NbConfGet(a:name, 'this', {})
+    if !empty(this) && this.is_open()
+        return 1
+    endif
+    return 0
 endfunction
 
 
