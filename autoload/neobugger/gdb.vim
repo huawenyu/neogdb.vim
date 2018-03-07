@@ -519,12 +519,31 @@ function! s:prototype.Breaks2Qf() dict
 endfunction
 
 
-function! s:prototype.GetCFunLinenr() dict
+function! neobugger#gdb#GetCFunLinenr()
   let lnum = line(".")
   let col = col(".")
   let linenr = search("^[^ \t#/]\\{2}.*[^:]\s*$", 'bW')
   call search("\\%" . lnum . "l" . "\\%" . col . "c")
   return linenr
+endfunction
+
+
+function! neobugger#gdb#curr_info()
+    let filenm = bufname("%")
+    let linenr = line(".")
+    let colnr = col(".")
+    let cword = expand("<cword>")
+    let cfuncline = neobugger#gdb#GetCFunLinenr()
+
+    let fname = fnamemodify(filenm, ':p:.')
+    let type = 0
+    if linenr == cfuncline
+        let type = 1
+        let file_breakpoints = fname .':'.cword
+    else
+        let file_breakpoints = fname .':'.linenr
+    endif
+    return file_breakpoints
 endfunction
 
 
@@ -537,7 +556,7 @@ function! s:prototype.ToggleBreak() dict
     let linenr = line(".")
     let colnr = col(".")
     let cword = expand("<cword>")
-    let cfuncline = self.GetCFunLinenr()
+    let cfuncline = neobugger#gdb#GetCFunLinenr()
 
     let fname = fnamemodify(filenm, ':p:.')
     let type = 0

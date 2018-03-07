@@ -27,7 +27,8 @@ command! -nargs=+ -complete=file Nbgdbattach call s:attachGDB([<f-args>][0], {'a
 
 
 command! -nargs=0 GdbDebugStop call neobugger#Handle('current', 'Kill')
-command! -nargs=0 GdbToggleBreak call neobugger#Handle('current', 'ToggleBreak')
+"command! -nargs=0 GdbToggleBreak call neobugger#Handle('current', 'ToggleBreak')
+command! -nargs=0 GdbToggleBreak call neobugger#menu_break#New().showMenu()
 command! -nargs=0 GdbToggleBreakAll call neobugger#Handle('current', 'ToggleBreakAll')
 command! -nargs=0 GdbClearBreak call neobugger#Handle('current', 'ClearBreak')
 command! -nargs=0 GdbContinue call neobugger#Handle('current', 'Send', 'c')
