@@ -1,6 +1,8 @@
 if !exists("s:script")
     let s:script = expand('<sfile>:t')
+    let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
+    let s:prototype = tlib#Object#New({'_class': [s:name]})
 
     sign define GdbCurrentLine text=☛ texthl=Error
     "sign define GdbCurrentLine text=☛ texthl=Keyword
@@ -20,9 +22,6 @@ if !exists("s:script")
 
     let s:currFrame = ""
     let s:module = 'gdb'
-    let s:prototype = tlib#Object#New({
-                \ '_class': [s:module],
-                \ })
 endif
 
 
