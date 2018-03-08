@@ -11,8 +11,8 @@ if !exists("s:script")
     "   .linetext   the breakpoint's line-text or function-name
     "   .line       the breakpoint's lineno
     "   .type       0 break at line, 1 at function
-    "   .state      0 disable, 1 enable, 2 delete
-    "   .update     0 noting, 1 need fresh gdb & view
+    "   .state      0 enable(default), 1 disable, 2 delete
+    "   .update     0 do-nothing, 1 need fresh gdb & view
     "   .offset     auto-load's offset if supported
     "   .sign_id
     "   .break
@@ -53,6 +53,8 @@ endfunction
 
 
 function! s:prototype.fill_detail(type, cmdtext) dict
+    let l:__func__ = "fill_detail"
+
     let filenm = bufname("%")
     let linenr = line(".")
     let colnr = col(".")
@@ -74,6 +76,7 @@ function! s:prototype.fill_detail(type, cmdtext) dict
     let self.['line'] = linenr
     let self.['col'] = colnr
     let self.['command'] = a:cmdtext
+    silent! call s:log.info(l:__func__, '() item=', string(self))
 endfunction
 
 

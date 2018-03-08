@@ -11,11 +11,12 @@ function! nelib#util#get_visual_selection()
 endfunction
 
 
+" the var must be global
 function! nelib#util#save_variable(var, file)
     call writefile([string(a:var)], a:file)
 endfunction
 
-
+" the varname must be global
 function! nelib#util#read_variable(varname, file)
     let recover = readfile(a:file)[0]
     execute "let ".a:varname." = " . recover

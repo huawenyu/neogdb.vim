@@ -17,11 +17,137 @@ if !exists("s:script")
     let s:breakpoint_signid_max = 0
 
     let s:toggle_all = 0
+    let s:gdb_init = '/tmp/gdb.init'
     let s:qf_gdb_frame = '/tmp/gdb.frame'
     let s:qf_gdb_break = '/tmp/gdb.break'
 
     let s:currFrame = ""
-    let s:module = 'gdb'
+
+    " set filename-display absolute
+    " set remotetimeout 50
+    let s:initCommands =
+          \"set confirm off\n
+          \ set pagination off\n
+          \ set width 0\n
+          \ set verbose off\n
+          \ set logging off\n
+          \ handle SIGUSR2 noprint nostop\n
+          \ set print elements 2048\n
+          \ set print pretty on\n
+          \ set print array off\n
+          \ set print array-indexes on\n
+          \"
+
+    " @param logfile, echomsg, commands
+    let s:initCommands .=
+          \"define neobug_redir_cmd\n
+          \   set logging off\n
+          \   set logging file $arg0\n
+          \   set logging overwrite on\n
+          \   set logging redirect on\n
+          \   set logging on\n
+          \   if $argc == 3\n
+          \       $arg2\n
+          \   end\n
+          \   if $argc == 4\n
+          \       $arg2 $arg3\n
+          \   end\n
+          \   if $argc == 5\n
+          \       $arg2 $arg3 $arg4\n
+          \   end\n
+          \   set logging off\n
+          \   if $arg1 != 0\n
+          \     echo $arg1\\n\n
+          \   end\n
+          \ end\n
+          \"
+
+    " @param logfile, commands
+    " if @param == 0, means NULL
+    let s:initCommands .=
+          \"define neobug_redir\n
+          \   set logging off\n
+          \   set logging file $arg0\n
+          \   set logging overwrite on\n
+          \   set logging redirect on\n
+          \   set logging on\n
+          \   if $arg1 != 0\n
+          \     $arg1\n
+          \   end\n
+          \ end\n
+          \
+          \ define neobug_redirend\n
+          \   set logging off\n
+          \   if $arg0 != 0\n
+          \     echo $arg0\\n\n
+          \   end\n
+          \ end
+          \"
+
+    let s:initCommands .=
+          \"define parser_bt\n
+          \   set logging off\n
+          \   set logging file /tmp/gdb.frame\n
+          \   set logging overwrite on\n
+          \   set logging redirect on\n
+          \   set logging on\n
+          \   bt\n
+          \   set logging off\n
+          \   echo #neobug_tag_parseend#\\n\n
+          \ end
+          \"
+
+    let s:initCommands .=
+          \"define parser_var_bt\n
+          \   set logging off\n
+          \   set logging file /tmp/gdb.frame\n
+          \   set logging overwrite on\n
+          \   set logging redirect on\n
+          \   set logging on\n
+          \   bt\n
+          \   set logging off\n
+          \   set logging file /tmp/gdb.var\n
+          \   set logging overwrite on\n
+          \   set logging redirect on\n
+          \   set logging on\n
+          \   info local\n
+          \   set logging off\n
+          \   echo #neobug_tag_parseend#\\n\n
+          \ end
+          \"
+
+    let s:initCommands .=
+          \"define silent_on\n
+          \   set logging off\n
+          \   set logging file /dev/null\n
+          \   set logging overwrite off\n
+          \   set logging redirect on\n
+          \   set logging on\n
+          \ end
+          \"
+
+    let s:initCommands .=
+          \"define silent_off\n
+          \     set logging off\n
+          \ end
+          \"
+
+    let s:initCommands .=
+          \"define hook-stop\n
+          \     handle SIGALRM nopass\n
+          \     parser_var_bt\n
+          \ end\n
+          \ \n
+          \ define hook-run\n
+          \     handle SIGALRM pass\n
+          \ end\n
+          \ \n
+          \ define hook-continue\n
+          \     handle SIGALRM pass\n
+          \ \n
+          \ end
+          \"
+
 endif
 
 
@@ -33,8 +159,8 @@ endif
 function! neobugger#gdb#New(conf, binaryFile, args)
     "{
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
-    if neobugger#Exists(s:module)
-        throw 'neobugger['.s:module.' already running!'
+    if neobugger#Exists(s:name)
+        throw 'neobugger['.s:name.' already running!'
     endif
 
     if !filereadable(a:binaryFile)
@@ -66,7 +192,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         let gdb = l:parent
     endif
 
-    let gdb.module = s:module
+    let gdb.module = s:name
     let gdb._initialized = 0
     let gdb._mode = a:conf
     let gdb._binaryFile = a:binaryFile
@@ -305,7 +431,7 @@ endfunction
 
 
 function! s:prototype.Jump(file, line) dict
-    if !neobugger#Exists(s:module)
+    if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
     endif
     if tabpagenr() != g:state_ctx._tab
@@ -361,7 +487,7 @@ endfunction
 
 
 function! s:prototype.Breakpoints(file) dict
-    if !neobugger#Exists(s:module)
+    if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
     endif
     if self._showbreakpoint && filereadable(a:file)
@@ -371,7 +497,7 @@ endfunction
 
 
 function! s:prototype.Stack(file) dict
-    if !neobugger#Exists(s:module)
+    if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
     endif
     if self._showbacktrace && filereadable(a:file)
@@ -381,7 +507,7 @@ endfunction
 
 
 function! s:prototype.Interrupt() dict
-    if !neobugger#Exists(s:module)
+    if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
     endif
     call jobsend(self._client_id, "\<c-c>info line\<cr>")
@@ -442,7 +568,7 @@ function! s:prototype.Step() dict
 endfunction
 
 function! s:prototype.Eval(expr) dict
-    if !neobugger#Exists(s:module)
+    if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
     endif
 
@@ -460,7 +586,7 @@ endfunction
 
 " Enable smart-eval base-on the special project
 function! s:prototype.Whatis(type) dict
-    if !neobugger#Exists(s:module)
+    if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
     endif
     if self._win_gdb._state.name !=# "pause"
@@ -647,6 +773,12 @@ function! s:prototype.on_retry(...) dict
 endfunction
 
 
+function! s:prototype.PrepareInitFile(initfile) dict
+    " Overwrite the existed file
+    call writefile([s:initCommands], a:initfile)
+endfunction
+
+
 function! s:prototype.on_init(...) dict
     let l:__func__ = "gdb.on_init"
     silent! call s:log.info(l:__func__, " args=", string(a:000))
@@ -658,123 +790,8 @@ function! s:prototype.on_init(...) dict
 
     let self._initialized = 1
     call state#Switch('gdb', 'init', 0)
-    " set filename-display absolute
-    " set remotetimeout 50
-    let cmdstr = "set confirm off\n
-                \ set pagination off\n
-                \ set width 0\n
-                \ set verbose off\n
-                \ set logging off\n
-                \ handle SIGUSR2 noprint nostop\n
-                \ set print elements 2048\n
-                \ set print pretty on\n
-                \ set print array off\n
-                \ set print array-indexes on\n
-                \"
-    call self.Send(cmdstr)
-
-    " @param logfile, echomsg, commands
-    let cmdstr = "define neobug_redir_cmd\n
-                \   set logging off\n
-                \   set logging file $arg0\n
-                \   set logging overwrite on\n
-                \   set logging redirect on\n
-                \   set logging on\n
-                \   if $argc == 3\n
-                \       $arg2\n
-                \   end\n
-                \   if $argc == 4\n
-                \       $arg2 $arg3\n
-                \   end\n
-                \   if $argc == 5\n
-                \       $arg2 $arg3 $arg4\n
-                \   end\n
-                \   set logging off\n
-                \   if $arg1 != 0\n
-                \     echo $arg1\\n\n
-                \   end\n
-                \ end\n"
-    call self.Send(cmdstr)
-
-    " @param logfile, commands
-    " if @param == 0, means NULL
-    let cmdstr = "define neobug_redir\n
-                \   set logging off\n
-                \   set logging file $arg0\n
-                \   set logging overwrite on\n
-                \   set logging redirect on\n
-                \   set logging on\n
-                \   if $arg1 != 0\n
-                \     $arg1\n
-                \   end\n
-                \ end\n
-                \
-                \ define neobug_redirend\n
-                \   set logging off\n
-                \   if $arg0 != 0\n
-                \     echo $arg0\\n\n
-                \   end\n
-                \ end"
-    call self.Send(cmdstr)
-
-    let cmdstr = "define parser_bt\n
-                \ set logging off\n
-                \ set logging file /tmp/gdb.frame\n
-                \ set logging overwrite on\n
-                \ set logging redirect on\n
-                \ set logging on\n
-                \ bt\n
-                \ set logging off\n
-                \ echo #neobug_tag_parseend#\\n\n
-                \ end"
-    call self.Send(cmdstr)
-
-    let cmdstr = "define parser_var_bt\n
-                \ set logging off\n
-                \ set logging file /tmp/gdb.frame\n
-                \ set logging overwrite on\n
-                \ set logging redirect on\n
-                \ set logging on\n
-                \ bt\n
-                \ set logging off\n
-                \ set logging file /tmp/gdb.var\n
-                \ set logging overwrite on\n
-                \ set logging redirect on\n
-                \ set logging on\n
-                \ info local\n
-                \ set logging off\n
-                \ echo #neobug_tag_parseend#\\n\n
-                \ end"
-    call self.Send(cmdstr)
-
-    let cmdstr = "define silent_on\n
-                \ set logging off\n
-                \ set logging file /dev/null\n
-                \ set logging overwrite off\n
-                \ set logging redirect on\n
-                \ set logging on\n
-                \ end"
-    call self.Send(cmdstr)
-
-    let cmdstr = "define silent_off\n
-                \ set logging off\n
-                \ end"
-    call self.Send(cmdstr)
-
-    let cmdstr = "define hook-stop\n
-                \ handle SIGALRM nopass\n
-                \ parser_var_bt\n
-                \ end\n
-                \ \n
-                \ define hook-run\n
-                \ handle SIGALRM pass\n
-                \ end\n
-                \ \n
-                \ define hook-continue\n
-                \ handle SIGALRM pass\n
-                \ \n
-                \ end"
-    call self.Send(cmdstr)
+    call self.PrepareInitFile(s:gdb_init)
+    call self.Send('source '.s:gdb_init)
 
     silent! call s:log.info("Load breaks ...")
     let Model_break = neobugger#Model_break#New()
@@ -791,7 +808,7 @@ function! s:prototype.on_initend(...) dict
 
     if has_key(self, 'Init')
         silent! call s:log.info(l:__func__, " call Init()")
-        "call neobugger#Handle(s:module, self.Init)
+        "call neobugger#Handle(s:name, self.Init)
         call self.Init()
     else
         silent! call s:log.info(l:__func__, " Init() is null.")

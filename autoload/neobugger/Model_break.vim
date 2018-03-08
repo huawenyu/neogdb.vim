@@ -10,6 +10,7 @@ if !exists("s:script")
 
     let s:breakpoints = {}
     let s:save_break = './.gdb.break'
+    let s:qf_gdb_break = '/tmp/gdb.break'
 endif
 
 
@@ -25,6 +26,13 @@ function! neobugger#Model_break#New()
 endfunction
 
 
+" the varname must be global
+function! s:prototype.read_variable(varname, file)
+    let recover = readfile(a:file)[0]
+    execute "let ".a:varname." = " . recover
+endfunction
+
+
 function! s:prototype.LoadFromFile(fBreakpoints) dict
     let l:__func__ = "LoadFromFile"
     silent! call s:log.info(l:__func__, "()")
@@ -34,7 +42,9 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
     endif
 
     if filereadable(s:save_break)
-        call nelib#util#read_variable("s:breakpoints", s:save_break)
+        silent! call s:log.info(l:__func__, "() wilson 1")
+        call self.read_variable("s:breakpoints", s:save_break)
+        silent! call s:log.info(l:__func__, "() wilson 2")
     else
         silent! call s:log.warn(l:__func__, "('". s:save_break. "'): file not exits.")
         return
@@ -167,48 +177,27 @@ endfunction
 " @state 0 disable 1 enable, Toggle: none -> enable -> disable
 " @type 0 line-break, 1 function-break
 function! s:prototype.ToggleBreak() dict
-    let breakItem = neobugger#break_item#New('toggle', '')
-    if empty(breakItem)
+    let l:__func__ = "ToggleBreak"
+
+    let newItem = neobugger#break_item#New('toggle', '')
+    if empty(newItem)
+        silent! call s:log.info(l:__func__, "() create a break_item fail")
         return
     endif
 
     let mode = 0
-    let old_value = get(s:breakpoints, breakItem.name, {})
-    if empty(old_value)
-        let break_new = input("[break] ", breakItem.name)
-        if !empty(break_new)
-            let old_value = {
-                        \'file':fname,
-                        \'type':type,
-                        \'line':linenr, 'col':colnr,
-                        \'fn' : '',
-                        \'state' : 1,
-                        \'cmd' : break_new,
-                        \'change' : 1,
-                        \}
-            let mode = 1
-            let s:breakpoints[breakItem.name] = old_value
-        endif
-    elseif old_value['state']
-        let break_new = input("[disable break] ", old_value['cmd'])
-        if !empty(break_new)
-            let old_value['state'] = 0
-            let old_value['change'] = 1
-        endif
+    let oldItem = get(s:breakpoints, newItem.name, {})
+    if empty(oldItem) || !newItem.equal(oldItem)
+        let s:breakpoints[newItem.name] = newItem
+        let newItem['update'] = 1
     else
-        let break_new = input("(delete break) ", old_value['cmd'])
-        if !empty(break_new)
-            call remove(s:breakpoints, breakItem.name)
-        endif
-        let old_value = {}
+        let oldItem['state'] += 1
+        let newItem['update'] = 1
     endif
     call nelib#util#save_variable(s:breakpoints, s:save_break)
     call self.Breaks2Qf()
     call self.RefreshBreakpointSigns(mode)
     call self.RefreshBreakpoints(mode)
-    if !empty(old_value)
-        let old_value['change'] = 0
-    endif
 endfunction
 
 
