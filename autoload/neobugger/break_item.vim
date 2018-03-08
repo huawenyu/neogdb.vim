@@ -42,7 +42,12 @@ endif
 function! neobugger#break_item#New(options)
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let newMenuItem = s:prototype.New(deepcopy(s:_Prototype))
+    let newBreak = s:prototype.New(deepcopy(s:_Prototype))
+    if empty(a:options)
+        call newBreak.add_break()
+    else
+    endif
+
     let newMenuItem.text = a:options['text']
     let newMenuItem.shortcut = a:options['shortcut']
     let newMenuItem.children = []
@@ -61,13 +66,21 @@ function! neobugger#break_item#New(options)
 endfunction
 
 
-function! neobugger#menu_item#NewSeparator(options)
-    let standard_options = { 'text': '--------------------',
-                \ 'shortcut': -1,
-                \ 'callback': -1 }
-    let options = extend(a:options, standard_options, "force")
+function! s:prototype.add_break(command) dict
+    let filenm = bufname("%")
+    let linenr = line(".")
+    let colnr = col(".")
+    let cword = expand("<cword>")
+    let cfuncline = neobugger#gdb#GetCFunLinenr()
 
-    return neobugger#menu_item#New(options)
+    let fname = fnamemodify(filenm, ':p:.')
+    let type = 0
+    if linenr == cfuncline
+        let type = 1
+        let file_breakpoints = fname .':'.cword
+    else
+        let file_breakpoints = fname .':'.linenr
+    endif
 endfunction
 
 
