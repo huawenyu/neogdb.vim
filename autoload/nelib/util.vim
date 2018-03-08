@@ -9,3 +9,15 @@ function! nelib#util#get_visual_selection()
 	let lines[0] = lines[0][col1 - 1:]
 	return join(lines, "\n")
 endfunction
+
+
+function! nelib#util#save_variable(var, file)
+    call writefile([string(a:var)], a:file)
+endfunction
+
+
+function! nelib#util#read_variable(varname, file)
+    let recover = readfile(a:file)[0]
+    execute "let ".a:varname." = " . recover
+endfunction
+

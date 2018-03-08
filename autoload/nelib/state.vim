@@ -109,8 +109,8 @@ function! nelib#state#CreateRuntime(scheme, config) abort
     let ctx._tab = tabpagenr()
     silent! ball 1
     let ctx._wid_main = win_getid()
-    call NbConfSet('view_main', 'wid', ctx._wid_main)
-    silent! call s:log.info("The view_main.wid=", ctx._wid_main)
+    call NbConfSet('View_main', 'wid', ctx._wid_main)
+    silent! call s:log.info("The View_main.wid=", ctx._wid_main)
 
     let windows = scheme.window
     for conf_win in windows
@@ -145,15 +145,15 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         endif
 
         " layout
-        let l:view_gdb = neobugger#view#Toggle('view_gdb')
-        if !empty(l:view_gdb)
+        let l:View_gdb = neobugger#View#Toggle('View_gdb')
+        if !empty(l:View_gdb)
             silent! call s:log.info(l:__func__, " termopen:", cmdstr)
             let window._wid = win_getid()
             enew | let window._client_id = termopen(cmdstr, target)
             let window._bufnr = bufnr('%')
-            let status = NbConfGet('view_gdb', 'status')
+            let status = NbConfGet('View_gdb', 'status')
             if empty(status)
-                neobugger#view#Toggle('view_gdb')
+                neobugger#View#Toggle('View_gdb')
             else
                 " Scroll to the end of terminal output
                 normal G

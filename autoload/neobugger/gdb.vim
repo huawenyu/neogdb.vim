@@ -2,10 +2,6 @@ if !exists("s:script")
     let s:script = expand('<sfile>:t')
     silent! let s:log = logger#getLogger(s:script)
 
-    sign define GdbBreakpointEn text=● texthl=Search
-    sign define GdbBreakpointDis text=● texthl=Function
-    sign define GdbBreakpointDel text=● texthl=Comment
-
     sign define GdbCurrentLine text=☛ texthl=Error
     "sign define GdbCurrentLine text=☛ texthl=Keyword
     "sign define GdbCurrentLine text=⇒ texthl=String
@@ -18,11 +14,9 @@ if !exists("s:script")
     let s:breakpoint_signid_start = 5000
     let s:breakpoint_signid_max = 0
 
-    let s:breakpoints = {}
     let s:toggle_all = 0
     let s:qf_gdb_frame = '/tmp/gdb.frame'
     let s:qf_gdb_break = '/tmp/gdb.break'
-    let s:save_break = './.gdb.break'
 
     let s:currFrame = ""
     let s:module = 'gdb'
@@ -61,7 +55,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     endif
 
     let l:parent = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:abstract = neobugger#std#New()
+    let l:abstract = neobugger#Debugger#New()
     call l:parent.Inherit(l:abstract)
 
     if has_key(conf, 'Inherit')
@@ -236,47 +230,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
 endfunction
 
 
-" @mode 0 refresh-all, 1 only-change
-function! s:prototype.RefreshBreakpointSigns(mode) dict
-    "{
-    if a:mode == 0
-        let i = s:breakpoint_signid_start
-        while i <= s:breakpoint_signid_max
-            exe 'sign unplace '.i
-            let i += 1
-        endwhile
-    endif
-
-    let s:breakpoint_signid_max = 0
-    let id = s:breakpoint_signid_start
-    for [next_key, next_val] in items(s:breakpoints)
-        try
-            let buf = bufnr(next_val['file'])
-            let linenr = next_val['line']
-
-            if a:mode == 1 && next_val['change']
-                        \ && has_key(next_val, 'sign_id')
-                exe 'sign unplace '. next_val['sign_id']
-            endif
-
-            if a:mode == 0 || (a:mode == 1 && next_val['change'])
-                if next_val['state']
-                    exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
-                else
-                    exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
-                endif
-                let next_val['sign_id'] = id
-                let s:breakpoint_signid_max = id
-                let id += 1
-            endif
-        catch /.*/
-            echo v:exception
-        endtry
-    endfor
-    "}
-endfunction
-
-
 function! s:prototype.Kill() dict
     call self.Map("unmap")
     call self.Update_current_line_sign(0)
@@ -349,61 +302,6 @@ function! s:prototype.Update_current_line_sign(add) dict
                     \. self._current_line. ' buffer='. self._current_buf
     endif
     exe 'sign unplace '.old_line_sign_id
-endfunction
-
-
-" Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
-" Then add breakpoints backto gdb
-" @mode 0 reset-all, 1 enable-only-change, 2 delete-all
-function! s:prototype.RefreshBreakpoints(mode) dict
-    "{
-    if !neobugger#Exists(s:module)
-        throw 'Gdb is not running'
-    endif
-
-    let is_running = 0
-    if self._win_gdb._state.name ==# "running"
-        " pause first
-        let is_running = 1
-        call jobsend(self._client_id, "\<c-c>")
-        call state#Switch('gdb', 'pause', 0)
-    endif
-
-    if a:mode == 0 || a:mode == 2
-        if self._has_breakpoints
-            call self.Send('delete')
-            let self._has_breakpoints = 0
-        endif
-    endif
-
-    if a:mode == 0 || a:mode == 1
-        let is_silent = 1
-        if a:mode == 1
-            let is_silent = 0
-        endif
-
-        for [next_key, next_val] in items(s:breakpoints)
-            if next_val['state'] && !empty(next_val['cmd'])
-                if is_silent == 1
-                    let is_silent = 2
-                    call self.Send('silent_on')
-                endif
-
-                if a:mode == 0 || (a:mode == 1 && next_val['change'])
-                    let self._has_breakpoints = 1
-                    call self.Send('break '. next_val['cmd'])
-                endif
-            endif
-        endfor
-        if is_silent == 2
-            call self.Send('silent_off')
-        endif
-    endif
-
-    if is_running
-        call self.Send('c')
-    endif
-    "}
 endfunction
 
 
@@ -491,34 +389,6 @@ function! s:prototype.Interrupt() dict
 endfunction
 
 
-function! s:prototype.SaveVariable(var, file) dict
-    call writefile([string(a:var)], a:file)
-endfunction
-
-function! s:prototype.ReadVariable(varname, file) dict
-    let recover = readfile(a:file)[0]
-    execute "let ".a:varname." = " . recover
-endfunction
-
-function! s:prototype.Breaks2Qf() dict
-    let list2 = []
-    let i = 0
-    for [next_key, next_val] in items(s:breakpoints)
-        if !empty(next_val['cmd'])
-            let i += 1
-            call add(list2, printf('#%d  %d in    %s    at %s:%d',
-                        \ i, next_val['state'], next_val['cmd'],
-                        \ next_val['file'], next_val['line']))
-        endif
-    endfor
-
-    call writefile(split(join(list2, "\n"), "\n"), s:qf_gdb_break)
-    if self._showbreakpoint && filereadable(s:qf_gdb_break)
-        exec "silent lgetfile " . s:qf_gdb_break
-    endif
-endfunction
-
-
 function! neobugger#gdb#GetCFunLinenr()
   let lnum = line(".")
   let col = col(".")
@@ -547,92 +417,9 @@ function! neobugger#gdb#curr_info()
 endfunction
 
 
-" Key: file:line, <or> file:function
-" Value: empty, <or> if condition
-" @state 0 disable 1 enable, Toggle: none -> enable -> disable
-" @type 0 line-break, 1 function-break
-function! s:prototype.ToggleBreak() dict
-    let filenm = bufname("%")
-    let linenr = line(".")
-    let colnr = col(".")
-    let cword = expand("<cword>")
-    let cfuncline = neobugger#gdb#GetCFunLinenr()
-
-    let fname = fnamemodify(filenm, ':p:.')
-    let type = 0
-    if linenr == cfuncline
-        let type = 1
-        let file_breakpoints = fname .':'.cword
-    else
-        let file_breakpoints = fname .':'.linenr
-    endif
-
-    let mode = 0
-    let old_value = get(s:breakpoints, file_breakpoints, {})
-    if empty(old_value)
-        let break_new = input("[break] ", file_breakpoints)
-        if !empty(break_new)
-            let old_value = {
-                        \'file':fname,
-                        \'type':type,
-                        \'line':linenr, 'col':colnr,
-                        \'fn' : '',
-                        \'state' : 1,
-                        \'cmd' : break_new,
-                        \'change' : 1,
-                        \}
-            let mode = 1
-            let s:breakpoints[file_breakpoints] = old_value
-        endif
-    elseif old_value['state']
-        let break_new = input("[disable break] ", old_value['cmd'])
-        if !empty(break_new)
-            let old_value['state'] = 0
-            let old_value['change'] = 1
-        endif
-    else
-        let break_new = input("(delete break) ", old_value['cmd'])
-        if !empty(break_new)
-            call remove(s:breakpoints, file_breakpoints)
-        endif
-        let old_value = {}
-    endif
-    call self.SaveVariable(s:breakpoints, s:save_break)
-    call self.Breaks2Qf()
-    call self.RefreshBreakpointSigns(mode)
-    call self.RefreshBreakpoints(mode)
-    if !empty(old_value)
-        let old_value['change'] = 0
-    endif
-endfunction
-
-
-function! s:prototype.ToggleBreakAll() dict
-    let s:toggle_all = ! s:toggle_all
-    let mode = 0
-    for v in values(s:breakpoints)
-        if s:toggle_all
-            let v['state'] = 0
-        else
-            let v['state'] = 1
-        endif
-    endfor
-    call self.RefreshBreakpointSigns(0)
-    call self.RefreshBreakpoints(0)
-endfunction
-
-
 function! s:prototype.TBreak() dict
     let file_breakpoints = bufname('%') .':'. line('.')
     call self.Send("tbreak ". file_breakpoints. "\nc")
-endfunction
-
-
-function! s:prototype.ClearBreak() dict
-    let s:breakpoints = {}
-    call self.Breaks2Qf()
-    call self.RefreshBreakpointSigns(0)
-    call self.RefreshBreakpoints(2)
 endfunction
 
 
@@ -707,34 +494,34 @@ endfunction
 
 
 function! s:prototype.ToggleViewGdb() dict
-    if neobugger#view#IsOpen('view_gdb')
-        call self.view_gdb.close()
-        unlet self['view_gdb']
+    if neobugger#View#IsOpen('View_gdb')
+        call self.View_gdb.close()
+        unlet self['View_gdb']
     else
-        if !has_key(self, 'view_gdb')
-            let self.view_var = neobugger#view_gdb#New(g:state_ctx._wid_main)
+        if !has_key(self, 'View_gdb')
+            let self.View_var = neobugger#View_gdb#New(g:state_ctx._wid_main)
         endif
 
-        call self.view_var.open()
+        call self.View_var.open()
     endif
 endfunction
 
 
 function! s:prototype.ToggleViewVar() dict
-    if (has_key(self, 'model_var'))
-        unlet self['model_var']
+    if (has_key(self, 'Model_var'))
+        unlet self['Model_var']
     endif
 
-    let l:view = neobugger#view#Toggle('view_var')
+    let l:view = neobugger#View#Toggle('View_var')
     if !empty(l:view)
-        let self.model_var = neobugger#model_var#New(l:view)
+        let self.Model_var = neobugger#Model_var#New(l:view)
 
         " Get current frame
-        if !has_key(self, 'model_frame')
-            if has_key(self, 'view_frame')
-                let self.model_frame = neobugger#model_frame#New(self.view_frame)
+        if !has_key(self, 'Model_frame')
+            if has_key(self, 'View_frame')
+                let self.Model_frame = neobugger#Model_frame#New(self.View_frame)
             else
-                let self.model_frame = neobugger#model_frame#New()
+                let self.Model_frame = neobugger#Model_frame#New()
             endif
         endif
 
@@ -745,10 +532,10 @@ endfunction
 
 
 function! s:prototype.ToggleViewFrame() dict
-    let l:view = neobugger#view#Toggle('view_frame')
+    let l:view = neobugger#View#Toggle('View_frame')
     if !empty(l:view)
-        if !has_key(self, 'model_frame')
-            let self.model_frame = neobugger#model_frame#New(self.view_frame)
+        if !has_key(self, 'Model_frame')
+            let self.Model_frame = neobugger#Model_frame#New(self.View_frame)
         endif
 
         " Trigger parse
@@ -758,14 +545,14 @@ endfunction
 
 
 function! s:prototype.ToggleViewBreak() dict
-    if neobugger#view#IsOpen('view_break')
-        call self.view_break.close()
-        unlet self['view_break']
-        unlet self['model_break']
+    if neobugger#View#IsOpen('View_break')
+        call self.View_break.close()
+        unlet self['View_break']
+        unlet self['Model_break']
     else
-        let self.view_break = neobugger#view_break#New(g:state_ctx._wid_main)
-        let self.model_break = neobugger#model_break#New(self.view_var)
-        call self.view_break.open()
+        let self.View_break = neobugger#View_break#New(g:state_ctx._wid_main)
+        let self.Model_break = neobugger#Model_break#New(self.View_var)
+        call self.View_break.open()
     endif
 endfunction
 
@@ -804,20 +591,20 @@ function! s:prototype.on_parseend(...) dict
     let l:__func__ = "on_parseend"
 
     " parser frame backtrace
-    if has_key(self, 'model_frame')
-        let s:currFrame = self.model_frame.ParseFrame('/tmp/gdb.frame')
+    if has_key(self, 'Model_frame')
+        let s:currFrame = self.Model_frame.ParseFrame('/tmp/gdb.frame')
         silent! call s:log.info(l:__func__, '(): currentFrame=', s:currFrame)
     endif
 
     " Start parser the info local variables
-    if neobugger#view#IsOpen('view_var')
+    if neobugger#View#IsOpen('View_var')
         call state#Switch('gdb', 'parsevar', 1)
-        let l:ret = self.model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
+        let l:ret = self.Model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
         silent! call s:log.info(l:__func__, '(): ret=', l:ret)
         if l:ret == 0
             " succ, parse-finish
             call state#Switch('gdb', 'parsevar', 2)
-            call self.model_var.ParseVarEnd('/tmp/gdb.var')
+            call self.Model_var.ParseVarEnd('/tmp/gdb.var')
         elseif l:ret == -1
             " file-not-exist
             call state#Switch('gdb', 'parsevar', 2)
@@ -829,11 +616,11 @@ function! s:prototype.on_parseend(...) dict
 endfunction
 
 function! s:prototype.on_parse_vartype(...) dict
-    let l:ret = self.model_var.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
+    let l:ret = self.Model_var.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
     if l:ret == 0
         " succ, parse-finish
         call state#Switch('gdb', 'parsevar', 2)
-        call self.model_var.ParseVarEnd('/tmp/gdb.var')
+        call self.Model_var.ParseVarEnd('/tmp/gdb.var')
     elseif l:ret == -1
         " file-not-exist
         call state#Switch('gdb', 'parsevar', 2)
@@ -845,7 +632,7 @@ endfunction
 
 function! s:prototype.on_parse_varend(...) dict
     call state#Switch('gdb', 'parsevar', 2)
-    call self.model_var.ParseVarEnd('/tmp/gdb.vars')
+    call self.Model_var.ParseVarEnd('/tmp/gdb.vars')
 
     " Trigger Jump
     call self.Send('info line')
@@ -991,19 +778,11 @@ function! s:prototype.on_init(...) dict
     call self.Send(cmdstr)
 
     silent! call s:log.info("Load breaks ...")
-    if filereadable(s:save_break)
-        call self.ReadVariable("s:breakpoints", s:save_break)
-    endif
-
-    silent! call s:log.info("Load set breaks ...")
-    if !empty(s:breakpoints)
-        call self.Breaks2Qf()
-        call self.RefreshBreakpointSigns(0)
-        call self.RefreshBreakpoints(0)
-    endif
+    let Model_break = neobugger#Model_break#New()
+    call Model_break.LoadFromFile('./.gdb.break')
+    call NbRuntimeSet('Model_break', Model_break)
 
     call self.Send('echo #neobug_tag_initend#\n')
-    silent! call s:log.info("Load set breaks wilson  finish")
 endfunction
 
 

@@ -10,6 +10,54 @@ else
 endif
 
 
+"==================================================={
+"
+" Config
+"   - The 'bufnr', 'wid' is runtime value
+let s:neobugger_conf = {
+            \'View_main': {
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \'View_gdb': {'status': 1, 'title': "Gdb",
+            \       'layout': ['vsp new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \'gdbserver': {'status': 1, 'title': "GdbServer",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \'View_var': {'status': 1, 'title': "Variable",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \'View_frame': {'status': 1, 'title': "Frame",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \'View_break': {'status': 1, 'title': "Breakpoint",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'this': {},
+            \       },
+            \}
+
+" Runtime object holder
+let s:neobugger_runtime = {}
+"===================================================}
+
+
+
 " InstanceGdb {{{1
 command! -nargs=+ -complete=file Nbgdb call neobugger#New('gdb', 'local', [<f-args>][0], {'args' : [<f-args>][1:]})
 function! s:attachGDB(binaryFile, args)
@@ -28,7 +76,7 @@ command! -nargs=+ -complete=file Nbgdbattach call s:attachGDB([<f-args>][0], {'a
 
 command! -nargs=0 GdbDebugStop call neobugger#Handle('current', 'Kill')
 "command! -nargs=0 GdbToggleBreak call neobugger#Handle('current', 'ToggleBreak')
-command! -nargs=0 GdbToggleBreak call neobugger#menu_break#New().showMenu()
+command! -nargs=0 GdbToggleBreak call neobugger#Menu_break#New().showMenu()
 command! -nargs=0 GdbToggleBreakAll call neobugger#Handle('current', 'ToggleBreakAll')
 command! -nargs=0 GdbClearBreak call neobugger#Handle('current', 'ClearBreak')
 command! -nargs=0 GdbContinue call neobugger#Handle('current', 'Send', 'c')
@@ -129,45 +177,7 @@ endif
 
 
 " Customization options {{{1
-"   - The 'bufnr', 'wid' is runtime value
-let s:neobugger_conf = {
-            \'view_main': {
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'this': {},
-            \       },
-            \'view_gdb': {'status': 1, 'title': "Gdb",
-            \       'layout': ['vsp new'],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'this': {},
-            \       },
-            \'gdbserver': {'status': 1, 'title': "GdbServer",
-            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'this': {},
-            \       },
-            \'view_var': {'status': 1, 'title': "Variable",
-            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'this': {},
-            \       },
-            \'view_frame': {'status': 1, 'title': "Frame",
-            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'this': {},
-            \       },
-            \'view_break': {'status': 1, 'title': "Breakpoint",
-            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'this': {},
-            \       },
-            \}
-
+"
 " Read from customer defined 'g:neobugger_user' first
 " <or> customer directly redefine 'g:neobugger_conf'.
 "
@@ -188,6 +198,25 @@ if !exists("g:neobugger_other")
 endif
 
 " }}}
+
+
+function! NbRuntimeSet(name, object)
+    let s:neobugger_runtime[a:name] = a:object
+endfunction
+
+
+function! NbRuntimeExist(name)
+    return has_key(s:neobugger_runtime, a:name)
+endfunction
+
+
+function! NbRuntimeGet(name)
+    if has_key(s:neobugger_runtime, a:name)
+        return s:neobugger_runtime[a:name]
+    else
+        return {}
+    endif
+endfunction
 
 
 " Set option, type must same as default config
