@@ -10,7 +10,7 @@ endif
 
 
 " Constructor
-function! neobugger#menu_item#New(options)
+function! neobugger#menuitem#New(options)
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let newMenuItem = s:prototype.New(a:0 >= 1 ? a:1 : {})
@@ -33,21 +33,21 @@ function! neobugger#menu_item#New(options)
 endfunction
 
 
-function! neobugger#menu_item#NewSeparator(options)
+function! neobugger#menuitem#NewSeparator(options)
     let standard_options = { 'text': '--------------------',
                 \ 'shortcut': -1,
                 \ 'callback': -1 }
     let options = extend(a:options, standard_options, "force")
 
-    return neobugger#menu_item#New(options)
+    return neobugger#menuitem#New(options)
 endfunction
 
 
-function! neobugger#menu_item#NewSubmenu(options)
+function! neobugger#menuitem#NewSubmenu(options)
     let standard_options = { 'callback': -1 }
     let options = extend(a:options, standard_options, "force")
 
-    return neobugger#menu_item#New(options)
+    return neobugger#menuitem#New(options)
 endfunction
 
 

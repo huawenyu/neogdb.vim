@@ -1,3 +1,5 @@
+" Code from nerdtree
+"
 if !exists("s:script")
     let s:script = expand('<sfile>:t')
     let s:name = expand('<sfile>:t:r')
@@ -56,6 +58,7 @@ function! s:prototype.showMenu() dict
             redraw!
             call self._echoPrompt()
             let key = nr2char(getchar())
+            silent! call s:log.info("menu get input shortcut-key: [". key. ']')
             let done = self._handleKeypress(key)
         endwhile
     finally
@@ -70,16 +73,15 @@ endfunction
 
 
 function! s:prototype._echoPrompt()
-    echo self.title . ': Use j/k/<Enter>/<ESC> and the shortcuts indicated'
-    echo '-------------------------------------------------------'
-
+    echo self.title . ':'
     for i in range(0, len(self.menuItems)-1)
         if self.selection == i
             echo "> " . self.menuItems[i].text
         else
             echo "  " . self.menuItems[i].text
         endif
-    endfor
+      endfor
+    echo 'Choice (Keys j/k/<Enter>/<ESC> or shortcut): '
 endfunction
 
 
@@ -119,7 +121,7 @@ function! s:prototype._allIndexesFor(shortcut)
     let toReturn = []
 
     for i in range(0, len(self.menuItems)-1)
-        if self.menuItems[i].shortcut == a:shortcut
+        if self.menuItems[i].shortcut ==# a:shortcut
             call add(toReturn, i)
         endif
     endfor
@@ -132,13 +134,13 @@ endfunction
 "current cursor location and wraps around to the top again if need be
 function! s:prototype._nextIndexFor(shortcut)
     for i in range(self.selection+1, len(self.menuItems)-1)
-        if self.menuItems[i].shortcut == a:shortcut
+        if self.menuItems[i].shortcut ==# a:shortcut
             return i
         endif
     endfor
 
     for i in range(0, self.selection)
-        if self.menuItems[i].shortcut == a:shortcut
+        if self.menuItems[i].shortcut ==# a:shortcut
             return i
         endif
     endfor

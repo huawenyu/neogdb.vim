@@ -176,7 +176,7 @@ if !exists("g:neobugger_conf")
 endif
 
 if !exists("g:gdb_require_enter_after_toggling_breakpoint")
-    let g:gdb_require_enter_after_toggling_breakpoint = 0
+    let g:gdb_require_enter_after_toggling_breakpoint = 1
 endif
 
 if !exists("g:restart_app_if_gdb_running")

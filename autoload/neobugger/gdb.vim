@@ -1126,9 +1126,10 @@ function! s:prototype.Map(type) dict
         exe 'nnoremap <silent> ' . g:gdb_keymap_finish . ' :GdbFinish<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_until . ' :GdbUntil<cr>'
 
+        " @todo wilson: If showMenu, consider the default menu choose
         let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'
         if !g:gdb_require_enter_after_toggling_breakpoint
-            let toggle_break_binding = toggle_break_binding . '<cr>'
+            let toggle_break_binding = toggle_break_binding . '<cr><cr>'
         endif
         exe toggle_break_binding
 

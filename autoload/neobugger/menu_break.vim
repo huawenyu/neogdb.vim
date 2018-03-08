@@ -16,40 +16,58 @@ function! neobugger#menu_break#New(...)
     let l:abstract = neobugger#menu#New('Breakpoints')
     call l:menu.Inherit(l:abstract)
 
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call l:menu.addMenuItem(neobugger#menuitem#New(
+                \{ 'text': '[t] toggle the breakpoint',
+                \  'shortcut': 't',
+                \  'callback': 'neobugger#menu_break#_click_toggle'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[b] add/enable a breakpoint',
                 \  'shortcut': 'b',
-                \  'callback': 'neobugger#menu_break#add'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+                \  'callback': 'neobugger#menu_break#_click_add'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[c] add/enable a breakpoint with condition',
                 \  'shortcut': 'c',
-                \  'callback': 'neobugger#menu_break#add'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+                \  'callback': 'neobugger#menu_break#_click_add'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[m] add/enable a breakpoint with command',
                 \  'shortcut': 'm',
-                \  'callback': 'neobugger#menu_break#add'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+                \  'callback': 'neobugger#menu_break#_click_add'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[B] disable the current breakpoint',
                 \  'shortcut': 'B',
-                \  'callback': 'neobugger#menu_break#move'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+                \  'callback': 'neobugger#menu_break#_click_move'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[d] delete the current breakpoint',
                 \  'shortcut': 'd',
-                \  'callback': 'neobugger#menu_break#move'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+                \  'callback': 'neobugger#menu_break#_click_move'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[a] disable all the breakpoints',
                 \  'shortcut': 'a',
-                \  'callback': 'neobugger#menu_break#move'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+                \  'callback': 'neobugger#menu_break#_click_move'}))
+    call l:menu.addMenuItem(neobugger#menuitem#New(
                 \{ 'text': '[A] delete all the breakpoints',
                 \  'shortcut': 'A',
-                \  'callback': 'neobugger#menu_break#move'}))
+                \  'callback': 'neobugger#menu_break#_click_move'}))
 
     return l:menu
 endfunction
 
 
-function! neobugger#menu_break#add()
+" Toggle state: enable -> disable -> delete
+function! neobugger#menu_break#_click_toggle()
+    let newNodeName = input("Add a childnode\n".
+                          \ "==========================================================\n".
+                          \ "Enter the dir/file name to be created. Dirs end with a '/'\n" .
+                          \ "", neobugger#gdb#curr_info())
+
+    if newNodeName ==# ''
+        call nerdtree#echo("Node Creation Aborted.")
+        return
+    endif
+endfunction
+
+
+function! neobugger#menu_break#_click_add()
     let newNodeName = input("Add a childnode\n".
                           \ "==========================================================\n".
                           \ "Enter the dir/file name to be created. Dirs end with a '/'\n" .
@@ -79,7 +97,7 @@ function! neobugger#menu_break#add()
 endfunction
 
 
-function! neobugger#menu_break#move()
+function! neobugger#menu_break#_click_move()
     let curNode = g:NERDTreeFileNode.GetSelected()
     let newNodePath = input("Rename the current node\n" .
                           \ "==========================================================\n" .
@@ -113,7 +131,7 @@ function! neobugger#menu_break#move()
 endfunction
 
 
-function! neobugger#menu_break#delete()
+function! neobugger#menu_break#_click_delete()
     let currentNode = g:NERDTreeFileNode.GetSelected()
     let confirmed = 0
 
@@ -156,7 +174,7 @@ function! neobugger#menu_break#delete()
 endfunction
 
 
-function! neobugger#menu_break#list()
+function! neobugger#menu_break#_click_list()
     let treenode = g:NERDTreeFileNode.GetSelected()
     if !empty(treenode)
         if has("osx")

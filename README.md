@@ -216,6 +216,8 @@ If this flag is set to 1, the plugin will require you to confirm the command wit
 
 ### others
 
+#### Show menu when set breakpoint [default=1]
+
 ```vim
 let g:gdb_require_enter_after_toggling_breakpoint = 0
 ```

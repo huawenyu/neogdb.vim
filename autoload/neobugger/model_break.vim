@@ -50,7 +50,7 @@ function! s:Breakpoint.new(file, line)
   let var.id = s:Breakpoint.id
 
   call var._set_sign()
-  call s:log.info("Set breakpoint to: " . var.file . ":" . var.line)
+  silent call s:log.info("Set breakpoint to: " . var.file . ":" . var.line)
   return var
 endfunction
 
