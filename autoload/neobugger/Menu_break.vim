@@ -58,9 +58,9 @@ function! neobugger#Menu_break#_click_toggle()
                           \ "Enter the dir/file name to be created. Dirs end with a '/'\n" .
                           \ "", neobugger#gdb#curr_info())
 
-    if newNodeName ==# ''
-        call nerdtree#echo("Node Creation Aborted.")
-        return
+    let modelBreak = NbRuntimeGet('Model_break')
+    if !empty(modelBreak)
+        call modelBreak.ToggleBreak()
     endif
 endfunction
 

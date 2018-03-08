@@ -162,48 +162,20 @@ function! s:prototype.Breaks2Qf() dict
 endfunction
 
 
-function! s:prototype.add_break(command) dict
-    let filenm = bufname("%")
-    let linenr = line(".")
-    let colnr = col(".")
-    let cword = expand("<cword>")
-    let cfuncline = neobugger#gdb#GetCFunLinenr()
-
-    let fname = fnamemodify(filenm, ':p:.')
-    let type = 0
-    if linenr == cfuncline
-        let type = 1
-        let file_breakpoints = fname .':'.cword
-    else
-        let file_breakpoints = fname .':'.linenr
-    endif
-endfunction
-
-
 " Key: file:line, <or> file:function
 " Value: empty, <or> if condition
 " @state 0 disable 1 enable, Toggle: none -> enable -> disable
 " @type 0 line-break, 1 function-break
 function! s:prototype.ToggleBreak() dict
-    let filenm = bufname("%")
-    let linenr = line(".")
-    let colnr = col(".")
-    let cword = expand("<cword>")
-    let cfuncline = neobugger#gdb#GetCFunLinenr()
-
-    let fname = fnamemodify(filenm, ':p:.')
-    let type = 0
-    if linenr == cfuncline
-        let type = 1
-        let file_breakpoints = fname .':'.cword
-    else
-        let file_breakpoints = fname .':'.linenr
+    let breakItem = neobugger#break_item#New('toggle', '')
+    if empty(breakItem)
+        return
     endif
 
     let mode = 0
-    let old_value = get(s:breakpoints, file_breakpoints, {})
+    let old_value = get(s:breakpoints, breakItem.name, {})
     if empty(old_value)
-        let break_new = input("[break] ", file_breakpoints)
+        let break_new = input("[break] ", breakItem.name)
         if !empty(break_new)
             let old_value = {
                         \'file':fname,
@@ -215,7 +187,7 @@ function! s:prototype.ToggleBreak() dict
                         \'change' : 1,
                         \}
             let mode = 1
-            let s:breakpoints[file_breakpoints] = old_value
+            let s:breakpoints[breakItem.name] = old_value
         endif
     elseif old_value['state']
         let break_new = input("[disable break] ", old_value['cmd'])
@@ -226,7 +198,7 @@ function! s:prototype.ToggleBreak() dict
     else
         let break_new = input("(delete break) ", old_value['cmd'])
         if !empty(break_new)
-            call remove(s:breakpoints, file_breakpoints)
+            call remove(s:breakpoints, breakItem.name)
         endif
         let old_value = {}
     endif

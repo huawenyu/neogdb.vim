@@ -2,11 +2,12 @@
 - abstract class: Menu.vim
 - class: menu_item.vim
 - inherit class: Menu_break.vim
+- instance of class: instanceOfClass
 - class static method: path#file#static_method
 - class virtual method: path#file#VirtualMethod
 - class public method: path#file#public_method
 - class private method: path#file#_private_method
-- template object: s:_TemplateObject
+- template class: s:_TemplateClass
 
 # Feature
 

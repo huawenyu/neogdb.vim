@@ -211,11 +211,7 @@ endfunction
 
 
 function! NbRuntimeGet(name)
-    if has_key(s:neobugger_runtime, a:name)
-        return s:neobugger_runtime[a:name]
-    else
-        return {}
-    endif
+    return get(s:neobugger_runtime, a:name, {})
 endfunction
 
 

@@ -26,6 +26,8 @@ if !exists("s:script")
                 \ 'file': '',
                 \ 'text': '',
                 \ 'line': 0,
+                \ 'col': 0,
+                \ 'fn': '',
                 \ 'type': 0,
                 \ 'state': 0,
                 \ 'update': 0,
@@ -33,40 +35,24 @@ if !exists("s:script")
                 \ 'sign_id': 0,
                 \ 'break': '',
                 \ 'condition': '',
-                \ 'command': [],
+                \ 'command': '',
                 \}
+
 endif
 
 
 " Constructor
-function! neobugger#break_item#New(options)
+function! neobugger#break_item#New(type, cmdtext)
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let newBreak = s:prototype.New(deepcopy(s:_Prototype))
-    if empty(a:options)
-        call newBreak.add_break()
-    else
-    endif
+    call newBreak.fill_detail(a:type, a:cmdtext)
 
-    let newMenuItem.text = a:options['text']
-    let newMenuItem.shortcut = a:options['shortcut']
-    let newMenuItem.children = []
-
-    let newMenuItem.isActiveCallback = -1
-    if has_key(a:options, 'isActiveCallback')
-        let newMenuItem.isActiveCallback = a:options['isActiveCallback']
-    endif
-
-    let newMenuItem.callback = -1
-    if has_key(a:options, 'callback')
-        let newMenuItem.callback = a:options['callback']
-    endif
-
-    return newMenuItem
+    return newBreak
 endfunction
 
 
-function! s:prototype.add_break(command) dict
+function! s:prototype.fill_detail(type, cmdtext) dict
     let filenm = bufname("%")
     let linenr = line(".")
     let colnr = col(".")
@@ -81,14 +67,30 @@ function! s:prototype.add_break(command) dict
     else
         let file_breakpoints = fname .':'.linenr
     endif
+
+    let self.['name'] = file_breakpoints
+    let self.['file'] = fname
+    let self.['type'] = type
+    let self.['line'] = linenr
+    let self.['col'] = colnr
+    let self.['command'] = a:cmdtext
 endfunction
 
 
-function! neobugger#menu_item#NewSubmenu(options)
-    let standard_options = { 'callback': -1 }
-    let options = extend(a:options, standard_options, "force")
+function! s:prototype.equal(item) dict
+    let l:__func__ = "equal"
 
-    return neobugger#menu_item#New(options)
+    let that = a:item
+    if !(self.name ==# that.name)
+                \ || !(self.file ==# that.file)
+                \ || !(self.type ==# that.type)
+                \ || !(self.line ==# that.line)
+                \ || !(self.command ==# that.command)
+        silent! call s:log.info(l:__func__, '('. that.name. ') not equal')
+        return 0
+    endif
+    silent! call s:log.info(l:__func__, '('. that.name. ') equal')
+    return 1
 endfunction
 
 
