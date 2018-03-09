@@ -8,7 +8,12 @@ if !exists("s:script")
     sign define GdbBreakpointDis text=● texthl=Function
     sign define GdbBreakpointDel text=● texthl=Comment
 
+    let s:breakpoint_signid_start = 5000
+    let s:breakpoint_signid_max = 0
+
     let s:breakpoints = {}
+
+    let s:toggle_all = 0
     let s:save_break = './.gdb.break'
     let s:qf_gdb_break = '/tmp/gdb.break'
 endif
@@ -26,13 +31,6 @@ function! neobugger#Model_break#New()
 endfunction
 
 
-" the varname must be global
-function! s:prototype.read_variable(varname, file)
-    let recover = readfile(a:file)[0]
-    execute "let ".a:varname." = " . recover
-endfunction
-
-
 function! s:prototype.LoadFromFile(fBreakpoints) dict
     let l:__func__ = "LoadFromFile"
     silent! call s:log.info(l:__func__, "()")
@@ -42,25 +40,27 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
     endif
 
     if filereadable(s:save_break)
-        silent! call s:log.info(l:__func__, "() wilson 1")
-        call self.read_variable("s:breakpoints", s:save_break)
-        silent! call s:log.info(l:__func__, "() wilson 2")
+        call nelib#util#read_variable('g:neobugger_tmp', s:save_break)
+        let s:breakpoints = g:neobugger_tmp
     else
         silent! call s:log.warn(l:__func__, "('". s:save_break. "'): file not exits.")
         return
     endif
 
-    silent! call s:log.info("Load set breaks ...")
+    silent! call s:log.info("Set and sign breaks ...")
     if !empty(s:breakpoints)
         call self.Breaks2Qf()
         call self.RefreshBreakpointSigns(0)
-        call self.RefreshBreakpoints(0)
+        call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
     endif
 endfunction
 
 
 " @mode 0 refresh-all, 1 only-change
 function! s:prototype.RefreshBreakpointSigns(mode) dict
+    let l:__func__ = "RefreshBreakpointSigns"
+    silent! call s:log.info(l:__func__, "()")
+
     if a:mode == 0
         let i = s:breakpoint_signid_start
         while i <= s:breakpoint_signid_max
@@ -71,6 +71,8 @@ function! s:prototype.RefreshBreakpointSigns(mode) dict
 
     let s:breakpoint_signid_max = 0
     let id = s:breakpoint_signid_start
+    silent! call s:log.info(l:__func__, ": ", string(type(s:breakpoints)))
+    silent! call s:log.info(l:__func__, ": ", string(s:breakpoints))
     for [next_key, next_val] in items(s:breakpoints)
         try
             let buf = bufnr(next_val['file'])
@@ -98,62 +100,10 @@ function! s:prototype.RefreshBreakpointSigns(mode) dict
 endfunction
 
 
-" Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
-" Then add breakpoints backto gdb
-" @mode 0 reset-all, 1 enable-only-change, 2 delete-all
-function! s:prototype.RefreshBreakpoints(mode) dict
-    "{
-    if !neobugger#Exists(s:module)
-        throw 'Gdb is not running'
-    endif
-
-    let is_running = 0
-    if self._win_gdb._state.name ==# "running"
-        " pause first
-        let is_running = 1
-        call jobsend(self._client_id, "\<c-c>")
-        call state#Switch('gdb', 'pause', 0)
-    endif
-
-    if a:mode == 0 || a:mode == 2
-        if self._has_breakpoints
-            call self.Send('delete')
-            let self._has_breakpoints = 0
-        endif
-    endif
-
-    if a:mode == 0 || a:mode == 1
-        let is_silent = 1
-        if a:mode == 1
-            let is_silent = 0
-        endif
-
-        for [next_key, next_val] in items(s:breakpoints)
-            if next_val['state'] && !empty(next_val['cmd'])
-                if is_silent == 1
-                    let is_silent = 2
-                    call self.Send('silent_on')
-                endif
-
-                if a:mode == 0 || (a:mode == 1 && next_val['change'])
-                    let self._has_breakpoints = 1
-                    call self.Send('break '. next_val['cmd'])
-                endif
-            endif
-        endfor
-        if is_silent == 2
-            call self.Send('silent_off')
-        endif
-    endif
-
-    if is_running
-        call self.Send('c')
-    endif
-    "}
-endfunction
-
-
 function! s:prototype.Breaks2Qf() dict
+    " @todo wilson: donothing, remove later
+    return
+
     let list2 = []
     let i = 0
     for [next_key, next_val] in items(s:breakpoints)
@@ -197,7 +147,7 @@ function! s:prototype.ToggleBreak() dict
     call nelib#util#save_variable(s:breakpoints, s:save_break)
     call self.Breaks2Qf()
     call self.RefreshBreakpointSigns(mode)
-    call self.RefreshBreakpoints(mode)
+    call neobugger#Handle('current', 'UpdateBreaks', mode, s:breakpoints)
 endfunction
 
 
@@ -212,7 +162,7 @@ function! s:prototype.ToggleBreakAll() dict
         endif
     endfor
     call self.RefreshBreakpointSigns(0)
-    call self.RefreshBreakpoints(0)
+    call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
 endfunction
 
 
@@ -220,7 +170,7 @@ function! s:prototype.ClearBreak() dict
     let s:breakpoints = {}
     call self.Breaks2Qf()
     call self.RefreshBreakpointSigns(0)
-    call self.RefreshBreakpoints(2)
+    call neobugger#Handle('current', 'UpdateBreaks', 2, s:breakpoints)
 endfunction
 
 

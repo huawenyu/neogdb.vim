@@ -11,14 +11,14 @@ function! nelib#util#get_visual_selection()
 endfunction
 
 
-" the var must be global
 function! nelib#util#save_variable(var, file)
     call writefile([string(a:var)], a:file)
 endfunction
 
-" the varname must be global
+
+" Serialize back a obj type({}) from file
+" varname should be name of a global variable
 function! nelib#util#read_variable(varname, file)
-    let recover = readfile(a:file)[0]
-    execute "let ".a:varname." = " . recover
+    let str_var = 'let '. a:varname. '=' . string(readfile(a:file)[0])
 endfunction
 

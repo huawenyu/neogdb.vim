@@ -9,7 +9,8 @@ else
     finish
 endif
 
-
+" Used as temp transfer data between functions
+let g:neobugger_tmp = {}
 "==================================================={
 "
 " Config

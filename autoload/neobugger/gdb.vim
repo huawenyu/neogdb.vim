@@ -12,11 +12,6 @@ if !exists("s:script")
     set errorformat+=#%c\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
     set errorformat+=#%c\ \ %m\ \(%.%#\)\ at\ %f:%l
 
-    let s:gdb_port = 7778
-    let s:breakpoint_signid_start = 5000
-    let s:breakpoint_signid_max = 0
-
-    let s:toggle_all = 0
     let s:gdb_init = '/tmp/gdb.init'
     let s:qf_gdb_frame = '/tmp/gdb.frame'
     let s:qf_gdb_break = '/tmp/gdb.break'
@@ -25,128 +20,110 @@ if !exists("s:script")
 
     " set filename-display absolute
     " set remotetimeout 50
-    let s:initCommands =
-          \"set confirm off\n
-          \ set pagination off\n
-          \ set width 0\n
-          \ set verbose off\n
-          \ set logging off\n
-          \ handle SIGUSR2 noprint nostop\n
-          \ set print elements 2048\n
-          \ set print pretty on\n
-          \ set print array off\n
-          \ set print array-indexes on\n
-          \"
+    let s:initCmds = []
+    call add(s:initCmds, 'set confirm off')
+    call add(s:initCmds, 'set pagination off')
+    call add(s:initCmds, 'set width 0')
+    call add(s:initCmds, 'set verbose off')
+    call add(s:initCmds, 'set logging off')
+    call add(s:initCmds, 'handle SIGUSR2 noprint nostop')
+    call add(s:initCmds, 'set print elements 2048')
+    call add(s:initCmds, 'set print pretty on')
+    call add(s:initCmds, 'set print array off')
+    call add(s:initCmds, 'set print array-indexes on')
 
     " @param logfile, echomsg, commands
-    let s:initCommands .=
-          \"define neobug_redir_cmd\n
-          \   set logging off\n
-          \   set logging file $arg0\n
-          \   set logging overwrite on\n
-          \   set logging redirect on\n
-          \   set logging on\n
-          \   if $argc == 3\n
-          \       $arg2\n
-          \   end\n
-          \   if $argc == 4\n
-          \       $arg2 $arg3\n
-          \   end\n
-          \   if $argc == 5\n
-          \       $arg2 $arg3 $arg4\n
-          \   end\n
-          \   set logging off\n
-          \   if $arg1 != 0\n
-          \     echo $arg1\\n\n
-          \   end\n
-          \ end\n
-          \"
+    call add(s:initCmds, 'define neobug_redir_cmd')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  set logging file $arg0')
+    call add(s:initCmds, '  set logging overwrite on')
+    call add(s:initCmds, '  set logging redirect on')
+    call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, '  if $argc == 3')
+    call add(s:initCmds, '      $arg2')
+    call add(s:initCmds, '  end')
+    call add(s:initCmds, '  if $argc == 4')
+    call add(s:initCmds, '      $arg2 $arg3')
+    call add(s:initCmds, '  end')
+    call add(s:initCmds, '  if $argc == 5')
+    call add(s:initCmds, '      $arg2 $arg3 $arg4')
+    call add(s:initCmds, '  end')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  if $arg1 != 0')
+    call add(s:initCmds, '    echo $arg1\n')
+    call add(s:initCmds, '  end')
+    call add(s:initCmds, 'end')
 
     " @param logfile, commands
     " if @param == 0, means NULL
-    let s:initCommands .=
-          \"define neobug_redir\n
-          \   set logging off\n
-          \   set logging file $arg0\n
-          \   set logging overwrite on\n
-          \   set logging redirect on\n
-          \   set logging on\n
-          \   if $arg1 != 0\n
-          \     $arg1\n
-          \   end\n
-          \ end\n
-          \
-          \ define neobug_redirend\n
-          \   set logging off\n
-          \   if $arg0 != 0\n
-          \     echo $arg0\\n\n
-          \   end\n
-          \ end
-          \"
+    call add(s:initCmds, 'define neobug_redir')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  set logging file $arg0')
+    call add(s:initCmds, '  set logging overwrite on')
+    call add(s:initCmds, '  set logging redirect on')
+    call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, '  if $arg1 != 0')
+    call add(s:initCmds, '    $arg1')
+    call add(s:initCmds, '  end')
+    call add(s:initCmds, 'end')
 
-    let s:initCommands .=
-          \"define parser_bt\n
-          \   set logging off\n
-          \   set logging file /tmp/gdb.frame\n
-          \   set logging overwrite on\n
-          \   set logging redirect on\n
-          \   set logging on\n
-          \   bt\n
-          \   set logging off\n
-          \   echo #neobug_tag_parseend#\\n\n
-          \ end
-          \"
+    call add(s:initCmds, 'define neobug_redirend')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  if $arg0 != 0')
+    call add(s:initCmds, '    echo $arg0\n')
+    call add(s:initCmds, '  end')
+    call add(s:initCmds, 'end')
 
-    let s:initCommands .=
-          \"define parser_var_bt\n
-          \   set logging off\n
-          \   set logging file /tmp/gdb.frame\n
-          \   set logging overwrite on\n
-          \   set logging redirect on\n
-          \   set logging on\n
-          \   bt\n
-          \   set logging off\n
-          \   set logging file /tmp/gdb.var\n
-          \   set logging overwrite on\n
-          \   set logging redirect on\n
-          \   set logging on\n
-          \   info local\n
-          \   set logging off\n
-          \   echo #neobug_tag_parseend#\\n\n
-          \ end
-          \"
+    call add(s:initCmds, 'define parser_bt')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  set logging file /tmp/gdb.frame')
+    call add(s:initCmds, '  set logging overwrite on')
+    call add(s:initCmds, '  set logging redirect on')
+    call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, '  bt')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
+    call add(s:initCmds, 'end')
 
-    let s:initCommands .=
-          \"define silent_on\n
-          \   set logging off\n
-          \   set logging file /dev/null\n
-          \   set logging overwrite off\n
-          \   set logging redirect on\n
-          \   set logging on\n
-          \ end
-          \"
+    call add(s:initCmds, 'define parser_var_bt')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  set logging file /tmp/gdb.frame')
+    call add(s:initCmds, '  set logging overwrite on')
+    call add(s:initCmds, '  set logging redirect on')
+    call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, '  bt')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  set logging file /tmp/gdb.var')
+    call add(s:initCmds, '  set logging overwrite on')
+    call add(s:initCmds, '  set logging redirect on')
+    call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, '  info local')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
+    call add(s:initCmds, 'end')
 
-    let s:initCommands .=
-          \"define silent_off\n
-          \     set logging off\n
-          \ end
-          \"
+    call add(s:initCmds, 'define silent_on')
+    call add(s:initCmds, '  set logging off')
+    call add(s:initCmds, '  set logging file /dev/null')
+    call add(s:initCmds, '  set logging overwrite off')
+    call add(s:initCmds, '  set logging redirect on')
+    call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, 'end')
 
-    let s:initCommands .=
-          \"define hook-stop\n
-          \     handle SIGALRM nopass\n
-          \     parser_var_bt\n
-          \ end\n
-          \ \n
-          \ define hook-run\n
-          \     handle SIGALRM pass\n
-          \ end\n
-          \ \n
-          \ define hook-continue\n
-          \     handle SIGALRM pass\n
-          \ \n
-          \ end
-          \"
+    call add(s:initCmds, 'define silent_off')
+    call add(s:initCmds, '    set logging off')
+    call add(s:initCmds, 'end')
+
+    call add(s:initCmds, 'define hook-stop')
+    call add(s:initCmds, '    handle SIGALRM nopass')
+    call add(s:initCmds, '    parser_var_bt')
+    call add(s:initCmds, 'end')
+    call add(s:initCmds, 'define hook-run')
+    call add(s:initCmds, '    handle SIGALRM pass')
+    call add(s:initCmds, 'end')
+    call add(s:initCmds, 'define hook-continue')
+    call add(s:initCmds, '    handle SIGALRM pass')
+    call add(s:initCmds, 'end')
 
 endif
 
@@ -542,6 +519,58 @@ function! neobugger#gdb#curr_info()
 endfunction
 
 
+" Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
+" Then add breakpoints backto gdb
+" @mode 0 reset-all, 1 enable-only-change, 2 delete-all
+function! s:prototype.UpdateBreaks(mode, breakpoints) dict
+    let l:__func__ = "UpdateBreaks"
+    silent! call s:log.info(l:__func__, '()')
+
+    let is_running = 0
+    if self._win_gdb._state.name ==# "running"
+        " pause first
+        let is_running = 1
+        call jobsend(self._client_id, "\<c-c>")
+        call state#Switch('gdb', 'pause', 0)
+    endif
+
+    if a:mode == 0 || a:mode == 2
+        if self._has_breakpoints
+            call self.Send('delete')
+            let self._has_breakpoints = 0
+        endif
+    endif
+
+    if a:mode == 0 || a:mode == 1
+        let is_silent = 1
+        if a:mode == 1
+            let is_silent = 0
+        endif
+
+        for [next_key, next_val] in items(a:breakpoints)
+            if next_val['state'] && !empty(next_val['cmd'])
+                if is_silent == 1
+                    let is_silent = 2
+                    call self.Send('silent_on')
+                endif
+
+                if a:mode == 0 || (a:mode == 1 && next_val['change'])
+                    let self._has_breakpoints = 1
+                    call self.Send('break '. next_val['cmd'])
+                endif
+            endif
+        endfor
+        if is_silent == 2
+            call self.Send('silent_off')
+        endif
+    endif
+
+    if is_running
+        call self.Send('c')
+    endif
+endfunction
+
+
 function! s:prototype.TBreak() dict
     let file_breakpoints = bufname('%') .':'. line('.')
     call self.Send("tbreak ". file_breakpoints. "\nc")
@@ -775,7 +804,7 @@ endfunction
 
 function! s:prototype.PrepareInitFile(initfile) dict
     " Overwrite the existed file
-    call writefile([s:initCommands], a:initfile)
+    call writefile(s:initCmds, a:initfile)
 endfunction
 
 

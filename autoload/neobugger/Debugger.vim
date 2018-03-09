@@ -15,10 +15,6 @@ if !exists("s:script")
     "set errorformat+=#%c\ \ %.%#\ in\ %m\ \(%.%#\)\ at\ %f:%l
     "set errorformat+=#%c\ \ %.%#\ in\ \ \ \ %m\ \ \ \ at\ %f:%l
     "set errorformat+=#%c\ \ %m\ \(%.%#\)\ at\ %f:%l
-
-    let s:breakpoint_signid_start = 5000
-    let s:breakpoint_signid_max = 0
-    let s:module = '_AbstractDebugger'
 endif
 
 
