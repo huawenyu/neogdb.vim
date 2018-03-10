@@ -548,15 +548,16 @@ function! s:prototype.UpdateBreaks(mode, breakpoints) dict
         endif
 
         for [next_key, next_val] in items(a:breakpoints)
-            if next_val['state'] && !empty(next_val['cmd'])
+            let state = next_val['state'] % 3
+            if state == 0 && !empty(next_val['command'])
                 if is_silent == 1
                     let is_silent = 2
                     call self.Send('silent_on')
                 endif
 
-                if a:mode == 0 || (a:mode == 1 && next_val['change'])
+                if a:mode == 0 || (a:mode == 1 && next_val['update'])
                     let self._has_breakpoints = 1
-                    call self.Send('break '. next_val['cmd'])
+                    call self.Send('break '. next_val['command'])
                 endif
             endif
         endfor

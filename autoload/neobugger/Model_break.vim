@@ -50,15 +50,15 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
     silent! call s:log.info("Set and sign breaks ...")
     if !empty(s:breakpoints)
         call self.Breaks2Qf()
-        call self.RefreshBreakpointSigns(0)
+        call self.UpdateSign(0)
         call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
     endif
 endfunction
 
 
-" @mode 0 refresh-all, 1 only-change
-function! s:prototype.RefreshBreakpointSigns(mode) dict
-    let l:__func__ = "RefreshBreakpointSigns"
+" @mode 0 refresh-all, 1 only-update
+function! s:prototype.UpdateSign(mode) dict
+    let l:__func__ = "UpdateSign"
     silent! call s:log.info(l:__func__, "()")
 
     if a:mode == 0
@@ -71,24 +71,29 @@ function! s:prototype.RefreshBreakpointSigns(mode) dict
 
     let s:breakpoint_signid_max = 0
     let id = s:breakpoint_signid_start
-    silent! call s:log.info(l:__func__, ": ", string(type(s:breakpoints)))
-    silent! call s:log.info(l:__func__, ": ", string(s:breakpoints))
     for [next_key, next_val] in items(s:breakpoints)
         try
             let buf = bufnr(next_val['file'])
             let linenr = next_val['line']
 
-            if a:mode == 1 && next_val['change']
+            if a:mode == 1 && next_val['update']
                         \ && has_key(next_val, 'sign_id')
+                        \ && next_val['sign_id']
                 exe 'sign unplace '. next_val['sign_id']
             endif
 
-            if a:mode == 0 || (a:mode == 1 && next_val['change'])
-                if next_val['state']
+            if a:mode == 0 || (a:mode == 1 && next_val['update'])
+                let next_val['sign_id'] = 0
+
+                let state = next_val['state'] % 3
+                if state == 0
                     exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
-                else
+                elseif state == 1
                     exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
+                else
+                    continue
                 endif
+
                 let next_val['sign_id'] = id
                 let s:breakpoint_signid_max = id
                 let id += 1
@@ -107,10 +112,10 @@ function! s:prototype.Breaks2Qf() dict
     let list2 = []
     let i = 0
     for [next_key, next_val] in items(s:breakpoints)
-        if !empty(next_val['cmd'])
+        if !empty(next_val['command'])
             let i += 1
             call add(list2, printf('#%d  %d in    %s    at %s:%d',
-                        \ i, next_val['state'], next_val['cmd'],
+                        \ i, next_val['state'], next_val['command'],
                         \ next_val['file'], next_val['line']))
         endif
     endfor
@@ -146,7 +151,7 @@ function! s:prototype.ToggleBreak() dict
     endif
     call nelib#util#save_variable(s:breakpoints, s:save_break)
     call self.Breaks2Qf()
-    call self.RefreshBreakpointSigns(mode)
+    call self.UpdateSign(mode)
     call neobugger#Handle('current', 'UpdateBreaks', mode, s:breakpoints)
 endfunction
 
@@ -161,7 +166,7 @@ function! s:prototype.ToggleBreakAll() dict
             let v['state'] = 1
         endif
     endfor
-    call self.RefreshBreakpointSigns(0)
+    call self.UpdateSign(0)
     call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
 endfunction
 
@@ -169,7 +174,7 @@ endfunction
 function! s:prototype.ClearBreak() dict
     let s:breakpoints = {}
     call self.Breaks2Qf()
-    call self.RefreshBreakpointSigns(0)
+    call self.UpdateSign(0)
     call neobugger#Handle('current', 'UpdateBreaks', 2, s:breakpoints)
 endfunction
 

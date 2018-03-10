@@ -2,8 +2,9 @@ if !exists("s:script")
     let s:script = expand('<sfile>:t')
     let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
-    let s:prototype = tlib#Object#New({'_class': [s:name]})
 
+    "let s:prototype = tlib#Object#New({'_class': [s:name]})
+    " For serialize: this class must be plain-struct-like layout
     "
     " break_item {
     "   .name*      masterkey: relative-path-file:[line-text|function]
@@ -21,7 +22,7 @@ if !exists("s:script")
     " }
     "
 
-    let s:_Prototype = {
+    let s:prototype = {
                 \ 'name': '',
                 \ 'file': '',
                 \ 'text': '',
@@ -45,14 +46,14 @@ endif
 function! neobugger#break_item#New(type, cmdtext)
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let newBreak = s:prototype.New(deepcopy(s:_Prototype))
-    call newBreak.fill_detail(a:type, a:cmdtext)
+    let newBreak = deepcopy(s:prototype)
+    call neobugger#break_item#_fill_detail(newBreak, a:type, a:cmdtext)
 
     return newBreak
 endfunction
 
 
-function! s:prototype.fill_detail(type, cmdtext) dict
+function! neobugger#break_item#_fill_detail(item, type, cmdtext)
     let l:__func__ = "fill_detail"
 
     let filenm = bufname("%")
@@ -70,13 +71,13 @@ function! s:prototype.fill_detail(type, cmdtext) dict
         let file_breakpoints = fname .':'.linenr
     endif
 
-    let self.['name'] = file_breakpoints
-    let self.['file'] = fname
-    let self.['type'] = type
-    let self.['line'] = linenr
-    let self.['col'] = colnr
-    let self.['command'] = a:cmdtext
-    silent! call s:log.info(l:__func__, '() item=', string(self))
+    let a:item['name'] = file_breakpoints
+    let a:item['file'] = fname
+    let a:item['type'] = type
+    let a:item['line'] = linenr
+    let a:item['col'] = colnr
+    let a:item['command'] = a:cmdtext
+    silent! call s:log.info(l:__func__, '() item=', string(a:item))
 endfunction
 
 
@@ -94,49 +95,5 @@ function! s:prototype.equal(item) dict
     endif
     silent! call s:log.info(l:__func__, '('. that.name. ') equal')
     return 1
-endfunction
-
-
-function! s:prototype.addMenuItem(menuItem) dict
-    call add(self.children, a:newMenuItem)
-endfunction
-
-
-"return 1 if this menu item should be displayed
-"
-"delegates off to the isActiveCallback, and defaults to 1 if no callback was
-"specified
-function! s:prototype.enabled()
-    if self.isActiveCallback != -1
-        return {self.isActiveCallback}()
-    endif
-    return 1
-endfunction
-
-
-"perform the action behind this menu item, if this menuitem has children then
-"display a new menu for them, otherwise deletegate off to the menuitem's
-"callback
-function! s:prototype.execute()
-    if len(self.children)
-        let mc = g:NERDTreeMenuController.New(self.children)
-        call mc.showMenu()
-    else
-        if self.callback != -1
-            call {self.callback}()
-        endif
-    endif
-endfunction
-
-
-"return 1 if this menuitem is a separator
-function! s:prototype.isSeparator()
-    return self.callback == -1 && self.children == []
-endfunction
-
-
-"return 1 if this menuitem is a submenu
-function! s:prototype.isSubmenu()
-    return self.callback == -1 && !empty(self.children)
 endfunction
 

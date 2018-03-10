@@ -32,10 +32,3 @@ function! neobugger#Debugger#New()
     "}
 endfunction
 
-
-" @mode 0 refresh-all, 1 only-change
-function! s:prototype.ARefreshBreakpointSigns(mode)
-    "{
-    "}
-endfunction
-
