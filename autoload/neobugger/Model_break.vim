@@ -15,7 +15,6 @@ if !exists("s:script")
 
     let s:toggle_all = 0
     let s:save_break = './.gdb.break'
-    let s:qf_gdb_break = '/tmp/gdb.break'
 endif
 
 
@@ -49,80 +48,9 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
 
     silent! call s:log.info("Set and sign breaks ...")
     if !empty(s:breakpoints)
-        call self.Breaks2Qf()
         call self.UpdateSign(0)
+        call self.Render()
         call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
-    endif
-endfunction
-
-
-" @mode 0 refresh-all, 1 only-update
-function! s:prototype.UpdateSign(mode) dict
-    let l:__func__ = "UpdateSign"
-    silent! call s:log.info(l:__func__, "()")
-
-    if a:mode == 0
-        let i = s:breakpoint_signid_start
-        while i <= s:breakpoint_signid_max
-            exe 'sign unplace '.i
-            let i += 1
-        endwhile
-    endif
-
-    let s:breakpoint_signid_max = 0
-    let id = s:breakpoint_signid_start
-    for [next_key, next_val] in items(s:breakpoints)
-        try
-            let buf = bufnr(next_val['file'])
-            let linenr = next_val['line']
-
-            if a:mode == 1 && next_val['update']
-                        \ && has_key(next_val, 'sign_id')
-                        \ && next_val['sign_id']
-                exe 'sign unplace '. next_val['sign_id']
-            endif
-
-            if a:mode == 0 || (a:mode == 1 && next_val['update'])
-                let next_val['sign_id'] = 0
-
-                let state = next_val['state'] % 3
-                if state == 0
-                    exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
-                elseif state == 1
-                    exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
-                else
-                    continue
-                endif
-
-                let next_val['sign_id'] = id
-                let s:breakpoint_signid_max = id
-                let id += 1
-            endif
-        catch /.*/
-            echo v:exception
-        endtry
-    endfor
-endfunction
-
-
-function! s:prototype.Breaks2Qf() dict
-    " @todo wilson: donothing, remove later
-    return
-
-    let list2 = []
-    let i = 0
-    for [next_key, next_val] in items(s:breakpoints)
-        if !empty(next_val['command'])
-            let i += 1
-            call add(list2, printf('#%d  %d in    %s    at %s:%d',
-                        \ i, next_val['state'], next_val['command'],
-                        \ next_val['file'], next_val['line']))
-        endif
-    endfor
-
-    call writefile(split(join(list2, "\n"), "\n"), s:qf_gdb_break)
-    if self._showbreakpoint && filereadable(s:qf_gdb_break)
-        exec "silent lgetfile " . s:qf_gdb_break
     endif
 endfunction
 
@@ -133,6 +61,7 @@ endfunction
 " @type 0 line-break, 1 function-break
 function! s:prototype.ToggleBreak() dict
     let l:__func__ = "ToggleBreak"
+    silent! call s:log.info(l:__func__, "()")
 
     let newItem = neobugger#break_item#New('toggle', '')
     if empty(newItem)
@@ -150,9 +79,20 @@ function! s:prototype.ToggleBreak() dict
         let newItem['update'] = 1
     endif
     call nelib#util#save_variable(s:breakpoints, s:save_break)
-    call self.Breaks2Qf()
-    call self.UpdateSign(mode)
-    call neobugger#Handle('current', 'UpdateBreaks', mode, s:breakpoints)
+    call self.ObserverUpdateAll("break")
+
+    " Remove state=2 item
+    for [next_key, next_val] in items(s:breakpoints)
+        let state = next_val['state'] % 3
+        if state == 2
+            silent! call s:log.info("Remove breakpoint " . next_key)
+            unlet s:breakpoints[next_key]
+        endif
+    endfor
+
+    "call self.Breaks2Qf()
+    "call self.UpdateSign(mode)
+    "call neobugger#Handle('current', 'UpdateBreaks', mode, s:gdb_break)
 endfunction
 
 
@@ -167,7 +107,7 @@ function! s:prototype.ToggleBreakAll() dict
         endif
     endfor
     call self.UpdateSign(0)
-    call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
+    call neobugger#Handle('current', 'UpdateBreaks', 0, s:gdb_break)
 endfunction
 
 
@@ -175,7 +115,7 @@ function! s:prototype.ClearBreak() dict
     let s:breakpoints = {}
     call self.Breaks2Qf()
     call self.UpdateSign(0)
-    call neobugger#Handle('current', 'UpdateBreaks', 2, s:breakpoints)
+    call neobugger#Handle('current', 'UpdateBreaks', 2, s:gdb_break)
 endfunction
 
 
@@ -259,12 +199,112 @@ endfunction
 
 
 " Output format for Breakpoints Window
-function! s:Breakpoint.render() dict
-  let output = self.id . " " . (exists("self.debugger_id") ? self.debugger_id : '') . " " . self.file . ":" . self.line
-  if exists("self.condition")
-    let output .= " " . self.condition
-  endif
-  return output . "\n"
+function! s:prototype.Render(mode, options) dict
+    if a:mode ==# 'break'
+        let a:options['mode'] = 'gdb'
+        return self._render2gdb(a:options)
+    elseif a:mode ==# 'sign'
+        return self._render2sign(a:options)
+    elseif a:mode ==# 'view'
+        let a:options['mode'] = 'view'
+        return self._render2gdb(a:options)
+    endif
+endfunction
+
+
+function! s:prototype._render2gdb(options) dict
+    let l:__func__ = "_render2gdb"
+    silent! call s:log.info(l:__func__, "() options=". string(a:options))
+
+    if has_key(a:options, 'mode')
+        let mode = a:options['mode']
+    else
+        silent! call s:log.info(l:__func__, "(". a:options['file'] .")")
+        return
+    endif
+
+    if mode ==# 'gdb'
+        let modeType = 0
+    elseif mode ==# 'view'
+        let modeType = 1
+    endif
+
+    let breakCmds = []
+    let cnt = 0
+
+    for [next_key, next_val] in items(s:breakpoints)
+        let state = next_val['state'] % 3
+        if state == 0
+            let cnt += 1
+            if empty(next_val['command'])
+                call add(breakCmds, 'break '. next_key)
+            else
+                cmds = split(next_val['command'], ';')
+                cmd1st = substitute(cmds[0], '^ *', '', 'g')
+                if cmd1st ==? 'if'
+                    call add(breakCmds, 'break '. next_key.' '.cmd1st)
+                    extend(breakCmds, cmds[1:])
+                elseif cmd1st ==? 'com'
+                    cmdEnd = substitute(cmds[-1], '^ *', '', 'g')
+                    if cmdEnd ==? 'end'
+                        call add(breakCmds, 'break '. next_key)
+                        extend(breakCmds, cmds[0:])
+                    else
+                        silent! call s:log.warn(l:__func__, "(".next_key.") no end: ".next_val)
+                    endif
+                endif
+            endif
+        endif
+    endfor
+
+    if modeType == 0
+        call insert(breakCmds, 'delete')
+    else
+        call insert(breakCmds, 'Breakpoints: ['. cnt. ']')
+    endif
+
+    if has_key(a:options, 'file')
+        call writefile(breakCmds, a:options['file'])
+    endif
+    return breakCmds
+endfunction
+
+
+function! s:prototype._render2sign(options) dict
+    let l:__func__ = "_render2sign"
+    silent! call s:log.info(l:__func__, "()")
+
+    let i = s:breakpoint_signid_start
+    while i <= s:breakpoint_signid_max
+        exe 'sign unplace '.i
+        let i += 1
+    endwhile
+
+    let s:breakpoint_signid_max = 0
+    let id = s:breakpoint_signid_start
+    for [next_key, next_val] in items(s:breakpoints)
+        try
+            let buf = bufnr(next_val['file'])
+            let linenr = next_val['line']
+            let next_val['sign_id'] = 0
+
+            let state = next_val['state'] % 3
+            if state == 0
+                exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
+            elseif state == 1
+                exe 'sign place '.id.' name=GdbBreakpointDis line='.linenr.' buffer='.buf
+            else
+                continue
+            endif
+
+            let next_val['sign_id'] = id
+            let s:breakpoint_signid_max = id
+            let id += 1
+        catch /.*/
+            echo v:exception
+        endtry
+    endfor
+    return {}
 endfunction
 
 
@@ -272,9 +312,6 @@ endfunction
 function! s:Breakpoint.open() dict
   call s:jump_to_file(self.file, self.line)
 endfunction
-
-
-" ** Private methods
 
 
 function! s:Breakpoint._set_sign() dict

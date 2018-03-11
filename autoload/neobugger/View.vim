@@ -18,9 +18,12 @@ function! neobugger#View#New(name, title)
 
     " https://technotales.wordpress.com/2010/04/29/vim-splits-a-guide-to-doing-exactly-what-you-want/
     let l:view['next_buffer_number'] = 1
-    let l:view['position'] = ['botright']
     let l:view['size'] = 10
+    let l:view['tabnr'] = -1
     let l:view['wid'] = -1
+
+    "let l:view['position'] = ['botright']
+    let l:view['position'] = NbConfGet(a:name, 'layout')
     return l:view
     "}
 endfunction
@@ -75,6 +78,14 @@ function! s:prototype.close() dict
     if !self.is_open()
         throw s:script. ": Window " . self.name . " is not open"
     endif
+
+    let obs = NbConfGet('View_main', 'observe')
+    for nameObs in obs
+        let obs = NbRuntimeGet(nameObs)
+        if !empty(obs)
+            call obs.ObserverRemove(self.name)
+        endif
+    endfor
 
     if winnr("$") != 1
         call self.focus()
@@ -135,6 +146,17 @@ function! s:prototype.open() dict
                     silent exec cmd
                 endfor
                 let self.wid = win_getid()
+                let self.tabnr = tabpagenr()
+                call NbConfSet(self.name, 'wid', self.wid)
+                call NbConfSet(self.name, 'tabnr', self.tabnr)
+
+                let obs = NbConfGet(self.name, 'observe')
+                for nameObs in obs
+                    let ob = NbRuntimeGet(nameObs)
+                    if !empty(ob)
+                        call ob.ObserverAppend(self.name, self)
+                    endif
+                endfor
             else
                 call s:log.info(s:script. ':'. l:__func__. '('. self.name.')  goto View_main.wid='. string(main_wid). ' fail.')
             endif
@@ -190,7 +212,39 @@ function! s:prototype.toggle() dict
 endfunction
 
 
-" ** Private methods
+function! s:prototype.Update(type, model) dict
+    let l:__func__ = 'Update'
+    silent! call s:log.info(l:__func__, '(type='.a:type.' name='.a:model.name.')')
+
+    if a:type ==# 'break'
+        call self.UpdateBreak(a:model)
+    elseif a:type ==# 'step'
+        call self.UpdateStep(a:model)
+    elseif a:type ==# 'current'
+        call self.UpdateCurrent(a:model)
+    endif
+endfunction
+
+
+function! s:prototype.UpdateBreak(model) dict
+    let l:__func__ = 'UpdateBreak'
+    silent! call s:log.info(l:__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. l:__func__
+endfunction
+
+
+function! s:prototype.UpdateStep(model) dict
+    let l:__func__ = 'UpdateStep'
+    silent! call s:log.info(l:__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. l:__func__
+endfunction
+
+
+function! s:prototype.UpdateCurrent(model) dict
+    let l:__func__ = 'UpdateCurrent'
+    silent! call s:log.info(l:__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. l:__func__
+endfunction
 
 
 " Return buffer name, that is stored in tab variable

@@ -14,7 +14,8 @@ if !exists("s:script")
 
     let s:gdb_init = '/tmp/gdb.init'
     let s:qf_gdb_frame = '/tmp/gdb.frame'
-    let s:qf_gdb_break = '/tmp/gdb.break'
+    let s:qf_gdb_break = '/tmp/gdb.breaks'
+    let s:gdb_break = '/tmp/gdb.break'
 
     let s:currFrame = ""
 
@@ -136,6 +137,7 @@ endif
 function! neobugger#gdb#New(conf, binaryFile, args)
     "{
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+
     if neobugger#Exists(s:name)
         throw 'neobugger['.s:name.' already running!'
     endif
@@ -158,6 +160,8 @@ function! neobugger#gdb#New(conf, binaryFile, args)
 
     let l:parent = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:abstract = neobugger#Debugger#New()
+    call l:parent.Inherit(l:abstract)
+    let l:abstract = neobugger#View#New(s:name, "instanceGDB")
     call l:parent.Inherit(l:abstract)
 
     if has_key(conf, 'Inherit')
@@ -230,26 +234,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         " 10.1.1.125:444 -> ["10.1.1.125", "444"]
         let gdb._server_addr = split(a:args.args[0], ":")
     endif
-
-    " Load all files from backtrace to solve relative-path
-    silent! call s:log.trace("Load open files ...")
-
-    "if gdb._showbacktrace && filereadable(s:qf_gdb_frame)
-    "    exec "cgetfile " . s:qf_gdb_frame
-    "    let list = getqflist()
-    "    for i in range(len(list))
-    "        if has_key(list[i], 'bufnr')
-    "            let list[i].filename = fnamemodify(bufname(list[i].bufnr), ':p:.')
-    "            unlet list[i].bufnr
-    "        else
-    "            let list[i].filename = fnamemodify(list[i].filename, ':p:.')
-    "        endif
-    "        if filereadable(list[i].filename)
-    "            exec "e ". list[i].filename
-    "        endif
-    "    endfor
-    "    "silent! call s:log.trace("old backtrace:<cr>", list)
-    "endif
 
     " window number that will be displaying the current file
     let gdb._jump_window = 1
@@ -519,11 +503,8 @@ function! neobugger#gdb#curr_info()
 endfunction
 
 
-" Firstly delete all breakpoints for Gdb delete breakpoints only by ref-no
-" Then add breakpoints backto gdb
-" @mode 0 reset-all, 1 enable-only-change, 2 delete-all
-function! s:prototype.UpdateBreaks(mode, breakpoints) dict
-    let l:__func__ = "UpdateBreaks"
+function! s:prototype.UpdateBreak(model) dict
+    let l:__func__ = "UpdateBreak"
     silent! call s:log.info(l:__func__, '()')
 
     let is_running = 0
@@ -534,41 +515,24 @@ function! s:prototype.UpdateBreaks(mode, breakpoints) dict
         call state#Switch('gdb', 'pause', 0)
     endif
 
-    if a:mode == 0 || a:mode == 2
-        if self._has_breakpoints
-            call self.Send('delete')
-            let self._has_breakpoints = 0
-        endif
-    endif
-
-    if a:mode == 0 || a:mode == 1
-        let is_silent = 1
-        if a:mode == 1
-            let is_silent = 0
-        endif
-
-        for [next_key, next_val] in items(a:breakpoints)
-            let state = next_val['state'] % 3
-            if state == 0 && !empty(next_val['command'])
-                if is_silent == 1
-                    let is_silent = 2
-                    call self.Send('silent_on')
-                endif
-
-                if a:mode == 0 || (a:mode == 1 && next_val['update'])
-                    let self._has_breakpoints = 1
-                    call self.Send('break '. next_val['command'])
-                endif
-            endif
-        endfor
-        if is_silent == 2
-            call self.Send('silent_off')
-        endif
+    call a:model.Render('break', {'file': s:gdb_break})
+    if filereadable(s:gdb_break)
+        call self.Send('source '. s:gdb_break)
     endif
 
     if is_running
         call self.Send('c')
     endif
+endfunction
+
+
+function! s:prototype.UpdateStep(breaks) dict
+    throw s:script. ': Virtual function UpdateStep() must be implement.'
+endfunction
+
+
+function! s:prototype.UpdateCurrent(breaks) dict
+    throw s:script. ': Virtual function UpdateCurrent() must be implement.'
 endfunction
 
 
@@ -700,15 +664,7 @@ endfunction
 
 
 function! s:prototype.ToggleViewBreak() dict
-    if neobugger#View#IsOpen('View_break')
-        call self.View_break.close()
-        unlet self['View_break']
-        unlet self['Model_break']
-    else
-        let self.View_break = neobugger#View_break#New(g:state_ctx._wid_main)
-        let self.Model_break = neobugger#Model_break#New(self.View_var)
-        call self.View_break.open()
-    endif
+    let view = neobugger#View#Toggle('View_break')
 endfunction
 
 
@@ -824,9 +780,14 @@ function! s:prototype.on_init(...) dict
     call self.Send('source '.s:gdb_init)
 
     silent! call s:log.info("Load breaks ...")
-    let Model_break = neobugger#Model_break#New()
-    call Model_break.LoadFromFile('./.gdb.break')
-    call NbRuntimeSet('Model_break', Model_break)
+    let viewMain = NbConfGet('View_main', 'this')
+    let modelBreak = neobugger#Model_break#New()
+
+    call modelBreak.ObserverAppend(s:name, self)
+    call modelBreak.ObserverAppend('View_main', viewMain)
+
+    call modelBreak.LoadFromFile('./.gdb.break')
+    call NbRuntimeSet('Model_break', modelBreak)
 
     call self.Send('echo #neobug_tag_initend#\n')
 endfunction

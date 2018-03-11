@@ -147,7 +147,7 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
 
     " view2window
     silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
-    call self.viewer.display(self.render())
+    call self.viewer.display(self.Render())
     return 0
 endfunction
 
@@ -161,7 +161,7 @@ function! s:prototype.ParseVarEnd(srcfile) dict
 
     " view2window
     silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
-    call self.viewer.display(self.render())
+    call self.viewer.display(self.Render())
     return 0
 endfunction
 
@@ -181,8 +181,9 @@ function! s:prototype.get_selected() dict
 endfunction
 
 
+" @todo wilson: Forward the changed item
 " Output format for Breakpoints Window
-function! s:prototype.render() dict
+function! s:prototype.Render() dict
     let output = "Variables:\n"
     for [name, data] in items(self.vars)
         if has_key(self.vars_last, name)

@@ -104,13 +104,23 @@ function! nelib#state#CreateRuntime(scheme, config) abort
     " @todo wilson: use view
     " Load window
     " Create new tab as FSM's view
-    silent! call s:log.info("Creating the 'main' window ...")
     tabnew | silent! b1
     let ctx._tab = tabpagenr()
     silent! ball 1
     let ctx._wid_main = win_getid()
-    call NbConfSet('View_main', 'wid', ctx._wid_main)
-    silent! call s:log.info("The View_main.wid=", ctx._wid_main)
+    let viewMain = neobugger#View_main#New()
+    let viewMain.wid = ctx._wid_main
+    let viewMain.tabnr = ctx._tab
+    call NbConfSet('View_main', 'wid', viewMain.wid)
+
+    "let bufnr = winbufnr(0)
+    "let viewMain = neobugger#View_main#New()
+    "call viewMain.open()
+    "exec 'silent! b'. bufnr
+    "let ctx._tab = viewMain.tabnr
+    "let ctx._wid_main = viewMain.wid
+
+    silent! call s:log.info("Creating the 'main' window.wid=". viewMain.wid)
 
     let windows = scheme.window
     for conf_win in windows

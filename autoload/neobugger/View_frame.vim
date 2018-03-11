@@ -16,7 +16,6 @@ function! neobugger#View_frame#New()
     let l:abstract = neobugger#View#New(s:name, l:title)
     call l:view.Inherit(l:abstract)
 
-    let l:view.position = NbConfGet(s:name, 'layout')
     return l:view
     "}
 endfunction
@@ -29,9 +28,9 @@ endfunction
 
 
 " Returns string that contains all variables (for Window.display())
-function! s:prototype.render() dict
+function! s:prototype.Render() dict
     let variables = self.title . "\n"
-    let variables .= (g:RubyDebugger.variables == {} ? '' : g:RubyDebugger.variables.render())
+    let variables .= (g:RubyDebugger.variables == {} ? '' : g:RubyDebugger.variables.Render())
     return variables
 endfunction
 

@@ -7,7 +7,13 @@
 " Provides a prototype plus some OO-like methods.
 
 let s:id_counter = 0
-let s:prototype  = {'_class': ['object'], '_super': [], '_id': 0} "{{{2
+" - 'this' pointer-to the real object instance, for example:
+"     If as the parent-class, here 'this' should be inheritance object
+let s:prototype  = {
+            \ '_class': ['object'],
+            \ '_super': [],
+            \ '_id': 0,
+            \}
 
 " :def: function! tlib#Object#New(?fields={})
 " This function creates a prototype that provides some kind of 

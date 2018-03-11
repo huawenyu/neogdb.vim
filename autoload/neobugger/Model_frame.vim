@@ -78,14 +78,14 @@ function! s:prototype.ParseFrame(framefile) dict
     " view2window
     "silent! call s:log.info(l:__func__, ' frames=', string(self.frames))
     if !empty(self.viewer)
-        call self.viewer.display(self.render())
+        call self.viewer.display(self.Render())
     endif
     return frame0
 endfunction
 
 
 " Output format for Breakpoints Window
-function! s:prototype.render() dict
+function! s:prototype.Render() dict
     let output = "Backtrace:\n"
     for frame in self.frames
         let l:file = tlib#file#Relative(frame.file, getcwd())
