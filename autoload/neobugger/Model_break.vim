@@ -223,6 +223,7 @@ function! s:prototype._render2gdb(options) dict
         return
     endif
 
+    let pre_cmd = ''
     if mode ==# 'gdb'
         let modeType = 0
     elseif mode ==# 'view'
@@ -234,20 +235,29 @@ function! s:prototype._render2gdb(options) dict
 
     for [next_key, next_val] in items(s:breakpoints)
         let state = next_val['state'] % 3
-        if state == 0
+        if state == 0 || (state == 1 && modeType == 1)
             let cnt += 1
+
+            if modeType == 1
+                if state == 0
+                    let pre_cmd = '[Y] '
+                elseif state == 1
+                    let pre_cmd = '[N] '
+                endif
+            endif
+
             if empty(next_val['command'])
-                call add(breakCmds, 'break '. next_key)
+                call add(breakCmds, pre_cmd.'break '. next_key)
             else
                 cmds = split(next_val['command'], ';')
                 cmd1st = substitute(cmds[0], '^ *', '', 'g')
                 if cmd1st ==? 'if'
-                    call add(breakCmds, 'break '. next_key.' '.cmd1st)
+                    call add(breakCmds, pre_cmd.'break '. next_key.' '.cmd1st)
                     extend(breakCmds, cmds[1:])
                 elseif cmd1st ==? 'com'
                     cmdEnd = substitute(cmds[-1], '^ *', '', 'g')
                     if cmdEnd ==? 'end'
-                        call add(breakCmds, 'break '. next_key)
+                        call add(breakCmds, pre_cmd.'break '. next_key)
                         extend(breakCmds, cmds[0:])
                     else
                         silent! call s:log.warn(l:__func__, "(".next_key.") no end: ".next_val)

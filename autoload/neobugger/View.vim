@@ -91,6 +91,7 @@ function! s:prototype.close() dict
         call self.focus()
         close
         exe "wincmd p"
+        stopinsert
         let self.wid = -1
     else
         " If this is only one window, just quit
@@ -136,68 +137,74 @@ endfunction
 function! s:prototype.open() dict
     let l:__func__ = 'open'
     silent! call s:log.info(l:__func__, '(', self.name, ')')
-    if !self.is_open()
-        " create the window
-        call s:log.info(s:script. ':'. l:__func__. '('. self.name.') :'. string(self.position))
-        if type(self.position) == type([])
-            let main_wid = NbConfGet('View_main', 'wid')
-            if win_gotoid(main_wid) == 1
-                for cmd in self.position
-                    silent exec cmd
-                endfor
-                let self.wid = win_getid()
-                let self.tabnr = tabpagenr()
-                call NbConfSet(self.name, 'wid', self.wid)
-                call NbConfSet(self.name, 'tabnr', self.tabnr)
 
-                let obs = NbConfGet(self.name, 'observe')
-                for nameObs in obs
-                    let ob = NbRuntimeGet(nameObs)
-                    if !empty(ob)
-                        call ob.ObserverAppend(self.name, self)
-                    endif
-                endfor
-            else
-                call s:log.info(s:script. ':'. l:__func__. '('. self.name.')  goto View_main.wid='. string(main_wid). ' fail.')
-            endif
-        else
-            silent exec self.position . ' ' . self.size . ' new'
-            let self.wid = win_getid()
-        endif
-
-        if !self._exist_for_tab()
-            " If the window is not opened/exists, create new
-            call self._set_buf_name(self._next_buffer_name())
-            silent! exec "edit " . self._buf_name()
-            " This function does not exist in Window class and should be declared in
-            " descendants
-            call self.bind_mappings()
-        else
-            " Or just jump to opened buffer
-            silent! exec "buffer " . self._buf_name()
-        endif
-
-        " set buffer options
-        setlocal winfixheight
-        setlocal noswapfile
-        setlocal buftype=nofile
-        setlocal nowrap
-        setlocal foldcolumn=0
-        setlocal nobuflisted
-        setlocal nospell
-        setlocal nolist
-        iabc <buffer>
-        setlocal cursorline
-        "setfiletype viewer_window
-        setfiletype c
-        call s:log.info("Opened window with name: " . self.name)
+    let main_wid = NbConfGet('View_main', 'wid')
+    if self.is_open()
+        return
     endif
+
+    " create the window
+    call s:log.info(s:script. ':'. l:__func__. '('. self.name.') :'. string(self.position))
+    if type(self.position) == type([])
+        if win_gotoid(main_wid) == 1
+            for cmd in self.position
+                silent exec cmd
+            endfor
+            let self.wid = win_getid()
+            let self.tabnr = tabpagenr()
+            call NbConfSet(self.name, 'wid', self.wid)
+            call NbConfSet(self.name, 'tabnr', self.tabnr)
+
+            let obs = NbConfGet(self.name, 'observe')
+            for nameObs in obs
+                let ob = NbRuntimeGet(nameObs)
+                if !empty(ob)
+                    call ob.ObserverAppend(self.name, self)
+                endif
+            endfor
+        else
+            call s:log.info(s:script. ':'. l:__func__. '('. self.name.')  goto View_main.wid='. string(main_wid). ' fail.')
+        endif
+    else
+        silent exec self.position . ' ' . self.size . ' new'
+        let self.wid = win_getid()
+    endif
+
+    if !self._exist_for_tab()
+        " If the window is not opened/exists, create new
+        call self._set_buf_name(self._next_buffer_name())
+        silent! exec "edit " . self._buf_name()
+        " This function does not exist in Window class and should be declared in
+        " descendants
+        call self.bind_mappings()
+    else
+        " Or just jump to opened buffer
+        silent! exec "buffer " . self._buf_name()
+    endif
+
+    " set buffer options
+    setlocal winfixheight
+    setlocal noswapfile
+    setlocal buftype=nofile
+    setlocal nowrap
+    setlocal foldcolumn=0
+    setlocal nobuflisted
+    setlocal nospell
+    setlocal nolist
+    iabc <buffer>
+    setlocal cursorline
+    "setfiletype viewer_window
+    setfiletype c
+    call s:log.info("Opened window with name: " . self.name)
 
     if has("syntax") && exists("g:syntax_on") && !has("syntax_items")
         call self.setup_syntax_highlighting()
     endif
-
     call self.display("[Empty]\n")
+
+    if win_gotoid(main_wid) == 1
+        stopinsert
+    endif
 endfunction
 
 

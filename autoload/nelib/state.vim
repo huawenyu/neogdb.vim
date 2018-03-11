@@ -161,6 +161,7 @@ function! nelib#state#CreateRuntime(scheme, config) abort
             let window._wid = win_getid()
             enew | let window._client_id = termopen(cmdstr, target)
             let window._bufnr = bufnr('%')
+            silent! call s:log.info(l:__func__, "() gdb.bufnr=", window._bufnr)
             let status = NbConfGet('View_gdb', 'status')
             if empty(status)
                 neobugger#View#Toggle('View_gdb')
