@@ -13,7 +13,7 @@ endif
 
 " Constructor
 function! neobugger#Model#New()
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
     return l:model
@@ -21,37 +21,37 @@ endfunction
 
 
 function! s:prototype.ObserverPurge(...) dict
-    let l:__func__ = 'ObserverPurge'
-    silent! call s:log.info(l:__func__, '()')
+    let __func__ = 'ObserverPurge'
+    silent! call s:log.info(__func__, '()')
 
     let s:observers = {}
 endfunction
 
 function! s:prototype.ObserverAppend(name, obs)
-    let l:__func__ = 'ObserverAppend'
-    silent! call s:log.info(l:__func__, '('.a:name.')')
+    let __func__ = 'ObserverAppend'
+    silent! call s:log.info(__func__, '('.a:name.')')
 
     let s:observers[a:name] = a:obs
 endfunction
 
 function! s:prototype.ObserverRemove(name)
-    let l:__func__ = 'ObserverRemove'
-    silent! call s:log.info(l:__func__, '('.a:name.')')
+    let __func__ = 'ObserverRemove'
+    silent! call s:log.info(__func__, '('.a:name.')')
 
     unlet s:observers[a:name]
 endfunction
 
 function! s:prototype.ObserverExist(name)
-    let l:__func__ = 'ObserverExist'
-    silent! call s:log.info(l:__func__, '('.a:name.')')
+    let __func__ = 'ObserverExist'
+    silent! call s:log.info(__func__, '('.a:name.')')
 
     return has_key(s:observers, a:name)
 endfunction
 
 
 function! s:prototype.ObserverUpdateAll(type)
-    let l:__func__ = 'ObserverUpdateAll'
-    silent! call s:log.info(l:__func__, '('.a:name.')')
+    let __func__ = 'ObserverUpdateAll'
+    silent! call s:log.info(__func__, '('.a:name.')')
 
     for [next_name, next_obj] in items(s:observers)
         try

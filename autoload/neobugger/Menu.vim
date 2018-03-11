@@ -10,18 +10,18 @@ endif
 
 " Constructor
 function! neobugger#Menu#New(title, ...)
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let l:menu = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:menu.menuItems = []
-    let l:menu.title = a:title
+    let menu = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let menu.menuItems = []
+    let menu.title = a:title
 
     "if a:menuItems[0].isSeparator()
-    "    let l:menu.menuItems = a:menuItems[1:-1]
+    "    let menu.menuItems = a:menuItems[1:-1]
     "else
-    "    let l:menu.menuItems = a:menuItems
+    "    let menu.menuItems = a:menuItems
     "endif
-    return l:menu
+    return menu
 endfunction
 
 

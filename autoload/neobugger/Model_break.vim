@@ -20,7 +20,7 @@ endif
 
 " Constructor
 function! neobugger#Model_break#New()
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:abstract = neobugger#Model#New()
@@ -31,8 +31,8 @@ endfunction
 
 
 function! s:prototype.LoadFromFile(fBreakpoints) dict
-    let l:__func__ = "LoadFromFile"
-    silent! call s:log.info(l:__func__, "()")
+    let __func__ = "LoadFromFile"
+    silent! call s:log.info(__func__, "()")
 
     if !empty(a:fBreakpoints) && filereadable(a:fBreakpoints)
         let s:save_break = a:fBreakpoints
@@ -42,7 +42,7 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
         call nelib#util#read_variable('g:neobugger_tmp', s:save_break)
         let s:breakpoints = g:neobugger_tmp
     else
-        silent! call s:log.warn(l:__func__, "('". s:save_break. "'): file not exits.")
+        silent! call s:log.warn(__func__, "('". s:save_break. "'): file not exits.")
         return
     endif
 
@@ -60,12 +60,13 @@ endfunction
 " @state 0 disable 1 enable, Toggle: none -> enable -> disable
 " @type 0 line-break, 1 function-break
 function! s:prototype.ToggleBreak() dict
-    let l:__func__ = "ToggleBreak"
-    silent! call s:log.info(l:__func__, "()")
+    let __func__ = "ToggleBreak"
+    silent! call s:log.info(__func__, "()")
 
+    call nelib#genutils#MarkActiveWindow()
     let newItem = neobugger#break_item#New('toggle', '')
     if empty(newItem)
-        silent! call s:log.info(l:__func__, "() create a break_item fail")
+        silent! call s:log.info(__func__, "() create a break_item fail")
         return
     endif
 
@@ -93,6 +94,7 @@ function! s:prototype.ToggleBreak() dict
     "call self.Breaks2Qf()
     "call self.UpdateSign(mode)
     "call neobugger#Handle('current', 'UpdateBreaks', mode, s:gdb_break)
+    call nelib#genutils#RestoreActiveWindow()
 endfunction
 
 
@@ -213,13 +215,13 @@ endfunction
 
 
 function! s:prototype._render2gdb(options) dict
-    let l:__func__ = "_render2gdb"
-    silent! call s:log.info(l:__func__, "() options=". string(a:options))
+    let __func__ = "_render2gdb"
+    silent! call s:log.info(__func__, "() options=". string(a:options))
 
     if has_key(a:options, 'mode')
         let mode = a:options['mode']
     else
-        silent! call s:log.info(l:__func__, "(". a:options['file'] .")")
+        silent! call s:log.info(__func__, "(". a:options['file'] .")")
         return
     endif
 
@@ -260,7 +262,7 @@ function! s:prototype._render2gdb(options) dict
                         call add(breakCmds, pre_cmd.'break '. next_key)
                         extend(breakCmds, cmds[0:])
                     else
-                        silent! call s:log.warn(l:__func__, "(".next_key.") no end: ".next_val)
+                        silent! call s:log.warn(__func__, "(".next_key.") no end: ".next_val)
                     endif
                 endif
             endif
@@ -281,8 +283,8 @@ endfunction
 
 
 function! s:prototype._render2sign(options) dict
-    let l:__func__ = "_render2sign"
-    silent! call s:log.info(l:__func__, "()")
+    let __func__ = "_render2sign"
+    silent! call s:log.info(__func__, "()")
 
     let i = s:breakpoint_signid_start
     while i <= s:breakpoint_signid_max

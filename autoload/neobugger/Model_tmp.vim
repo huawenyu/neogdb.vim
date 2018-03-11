@@ -9,7 +9,7 @@ endif
 " Constructor
 function! neobugger#model_var#New()
     "{
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:abstract = neobugger#Model#New()

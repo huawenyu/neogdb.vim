@@ -136,14 +136,14 @@ endif
 "        type 'server', 'bin-exe', {'args': [list]}
 function! neobugger#gdb#New(conf, binaryFile, args)
     "{
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     if neobugger#Exists(s:name)
         throw 'neobugger['.s:name.' already running!'
     endif
 
     if !filereadable(a:binaryFile)
-        throw l:__func__. " error: no program '". a:binaryFile ."'."
+        throw __func__. " error: no program '". a:binaryFile ."'."
     endif
 
     let server_addr = (a:0 >= 2) ? a:2 : ''
@@ -151,17 +151,17 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     let l:f_conf = 'neobugger#gdb#'.a:conf.'#Conf'
     let Conf = function(l:f_conf)
     if empty(Conf)
-        throw l:__func__. " error: no Conf '". a:conf ."' from ".l:f_conf
+        throw __func__. " error: no Conf '". a:conf ."' from ".l:f_conf
     endif
     let conf = Conf()
     if type(conf) != type({})
-        throw l:__func__. " error: Conf '". a:conf ."' should return a dict not ". type(conf). "."
+        throw __func__. " error: Conf '". a:conf ."' should return a dict not ". type(conf). "."
     endif
 
     let l:parent = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:abstract = neobugger#Debugger#New()
     call l:parent.Inherit(l:abstract)
-    let l:abstract = neobugger#View#New(s:name, "instanceGDB")
+    let l:abstract = neobugger#View#New('View_gdb', "instanceGDB", {'is_job': 1})
     call l:parent.Inherit(l:abstract)
 
     if has_key(conf, 'Inherit')
@@ -173,12 +173,14 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         let gdb = l:parent
     endif
 
+    call NbConfSet('View_gdb', 'this', gdb)
+
     let gdb.module = s:name
     let gdb._initialized = 0
     let gdb._mode = a:conf
     let gdb._binaryFile = a:binaryFile
     let gdb.args = a:args
-    silent! call s:log.info(l:__func__, ": args=", string(a:args))
+    silent! call s:log.info(__func__, ": args=", string(a:args))
 
     let gdb._autorun = 0
     if has_key(conf, 'autorun')
@@ -222,13 +224,13 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     let gdb._attach_pid = "NoAttachedPid"
     if a:conf == "pid"
         if !get(a:args,'pid')
-            throw l:__func__. " error: attach pid, but no pid."
+            throw __func__. " error: attach pid, but no pid."
         endif
         "let conf.conf_gdb_cmd[1] = a:args.pid
         let gdb._attach_pid = a:args.pid
     elseif a:conf == "server"
         if !has_key(a:args,'args') "Attach to gdbserver
-            throw l:__func__. " error: attach pid, but no gdbserver."
+            throw __func__. " error: attach pid, but no gdbserver."
         endif
         "call l:debugger.writeLine('target remote '.a:args.con)
         " 10.1.1.125:444 -> ["10.1.1.125", "444"]
@@ -330,30 +332,30 @@ endfunction
 
 
 function! s:prototype.Send(data) dict
-    let l:__func__ = "gdb.Send"
-    silent! call s:log.trace(l:__func__. "[". string(self._client_id). " at ". self._win_gdb._state.name. "] args=". string(a:data))
+    let __func__ = "gdb.Send"
+    silent! call s:log.trace(__func__. "[". string(self._client_id). " at ". self._win_gdb._state.name. "] args=". string(a:data))
 
     if self._win_gdb._state.name ==# "pause"
                 \ || self._win_gdb._state.name ==# "init"
                 \ || self._win_gdb._state.name ==# "parsevar"
         call jobsend(self._client_id, a:data."\<cr>")
     else
-        silent! call s:log.error(l:__func__, ": Cann't send data when state='". self._win_gdb._state.name. "'")
+        silent! call s:log.error(__func__, ": Cann't send data when state='". self._win_gdb._state.name. "'")
     endif
 endfunction
 
 
 function! s:prototype._Send(data) dict
-    let l:__func__ = "gdb._Send"
-    silent! call s:log.trace(l:__func__. "() args=". string(a:data))
+    let __func__ = "gdb._Send"
+    silent! call s:log.trace(__func__. "() args=". string(a:data))
     call jobsend(self._client_id, a:data)
 endfunction
 
 
 
 function! s:prototype.SendSvr(data) dict
-    let l:__func__ = "gdb.SendSvr"
-    silent! call s:log.trace(l:__func__. "() args=". string(a:data))
+    let __func__ = "gdb.SendSvr"
+    silent! call s:log.trace(__func__. "() args=". string(a:data))
 
     if has_key(self, "_server_id")
         call jobsend(self._server_id, a:data."\<cr>")
@@ -504,8 +506,8 @@ endfunction
 
 
 function! s:prototype.UpdateBreak(model) dict
-    let l:__func__ = "UpdateBreak"
-    silent! call s:log.info(l:__func__, '()')
+    let __func__ = "UpdateBreak"
+    silent! call s:log.info(__func__, '()')
 
     let is_running = 0
     if self._win_gdb._state.name ==# "running"
@@ -681,8 +683,8 @@ function! s:prototype.on_continue(...) dict
 endfunction
 
 function! s:prototype.on_jump(file, line, ...) dict
-    let l:__func__ = "gdb.on_jump"
-    silent! call s:log.info(l:__func__, ' open ', a:file, ':', a:line)
+    let __func__ = "gdb.on_jump"
+    silent! call s:log.info(__func__, ' open ', a:file, ':', a:line)
 
     if self._win_gdb._state.name !=# "pause"
         silent! call s:log.info(gdb)
@@ -699,19 +701,19 @@ function! s:prototype.on_whatis(type, ...) dict
 endfunction
 
 function! s:prototype.on_parseend(...) dict
-    let l:__func__ = "on_parseend"
+    let __func__ = "on_parseend"
 
     " parser frame backtrace
     if has_key(self, 'Model_frame')
         let s:currFrame = self.Model_frame.ParseFrame('/tmp/gdb.frame')
-        silent! call s:log.info(l:__func__, '(): currentFrame=', s:currFrame)
+        silent! call s:log.info(__func__, '(): currentFrame=', s:currFrame)
     endif
 
     " Start parser the info local variables
     if neobugger#View#IsOpen('View_var')
         call state#Switch('gdb', 'parsevar', 1)
         let l:ret = self.Model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
-        silent! call s:log.info(l:__func__, '(): ret=', l:ret)
+        silent! call s:log.info(__func__, '(): ret=', l:ret)
         if l:ret == 0
             " succ, parse-finish
             call state#Switch('gdb', 'parsevar', 2)
@@ -766,11 +768,11 @@ endfunction
 
 
 function! s:prototype.on_init(...) dict
-    let l:__func__ = "gdb.on_init"
-    silent! call s:log.info(l:__func__, " args=", string(a:000))
+    let __func__ = "gdb.on_init"
+    silent! call s:log.info(__func__, " args=", string(a:000))
 
     if self._initialized
-      silent! call s:log.warn(l:__func__, "() ignore re-initial!")
+      silent! call s:log.warn(__func__, "() ignore re-initial!")
       return
     endif
 
@@ -794,15 +796,15 @@ endfunction
 
 
 function! s:prototype.on_initend(...) dict
-    let l:__func__ = "gdb.on_initend"
-    silent! call s:log.info(l:__func__, " args=", string(a:000))
+    let __func__ = "gdb.on_initend"
+    silent! call s:log.info(__func__, " args=", string(a:000))
 
     if has_key(self, 'Init')
-        silent! call s:log.info(l:__func__, " call Init()")
+        silent! call s:log.info(__func__, " call Init()")
         "call neobugger#Handle(s:name, self.Init)
         call self.Init()
     else
-        silent! call s:log.info(l:__func__, " Init() is null.")
+        silent! call s:log.info(__func__, " Init() is null.")
     endif
 
     if self._autorun

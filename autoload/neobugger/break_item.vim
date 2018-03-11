@@ -44,7 +44,7 @@ endif
 
 " Constructor
 function! neobugger#break_item#New(type, cmdtext)
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let newBreak = deepcopy(s:prototype)
     call neobugger#break_item#_fill_detail(newBreak, a:type, a:cmdtext)
@@ -54,7 +54,7 @@ endfunction
 
 
 function! neobugger#break_item#_fill_detail(item, type, cmdtext)
-    let l:__func__ = "fill_detail"
+    let __func__ = "fill_detail"
 
     let filenm = bufname("%")
     let linenr = line(".")
@@ -77,12 +77,12 @@ function! neobugger#break_item#_fill_detail(item, type, cmdtext)
     let a:item['line'] = linenr
     let a:item['col'] = colnr
     let a:item['command'] = a:cmdtext
-    silent! call s:log.info(l:__func__, '() item=', string(a:item))
+    silent! call s:log.info(__func__, '() item=', string(a:item))
 endfunction
 
 
 function! s:prototype.equal(item) dict
-    let l:__func__ = "equal"
+    let __func__ = "equal"
 
     let that = a:item
     if !(self.name ==# that.name)
@@ -90,10 +90,10 @@ function! s:prototype.equal(item) dict
                 \ || !(self.type ==# that.type)
                 \ || !(self.line ==# that.line)
                 \ || !(self.command ==# that.command)
-        silent! call s:log.info(l:__func__, '('. that.name. ') not equal')
+        silent! call s:log.info(__func__, '('. that.name. ') not equal')
         return 0
     endif
-    silent! call s:log.info(l:__func__, '('. that.name. ') equal')
+    silent! call s:log.info(__func__, '('. that.name. ') equal')
     return 1
 endfunction
 

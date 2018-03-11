@@ -8,46 +8,46 @@ endif
 
 " Constructor
 function! neobugger#Menu_break#New(...)
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let l:menu = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let menu = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:abstract = neobugger#Menu#New('Breakpoints')
-    call l:menu.Inherit(l:abstract)
+    call menu.Inherit(l:abstract)
 
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[t] toggle the breakpoint',
                 \  'shortcut': 't',
                 \  'callback': 'neobugger#Menu_break#_click_toggle'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[b] add/enable a breakpoint',
                 \  'shortcut': 'b',
                 \  'callback': 'neobugger#Menu_break#_click_add'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[c] add/enable a breakpoint with condition',
                 \  'shortcut': 'c',
                 \  'callback': 'neobugger#Menu_break#_click_add'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[m] add/enable a breakpoint with command',
                 \  'shortcut': 'm',
                 \  'callback': 'neobugger#Menu_break#_click_add'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[B] disable the current breakpoint',
                 \  'shortcut': 'B',
                 \  'callback': 'neobugger#Menu_break#_click_move'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[d] delete the current breakpoint',
                 \  'shortcut': 'd',
                 \  'callback': 'neobugger#Menu_break#_click_move'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[a] disable all the breakpoints',
                 \  'shortcut': 'a',
                 \  'callback': 'neobugger#Menu_break#_click_move'}))
-    call l:menu.addMenuItem(neobugger#menu_item#New(
+    call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[A] delete all the breakpoints',
                 \  'shortcut': 'A',
                 \  'callback': 'neobugger#Menu_break#_click_move'}))
 
-    return l:menu
+    return menu
 endfunction
 
 
@@ -194,8 +194,8 @@ endfunction
 
 
 function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
-    let l:__func__ = "Model_Var.ParseVar"
-    silent! call s:log.info(l:__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
+    let __func__ = "Model_Var.ParseVar"
+    silent! call s:log.info(__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
 
     return 1
 endfunction

@@ -9,7 +9,7 @@ endif
 " Constructor
 function! neobugger#Model_var#New(viewer)
     "{
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:model.frame = ""
@@ -28,8 +28,8 @@ endfunction
 "          0 succ
 "          1 wait 'end'
 function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
-    let l:__func__ = "Model_Var.ParseVar"
-    silent! call s:log.info(l:__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
+    let __func__ = "Model_Var.ParseVar"
+    silent! call s:log.info(__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
 
     if self.frame == a:frame
         let self.vars_last = deepcopy(self.vars)
@@ -96,7 +96,7 @@ endfunction
 "          0 succ
 "          1 wait 'end'
 function! s:prototype.ParseVarType(srcfile, dstfile) dict
-    let l:__func__ = "Model_Var.ParseVarEnd"
+    let __func__ = "Model_Var.ParseVarEnd"
 
     if !filereadable(a:srcfile)
         return -1
@@ -110,7 +110,7 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
             let next_is_key = 0
 
             let matches = matchlist(l:line, 'whatis \(.*\)')
-            "silent! call s:log.info(l:__func__, ' line=', l:line, ' key=', string(matches))
+            "silent! call s:log.info(__func__, ' line=', l:line, ' key=', string(matches))
             if len(matches) > 0 && !empty(matches[1])
                 let l:key = matches[1]
             endif
@@ -118,7 +118,7 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
             let next_is_key = 1
 
             let matches = matchlist(l:line, 'type = \(.*\)')
-            "silent! call s:log.info(l:__func__, ' line=', l:line, ' val=', string(matches))
+            "silent! call s:log.info(__func__, ' line=', l:line, ' val=', string(matches))
             if len(matches) > 0 && !empty(matches[1])
                 let l:val = matches[1]
                 if has_key(self.vars, l:key)
@@ -146,21 +146,21 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
     endif
 
     " view2window
-    silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
+    silent! call s:log.info(__func__, ' vars=', string(self.vars))
     call self.viewer.display(self.Render())
     return 0
 endfunction
 
 
 function! s:prototype.ParseVarEnd(srcfile) dict
-    let l:__func__ = "Model_Var.ParseVarEnd"
+    let __func__ = "Model_Var.ParseVarEnd"
 
     if !filereadable(a:srcfile)
         return -1
     endif
 
     " view2window
-    silent! call s:log.info(l:__func__, ' vars=', string(self.vars))
+    silent! call s:log.info(__func__, ' vars=', string(self.vars))
     call self.viewer.display(self.Render())
     return 0
 endfunction
@@ -220,8 +220,8 @@ endfunction
 " Send deleting breakpoint message to debugger, if it is run
 " (e.g.: 'delete 5')
 function! s:prototype._send_delete_to_debugger() dict
-    let l:__func__ = "Model_Var._send_delete_to_debugger"
+    let __func__ = "Model_Var._send_delete_to_debugger"
 
-    silent! call s:log.info(l:__func__)
+    silent! call s:log.info(__func__)
 endfunction
 

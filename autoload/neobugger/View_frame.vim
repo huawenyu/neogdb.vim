@@ -9,11 +9,11 @@ endif
 " Constructor
 function! neobugger#View_frame#New()
     "{
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:title = NbConfGet(s:name, 'title')
-    let l:abstract = neobugger#View#New(s:name, l:title)
+    let l:abstract = neobugger#View#New(s:name, l:title, {})
     call l:view.Inherit(l:abstract)
 
     return l:view

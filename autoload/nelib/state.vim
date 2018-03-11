@@ -6,8 +6,8 @@ endif
 
 
 function! nelib#state#Open(config) abort
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
-    silent! call s:log.info(l:__func__. " args=", string(a:config))
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    silent! call s:log.info(__func__. " args=", string(a:config))
 
     let conf = a:config
     if type(conf) != type({})
@@ -20,14 +20,14 @@ function! nelib#state#Open(config) abort
         throw "neogdb.nelib#state#Open: no Creator '". conf['Scheme'] ."'."
     endif
     let scheme = Creator()
-    silent! call s:log.info(l:__func__. " ", conf['Scheme'])
+    silent! call s:log.info(__func__. " ", conf['Scheme'])
     let g:state_ctx = nelib#state#CreateRuntime(scheme, conf)
     return g:state_ctx
 endfunc
 
 
 function! nelib#state#CreateRuntime(scheme, config) abort
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
     let scheme = a:scheme
     let conf = a:config
 
@@ -79,8 +79,8 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         for i in v
             let matches = i.match
             if type(matches) != type([])
-                throw printf("neogdb.nelib#state#CreateRuntime: state '%s' match '%s' should be list"
-                        \ ,k, string(matches))
+                throw printf("%s: state '%s' match '%s' should be list"
+                        \ , __func__, k, string(matches))
             endif
             for match in matches
                 call add(patterns, [ match, 'on_call'
@@ -129,8 +129,8 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         endif
 
         if has_key(ctx.window, conf_win.name)
-            throw printf("neogdb.nelib#state#CreateRuntime: window duplicate '%s'"
-                        \ , conf_win.name)
+            throw printf("%s: window duplicate '%s'"
+                        \ , __func__, conf_win.name)
         endif
 
         silent! call s:log.info("Creating the window: ". conf_win.name. ' view='.conf_win.view)
@@ -138,8 +138,8 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         let ctx.window[conf_win.name] = window
         let window._name = conf_win.name
         if !has_key(ctx.state, conf_win.state)
-            throw printf("neogdb.nelib#state#CreateRuntime: window ''%s' initstate '%s' not exist"
-                        \ , conf_win.name, conf_win.state)
+            throw printf("%s: window ''%s' initstate '%s' not exist"
+                        \ , __func__, conf_win.name, conf_win.state)
         endif
         let state0 = copy(ctx.state[conf_win.state])
         let window._state = state0
@@ -157,19 +157,24 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         endif
 
         " layout
-        let l:View_gdb = neobugger#View#Toggle(conf_win.view)
-        if !empty(l:View_gdb)
-            silent! call s:log.info(l:__func__, " termopen:", cmdstr)
+        let viewGdb = NbConfGet('View_gdb', 'this')
+        if !empty(viewGdb)
+            silent! call s:log.info(__func__, " termopen:", cmdstr)
+
+            call viewGdb.open()
             let window._wid = win_getid()
             enew | let window._client_id = termopen(cmdstr, target)
             let window._bufnr = bufnr('%')
             let status = NbConfGet(conf_win.view, 'status')
             if empty(status)
-                neobugger#View#Toggle(conf_win.view)
+                call viewGdb.close()
             else
                 " Scroll to the end of terminal output
                 normal G
             endif
+        else
+            throw printf("%s: instance of 'View_gdb' not exist"
+                        \ , __func__)
         endif
     endfor
 
@@ -191,7 +196,7 @@ function! nelib#state#CreateRuntime(scheme, config) abort
     " self is termopen's target, here is the window, not ctx itself
     " @match1: [i.window, i.action, i.arg0]
     function! ctx.on_call(match1, ...)
-        let l:__func__ = "ctx.on_call"
+        let __func__ = "ctx.on_call"
         let matched = a:match1
         silent! call s:log.info("matched: ", matched)
         "silent! call s:log.trace("self=", string(self))
@@ -214,7 +219,7 @@ function! nelib#state#CreateRuntime(scheme, config) abort
                     let l:funcargs = []
                     call add(l:funcargs, l:funcname)
                     call extend(l:funcargs, a:000)
-                    silent! call s:log.info(l:__func__, "func=", l:funcname,
+                    silent! call s:log.info(__func__, "func=", l:funcname,
                                 \" args=", string(l:funcargs))
                     call call(scheme[l:funcname], l:funcargs, scheme)
                 else

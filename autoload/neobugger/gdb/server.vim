@@ -50,13 +50,13 @@ function! neobugger#gdb#server#New()
 
 
     function! this.Init()
-        let l:__func__ = "server.Init"
+        let __func__ = "server.Init"
         if !has_key(self, "_server_id")
-            echoerr l:__func__. "(): GdbServer window not exist."
+            echoerr __func__. "(): GdbServer window not exist."
             return
         endif
         if empty(self._server_addr)
-            echoerr l:__func__. "(): server address is empty."
+            echoerr __func__. "(): server address is empty."
             return
         endif
 
@@ -65,16 +65,16 @@ function! neobugger#gdb#server#New()
         let self._debug_level = 0
         let self._remote_debugging = 0
 
-        silent! call s:log.info(l:__func__, " args=", string(self.args))
+        silent! call s:log.info(__func__, " args=", string(self.args))
         let l:cmdstr = 'login.exp '. self._server_addr[0].' '.join(self.args.args[1:], ' ')
-        silent! call s:log.info(l:__func__, " cmdstr=", l:cmdstr)
+        silent! call s:log.info(__func__, " cmdstr=", l:cmdstr)
         call self.SendSvr(l:cmdstr)
     endfunction
 
 
     function! this.Symbol(type, expr)
-        let l:__func__ = "server.Symbol"
-        silent! call s:log.info(l:__func__, " type=", a:type, " expr=", a:expr)
+        let __func__ = "server.Symbol"
+        silent! call s:log.info(__func__, " type=", a:type, " expr=", a:expr)
 
         let expr = get(s:symbols, a:type, '')
         if !empty(expr)

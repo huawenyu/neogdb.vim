@@ -3,34 +3,41 @@ if !exists("s:script")
     let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
     let s:prototype = tlib#Object#New({'_class': [s:name]})
+
+    " https://technotales.wordpress.com/2010/04/29/vim-splits-a-guide-to-doing-exactly-what-you-want/
+    let s:_Prototype = {
+                \ 'next_buffer_number': 1,
+                \ 'size': 10,
+                \ 'tabnr': -1,
+                \ 'wid': -1,
+                \ 'position': ['botright'],
+                \ 'is_job': 0,
+                \}
 endif
 
 
 " Constructor
-function! neobugger#View#New(name, title)
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
-    silent! call s:log.info(l:__func__, '(', a:name, ')')
+function! neobugger#View#New(name, title, options)
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    silent! call s:log.info(__func__, '(', a:name, ')')
 
-    let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let view = s:prototype.New(deepcopy(s:_Prototype))
 
-    let l:view.name = a:name
-    let l:view.title = a:title
+    let view.name = a:name
+    let view.title = a:title
+    let view['position'] = NbConfGet(a:name, 'layout')
 
-    " https://technotales.wordpress.com/2010/04/29/vim-splits-a-guide-to-doing-exactly-what-you-want/
-    let l:view['next_buffer_number'] = 1
-    let l:view['size'] = 10
-    let l:view['tabnr'] = -1
-    let l:view['wid'] = -1
+    if has_key(a:options, 'is_job')
+        let view.is_job = a:options.is_job
+    endif
 
-    "let l:view['position'] = ['botright']
-    let l:view['position'] = NbConfGet(a:name, 'layout')
-    return l:view
+    return view
 endfunction
 
 
 function! neobugger#View#Toggle(name)
-    let l:__func__ = 'neobugger#View#Toggle'
-    silent! call s:log.info(l:__func__, '(', a:name, ')')
+    let __func__ = 'neobugger#View#Toggle'
+    silent! call s:log.info(__func__, '(', a:name, ')')
 
     let this = NbConfGet(a:name, 'this', {})
     if !empty(this) && this.is_open()
@@ -43,7 +50,7 @@ function! neobugger#View#Toggle(name)
         call this.open()
         let l:bufnum = NbConfGet(a:name, 'bufnr')
         if l:bufnum >=0
-            silent! call s:log.info(l:__func__, 'backto buffer ', l:bufnum)
+            silent! call s:log.info(__func__, 'backto buffer ', l:bufnum)
             execute 'b '. l:bufnum
         endif
         call NbConfSet(a:name, 'this', this)
@@ -53,8 +60,8 @@ endfunction
 
 
 function! neobugger#View#IsOpen(name)
-    let l:__func__ = 'neobugger#View#IsOpen'
-    silent! call s:log.info(l:__func__, '(', a:name, ')')
+    let __func__ = 'neobugger#View#IsOpen'
+    silent! call s:log.info(__func__, '(', a:name, ')')
 
     let this = NbConfGet(a:name, 'this', {})
     if !empty(this) && this.is_open()
@@ -72,8 +79,8 @@ endfunction
 
 " Close window
 function! s:prototype.close() dict
-    let l:__func__ = 'open'
-    silent! call s:log.info(l:__func__, '(', self.name, ')')
+    let __func__ = 'open'
+    silent! call s:log.info(__func__, '(', self.name, ')')
     if !self.is_open()
         throw s:script. ": Window " . self.name . " is not open"
     endif
@@ -102,8 +109,8 @@ endfunction
 
 " Display data to the window
 function! s:prototype.display(data) dict
-    let l:__func__ = 'display'
-    silent! call s:log.info(l:__func__, '(', self.name, ')')
+    let __func__ = 'display'
+    silent! call s:log.info(__func__, '(', self.name, ')')
     call self.focus()
     setlocal modifiable
 
@@ -122,8 +129,8 @@ endfunction
 
 
 function! s:prototype.focus() dict
-    let l:__func__ = 'focus'
-    silent! call s:log.info(l:__func__, '(', self.name, ')')
+    let __func__ = 'focus'
+    silent! call s:log.info(__func__, '(', self.name, ')')
     call win_gotoid(self.wid)
 endfunction
 
@@ -134,8 +141,8 @@ endfunction
 
 " Open window and display data (stolen from NERDTree)
 function! s:prototype.open() dict
-    let l:__func__ = 'open'
-    silent! call s:log.info(l:__func__, '(', self.name, ')')
+    let __func__ = 'open'
+    silent! call s:log.info(__func__, '(', self.name, ')')
 
     let main_wid = NbConfGet('View_main', 'wid')
     if self.is_open()
@@ -143,7 +150,7 @@ function! s:prototype.open() dict
     endif
 
     " create the window
-    call s:log.info(s:script. ':'. l:__func__. '('. self.name.') :'. string(self.position))
+    call s:log.info(s:script. ':'. __func__. '('. self.name.') :'. string(self.position))
     if type(self.position) == type([])
         if win_gotoid(main_wid) == 1
             for cmd in self.position
@@ -162,7 +169,7 @@ function! s:prototype.open() dict
                 endif
             endfor
         else
-            call s:log.info(s:script. ':'. l:__func__. '('. self.name.')  goto View_main.wid='. string(main_wid). ' fail.')
+            call s:log.info(s:script. ':'. __func__. '('. self.name.')  goto View_main.wid='. string(main_wid). ' fail.')
         endif
     else
         silent exec self.position . ' ' . self.size . ' new'
@@ -170,39 +177,41 @@ function! s:prototype.open() dict
     endif
 
     if !self._exist_for_tab()
-        " If the window is not opened/exists, create new
         call self._set_buf_name(self._next_buffer_name())
         silent! exec "edit " . self._buf_name()
-        " This function does not exist in Window class and should be declared in
-        " descendants
-        call self.bind_mappings()
+
+        if has_key(self, 'bind_mappings')
+            call self.bind_mappings()
+        endif
     else
         " Or just jump to opened buffer
         silent! exec "buffer " . self._buf_name()
     endif
 
     " set buffer options
-    setlocal winfixheight
-    setlocal noswapfile
-    setlocal buftype=nofile
-    setlocal nowrap
-    setlocal foldcolumn=0
-    setlocal nobuflisted
-    setlocal nospell
-    setlocal nolist
-    iabc <buffer>
-    setlocal cursorline
-    "setfiletype viewer_window
-    setfiletype c
-    call s:log.info("Opened window with name: " . self.name)
+    if !self.is_job
+        setlocal winfixheight
+        setlocal noswapfile
+        setlocal buftype=nofile
+        setlocal nowrap
+        setlocal foldcolumn=0
+        setlocal nobuflisted
+        setlocal nospell
+        setlocal nolist
+        iabc <buffer>
+        setlocal cursorline
+        "setfiletype viewer_window
+        setfiletype c
+        call s:log.info("Opened buffer with name: " . self.name)
 
-    if has("syntax") && exists("g:syntax_on") && !has("syntax_items")
-        call self.setup_syntax_highlighting()
-    endif
-    call self.display("[Empty]\n")
+        if has_key(self, 'setup_syntax_highlighting') && has("syntax") && exists("g:syntax_on") && !has("syntax_items")
+            call self.setup_syntax_highlighting()
+        endif
 
-    if win_gotoid(main_wid) == 1
-        stopinsert
+        call self.display("[Empty]\n")
+        if win_gotoid(main_wid) == 1
+            stopinsert
+        endif
     endif
 endfunction
 
@@ -219,8 +228,8 @@ endfunction
 
 
 function! s:prototype.Update(type, model) dict
-    let l:__func__ = 'Update'
-    silent! call s:log.info(l:__func__, '(type='.a:type.' name='.a:model.name.')')
+    let __func__ = 'Update'
+    silent! call s:log.info(__func__, '(type='.a:type.' name='.a:model.name.')')
 
     if a:type ==# 'break'
         call self.UpdateBreak(a:model)
@@ -233,23 +242,23 @@ endfunction
 
 
 function! s:prototype.UpdateBreak(model) dict
-    let l:__func__ = 'UpdateBreak'
-    silent! call s:log.info(l:__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. l:__func__
+    let __func__ = 'UpdateBreak'
+    silent! call s:log.info(__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 
 
 function! s:prototype.UpdateStep(model) dict
-    let l:__func__ = 'UpdateStep'
-    silent! call s:log.info(l:__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. l:__func__
+    let __func__ = 'UpdateStep'
+    silent! call s:log.info(__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 
 
 function! s:prototype.UpdateCurrent(model) dict
-    let l:__func__ = 'UpdateCurrent'
-    silent! call s:log.info(l:__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. l:__func__
+    let __func__ = 'UpdateCurrent'
+    silent! call s:log.info(__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 
 

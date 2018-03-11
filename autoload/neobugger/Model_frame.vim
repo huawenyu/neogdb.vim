@@ -11,7 +11,7 @@ endif
 " Constructor
 function! neobugger#Model_frame#New(...)
     "{
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:model = s:prototype.New()
     let l:model.frames = []
@@ -31,8 +31,8 @@ endfunction
 "
 " @return current frame name
 function! s:prototype.ParseFrame(framefile) dict
-    let l:__func__ = "gdb.ParseFrame"
-    silent! call s:log.info(l:__func__, '()')
+    let __func__ = "gdb.ParseFrame"
+    silent! call s:log.info(__func__, '()')
 
     let self.frames = []
     if !filereadable(a:framefile)
@@ -72,11 +72,11 @@ function! s:prototype.ParseFrame(framefile) dict
                             \})
             endif
         endif
-        silent! call s:log.info(l:__func__, ' line=', l:line, ' matches=', string(matches))
+        silent! call s:log.info(__func__, ' line=', l:line, ' matches=', string(matches))
     endfor
 
     " view2window
-    "silent! call s:log.info(l:__func__, ' frames=', string(self.frames))
+    "silent! call s:log.info(__func__, ' frames=', string(self.frames))
     if !empty(self.viewer)
         call self.viewer.display(self.Render())
     endif

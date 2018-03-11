@@ -16,7 +16,7 @@ endif
 
 " Constructor
 function! neobugger#menu_item#New(options)
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let newMenuItem = s:prototype.New(deepcopy(s:_Prototype))
     let newMenuItem.text = a:options['text']

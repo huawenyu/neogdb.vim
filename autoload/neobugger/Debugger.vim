@@ -25,7 +25,7 @@ endif
 "        type 'server', 'bin-exe', {'args': [list]}
 function! neobugger#Debugger#New()
     "{
-    let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let l:std = s:prototype.New(a:0 >= 1 ? a:1 : {})
     return l:std
