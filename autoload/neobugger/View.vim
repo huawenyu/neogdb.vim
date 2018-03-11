@@ -8,8 +8,8 @@ endif
 
 " Constructor
 function! neobugger#View#New(name, title)
-    "{
     let l:__func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+    silent! call s:log.info(l:__func__, '(', a:name, ')')
 
     let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
 
@@ -25,7 +25,6 @@ function! neobugger#View#New(name, title)
     "let l:view['position'] = ['botright']
     let l:view['position'] = NbConfGet(a:name, 'layout')
     return l:view
-    "}
 endfunction
 
 

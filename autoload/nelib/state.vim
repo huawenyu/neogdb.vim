@@ -132,6 +132,8 @@ function! nelib#state#CreateRuntime(scheme, config) abort
             throw printf("neogdb.nelib#state#CreateRuntime: window duplicate '%s'"
                         \ , conf_win.name)
         endif
+
+        silent! call s:log.info("Creating the window: ". conf_win.name. ' view='.conf_win.view)
         let window = {}
         let ctx.window[conf_win.name] = window
         let window._name = conf_win.name
@@ -155,22 +157,27 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         endif
 
         " layout
-        let l:View_gdb = neobugger#View#Toggle('View_gdb')
+        let l:View_gdb = neobugger#View#Toggle(conf_win.view)
         if !empty(l:View_gdb)
             silent! call s:log.info(l:__func__, " termopen:", cmdstr)
             let window._wid = win_getid()
             enew | let window._client_id = termopen(cmdstr, target)
             let window._bufnr = bufnr('%')
-            silent! call s:log.info(l:__func__, "() gdb.bufnr=", window._bufnr)
-            let status = NbConfGet('View_gdb', 'status')
+            let status = NbConfGet(conf_win.view, 'status')
             if empty(status)
-                neobugger#View#Toggle('View_gdb')
+                neobugger#View#Toggle(conf_win.view)
             else
                 " Scroll to the end of terminal output
                 normal G
             endif
         endif
     endfor
+
+    "let viewGdb = NbConfGet('View_gdb', 'wid')
+    "if win_gotoid(viewGdb) == 1
+    "    silent! call s:log.info("Backto 'gdb' window-id=", viewGdb)
+    "    exec 'buffer '. NbConfGet('View_gdb', 'bufnr')
+    "endif
 
     " Backto main windows
     if win_gotoid(ctx._wid_main) == 1
