@@ -22,12 +22,28 @@ endif
 function! neobugger#Model_break#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
+    let model = NbRuntimeGet(s:name)
+    if !empty(model)
+        return model
+    endif
+
     let model = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let abstract = neobugger#Model#New()
+    let abstract = neobugger#Model#New(s:name)
     call model.Inherit(abstract)
 
     call NbRuntimeSet(s:name, model)
     return model
+endfunction
+
+
+function! s:prototype.ReadVariable(varname, file)
+    let __func__ = "ReadVariable"
+    try
+        let recover = readfile(a:file)[0]
+        execute "let ".a:varname." = " . recover
+    catch /.*/
+        silent! call s:log.info("Load breaks wilson: ", string(s:breakpoints))
+    endtry
 endfunction
 
 
@@ -40,18 +56,18 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
     endif
 
     if filereadable(s:save_break)
-        call nelib#util#read_variable('g:neobugger_tmp', s:save_break)
-        let s:breakpoints = g:neobugger_tmp
+         call self.ReadVariable("s:breakpoints", s:save_break)
+         "let s:breakpoints = deepcopy(g:neobugger_tmp)
+         "silent! call s:log.info("Load breaks wilson: ", string(s:breakpoints))
+         "let g:neobugger_tmp = {}
     else
         silent! call s:log.warn(__func__, "('". s:save_break. "'): file not exits.")
         return
     endif
 
-    silent! call s:log.info("Set and sign breaks ...")
+    silent! call s:log.info("Load breaks: ", string(s:breakpoints))
     if !empty(s:breakpoints)
-        call self.UpdateSign(0)
-        call self.Render()
-        call neobugger#Handle('current', 'UpdateBreaks', 0, s:breakpoints)
+        call self.ObserverUpdateAll("break")
     endif
 endfunction
 
@@ -92,9 +108,6 @@ function! s:prototype.ToggleBreak() dict
         endif
     endfor
 
-    "call self.Breaks2Qf()
-    "call self.UpdateSign(mode)
-    "call neobugger#Handle('current', 'UpdateBreaks', mode, s:gdb_break)
     call nelib#genutils#RestoreActiveWindow()
 endfunction
 
@@ -109,16 +122,13 @@ function! s:prototype.ToggleBreakAll() dict
             let v['state'] = 1
         endif
     endfor
-    call self.UpdateSign(0)
-    call neobugger#Handle('current', 'UpdateBreaks', 0, s:gdb_break)
+    call self.ObserverUpdateAll("break")
 endfunction
 
 
 function! s:prototype.ClearBreak() dict
     let s:breakpoints = {}
-    call self.Breaks2Qf()
-    call self.UpdateSign(0)
-    call neobugger#Handle('current', 'UpdateBreaks', 2, s:gdb_break)
+    call self.ObserverUpdateAll("break")
 endfunction
 
 

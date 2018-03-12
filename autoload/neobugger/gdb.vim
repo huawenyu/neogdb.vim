@@ -641,20 +641,22 @@ endfunction
 
 
 function! s:prototype.ToggleViewFrame() dict
+    call neobugger#Model_frame#New()
     let view = neobugger#View#Toggle('View_frame')
-    if !empty(view)
-        if !has_key(self, 'Model_frame')
-            let self.Model_frame = neobugger#Model_frame#New(self.View_frame)
-        endif
 
-        " Trigger parse
+    " Trigger parse
+    if !empty(view)
         call self.on_parseend()
     endif
 endfunction
 
 
 function! s:prototype.ToggleViewBreak() dict
+    let modelBreak = neobugger#Model_break#New()
     let view = neobugger#View#Toggle('View_break')
+    if !empty(view)
+        call modelBreak.ObserverUpdateAll("break")
+    endif
 endfunction
 
 

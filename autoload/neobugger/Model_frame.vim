@@ -12,10 +12,13 @@ endif
 function! neobugger#Model_frame#New(...)
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
+    let model = NbRuntimeGet(s:name)
+    if !empty(model)
+        return model
+    endif
     let model = s:prototype.New()
     let model.frames = []
-    let model.viewer = a:0 >= 1 ? a:1 : {}
-    let abstract = neobugger#Model#New()
+    let abstract = neobugger#Model#New(s:name)
     call model.Inherit(abstract)
 
     call NbRuntimeSet(s:name, model)
@@ -76,9 +79,7 @@ function! s:prototype.ParseFrame(framefile) dict
 
     " view2window
     "silent! call s:log.info(__func__, ' frames=', string(self.frames))
-    if !empty(self.viewer)
-        call self.viewer.display(self.Render())
-    endif
+    call self.ObserverUpdateAll("frame")
     return frame0
 endfunction
 

@@ -238,6 +238,8 @@ function! s:prototype.Update(type, model) dict
         call self.UpdateStep(a:model)
     elseif a:type ==# 'var'
         call self.UpdateVar(a:model)
+    elseif a:type ==# 'frame'
+        call self.UpdateFrame(a:model)
     elseif a:type ==# 'current'
         call self.UpdateCurrent(a:model)
     endif
@@ -246,28 +248,35 @@ endfunction
 
 function! s:prototype.UpdateBreak(model) dict
     let __func__ = 'UpdateBreak'
-    silent! call s:log.info(__func__, ' view='. string(self))
+    silent! call s:log.warn(__func__, ' view='. string(self))
     throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 
 
 function! s:prototype.UpdateStep(model) dict
     let __func__ = 'UpdateStep'
-    silent! call s:log.info(__func__, ' view='. string(self))
+    silent! call s:log.warn(__func__, ' view='. string(self))
     throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 
 
 function! s:prototype.UpdateCurrent(model) dict
     let __func__ = 'UpdateCurrent'
-    silent! call s:log.info(__func__, ' view='. string(self))
+    silent! call s:log.warn(__func__, ' view='. string(self))
     throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 
 
 function! s:prototype.UpdateVar(model) dict
-    let __func__ = 'UpdateCurrent'
-    silent! call s:log.info(__func__, ' view='. string(self))
+    let __func__ = 'UpdateVar'
+    silent! call s:log.warn(__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. __func__
+endfunction
+
+
+function! s:prototype.UpdateFrame(model) dict
+    let __func__ = 'UpdateFrame'
+    silent! call s:log.warn(__func__, ' view='. string(self))
     throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
 

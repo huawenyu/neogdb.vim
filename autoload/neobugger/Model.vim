@@ -4,41 +4,46 @@ if !exists("s:script")
     silent! let s:log = logger#getLogger(s:script)
     let s:prototype = tlib#Object#New({'_class': [s:name]})
 
-    " Normally this should be list.
-    " So far we have no observer use same name,
-    " Use dictionary make the remove easier
-    let s:observers = {}
+    " - 'observers'
+    "   Normally this should be list.
+    "   So far we have no observer use same name,
+    "   Use dictionary make the remove easier
+    let s:_Prototype = {
+                \ 'name': '',
+                \ 'observers': {},
+                \}
 endif
 
 
 " Constructor
-function! neobugger#Model#New()
+function! neobugger#Model#New(name)
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
-    let model = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let model = s:prototype.New(deepcopy(s:_Prototype))
+    let model.name = a:name
     return model
 endfunction
 
 
 function! s:prototype.ObserverPurge(...) dict
     let __func__ = 'ObserverPurge'
-    silent! call s:log.info(__func__, '()')
+    silent! call s:log.info(__func__, '() from ', self.name)
 
-    let s:observers = {}
+    let self.observers = {}
 endfunction
 
 function! s:prototype.ObserverAppend(name, obs)
     let __func__ = 'ObserverAppend'
-    silent! call s:log.info(__func__, '('.a:name.')')
+    silent! call s:log.info(__func__, '('.a:name.') to ', self.name)
 
-    let s:observers[a:name] = a:obs
+    let self.observers[a:name] = a:obs
 endfunction
 
 function! s:prototype.ObserverRemove(name)
     let __func__ = 'ObserverRemove'
-    silent! call s:log.info(__func__, '('.a:name.')')
+    silent! call s:log.info(__func__, '('.a:name.') from ', self.name)
 
-    if has_key(s:observers, a:name)
-        unlet s:observers[a:name]
+    if has_key(self.observers, a:name)
+        unlet self.observers[a:name]
     endif
 endfunction
 
@@ -46,7 +51,7 @@ function! s:prototype.ObserverExist(name)
     let __func__ = 'ObserverExist'
     silent! call s:log.info(__func__, '('.a:name.')')
 
-    return has_key(s:observers, a:name)
+    return has_key(self.observers, a:name)
 endfunction
 
 
@@ -54,7 +59,7 @@ function! s:prototype.ObserverUpdateAll(type)
     let __func__ = 'ObserverUpdateAll'
     silent! call s:log.info(__func__, '('.a:name.')')
 
-    for [next_name, next_obj] in items(s:observers)
+    for [next_name, next_obj] in items(self.observers)
         try
             call next_obj.Update(a:type, self)
         catch

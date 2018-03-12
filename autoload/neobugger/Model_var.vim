@@ -16,8 +16,12 @@ endif
 function! neobugger#Model_var#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
+    let model = NbRuntimeGet(s:name)
+    if !empty(model)
+        return model
+    endif
     let model = s:prototype.New(deepcopy(s:_Prototype))
-    let abstract = neobugger#Model#New()
+    let abstract = neobugger#Model#New(s:name)
     call model.Inherit(abstract)
 
     call NbRuntimeSet(s:name, model)

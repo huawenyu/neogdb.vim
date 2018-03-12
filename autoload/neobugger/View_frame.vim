@@ -26,11 +26,8 @@ function! s:prototype.bind_mappings()
 endfunction
 
 
-" Returns string that contains all variables (for Window.display())
-function! s:prototype.Render() dict
-    let variables = self.title . "\n"
-    let variables .= (g:RubyDebugger.variables == {} ? '' : g:RubyDebugger.variables.Render())
-    return variables
+function! s:prototype.UpdateFrame(model) dict
+    call self.display(a:model.Render())
 endfunction
 
 
