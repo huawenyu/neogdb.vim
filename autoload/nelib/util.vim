@@ -18,22 +18,26 @@ function! nelib#util#get_visual_selection()
 endfunction
 
 
+" @note please not serialize class which contain function,
+"       which will cause fail
 function! nelib#util#save_variable(var, file)
     call writefile([string(a:var)], a:file)
 endfunction
 
 
+" @note please not serialize class which contain function,
+"       which will cause fail
 " Serialize back a obj type({}) from file
 " varname should be name of a global variable
-function! nelib#util#read_variable(varname, file)
-    let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
+function! nelib#util#read_variable(file)
+    let __func__ = "nelib#util#read_variable"
+    let result = {}
     try
-        let str_var = "let g:neobugger_tmp = " . readfile(a:file)[0]
-        silent! call s:log.info(__func__, "() execute=", str_var)
+        let str_var = "let result = " . readfile(a:file)[0]
         execute str_var
+        return result
     catch /.*/
-        echomsg string(g:neobugger_tmp)
-        silent! call s:log.info(__func__, "() var=". string(g:neobugger_tmp))
+        return result
     endtry
 endfunction
 

@@ -81,19 +81,18 @@ function! neobugger#break_item#_fill_detail(item, type, cmdtext)
 endfunction
 
 
-function! s:prototype.equal(item) dict
+function! neobugger#break_item#equal(old, new)
     let __func__ = "equal"
 
-    let that = a:item
-    if !(self.name ==# that.name)
-                \ || !(self.file ==# that.file)
-                \ || !(self.type ==# that.type)
-                \ || !(self.line ==# that.line)
-                \ || !(self.command ==# that.command)
-        silent! call s:log.info(__func__, '('. that.name. ') not equal')
+    if !(a:old.name ==# a:new.name)
+                \ || !(a:old.file ==# a:new.file)
+                \ || !(a:old.type ==# a:new.type)
+                \ || !(a:old.line ==# a:new.line)
+                \ || !(a:old.command ==# a:new.command)
+        silent! call s:log.info(__func__, '('. a:new.name. ') not equal')
         return 0
     endif
-    silent! call s:log.info(__func__, '('. that.name. ') equal')
+    silent! call s:log.info(__func__, '('. a:new.name. ') equal')
     return 1
 endfunction
 

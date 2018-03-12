@@ -36,17 +36,6 @@ function! neobugger#Model_break#New()
 endfunction
 
 
-function! s:prototype.ReadVariable(varname, file)
-    let __func__ = "ReadVariable"
-    try
-        let recover = readfile(a:file)[0]
-        execute "let ".a:varname." = " . recover
-    catch /.*/
-        silent! call s:log.info("Load breaks wilson: ", string(s:breakpoints))
-    endtry
-endfunction
-
-
 function! s:prototype.LoadFromFile(fBreakpoints) dict
     let __func__ = "LoadFromFile"
     silent! call s:log.info(__func__, "()")
@@ -56,10 +45,7 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
     endif
 
     if filereadable(s:save_break)
-         call self.ReadVariable("s:breakpoints", s:save_break)
-         "let s:breakpoints = deepcopy(g:neobugger_tmp)
-         "silent! call s:log.info("Load breaks wilson: ", string(s:breakpoints))
-         "let g:neobugger_tmp = {}
+        let s:breakpoints = nelib#util#read_variable(s:save_break)
     else
         silent! call s:log.warn(__func__, "('". s:save_break. "'): file not exits.")
         return
@@ -89,7 +75,7 @@ function! s:prototype.ToggleBreak() dict
 
     let mode = 0
     let oldItem = get(s:breakpoints, newItem.name, {})
-    if empty(oldItem) || !newItem.equal(oldItem)
+    if empty(oldItem) || !neobugger#break_item#equal(oldItem, newItem)
         let s:breakpoints[newItem.name] = newItem
         let newItem['update'] = 1
     else
