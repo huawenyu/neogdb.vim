@@ -50,13 +50,16 @@ function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
     let l:check_parse = 0
     let l:lines = readfile(a:srcfile)
     for l:line in l:lines
-        let matches = matchlist(l:line, '^\(\S\) = \(.*\)')
+        "echo matchlist('  str = 0x7fffffffda24 "hello world"', '^\(\S\+\) = \(.*\)')
+        let matches = matchlist(l:line, '^\(\S\+\) = \(.*\)')
+        "silent! call s:log.info(__func__, '(matches) '. string(matches))
         if len(matches) < 2
             continue
         endif
 
         let l:key = matches[1]
         let l:val = matches[2]
+        "silent! call s:log.info(__func__, '(before) '. l:key . ' = '. l:val)
         if match(l:val, '{') != -1
             continue
         elseif match(l:val, '<optimized out>') != -1
@@ -64,10 +67,11 @@ function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
         elseif match(l:key, '__FUNCTION__') != -1
             continue
         elseif match(l:val, '0x') != -1
+              \ && match(l:val, '0x.*".*"') == -1
             let l:check_parse = 1
         endif
 
-        "silent! call s:log.info(__func__, '() '. l:key . ' = '. l:val)
+        "silent! call s:log.info(__func__, '(after) '. l:key . ' = '. l:val)
         let self.vars[l:key] = l:val
     endfor
 
@@ -156,15 +160,16 @@ endfunction
 
 
 function! s:prototype.ParseVarEnd(srcfile) dict
-    let __func__ = "Model_Var.ParseVarEnd"
+    let __func__ = "ParseVarEnd"
 
     if !filereadable(a:srcfile)
         return -1
     endif
 
     " view2window
-    silent! call s:log.info(__func__, ' vars=', string(self.vars))
+    "silent! call s:log.info(__func__, ' vars=', string(self.vars))
     call self.ObserverUpdateAll("var")
+    call nelib#util#active_win_pop()
     return 0
 endfunction
 

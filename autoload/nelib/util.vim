@@ -50,18 +50,18 @@ function! nelib#util#read_variable(file)
 endfunction
 
 
-function! nelib#util#mark_active_win(var, file)
+function! nelib#util#active_win_push()
     let active = deepcopy(s:_active_info)
     let active.wid = win_getid()
-    add(s:_static_prototype, active)
+    call add(s:_static_prototype.stack, active)
 endfunction
 
 
-function! nelib#util#restore_active_win(var, file)
-    let old = s:_static_prototype[-1]
+function! nelib#util#active_win_pop()
+    let old = s:_static_prototype.stack[-1]
     call win_gotoid(old.wid)
     stopinsert
-    call remove(s:_static_prototype, -1)
+    call remove(s:_static_prototype.stack, -1)
 endfunction
 
 

@@ -83,7 +83,8 @@ if !exists("s:script")
     call add(s:initCmds, '  set logging on')
     call add(s:initCmds, '  bt')
     call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
+    " Interrupt trigger 'on_jump'
+    "call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
     call add(s:initCmds, 'end')
 
     call add(s:initCmds, 'define parser_var_bt')
@@ -100,7 +101,8 @@ if !exists("s:script")
     call add(s:initCmds, '  set logging on')
     call add(s:initCmds, '  info local')
     call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
+    " Interrupt trigger 'on_jump'
+    "call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
     call add(s:initCmds, 'end')
 
     call add(s:initCmds, 'define silent_on')
@@ -676,6 +678,8 @@ function! s:prototype.on_jump(file, line, ...) dict
     let __func__ = "gdb.on_jump"
     silent! call s:log.info(__func__, ' open ', a:file, ':', a:line)
 
+    call nelib#util#active_win_push()
+
     if self._win_gdb._state.name !=# "pause"
         silent! call s:log.info(gdb)
         silent! call s:log.info("State ", self._win_gdb._state.name, " => pause")
@@ -684,6 +688,7 @@ function! s:prototype.on_jump(file, line, ...) dict
         call self.Send('info line')
     endif
     call self.Jump(a:file, a:line)
+    call self.on_parseend()
 endfunction
 
 function! s:prototype.on_whatis(type, ...) dict
@@ -720,7 +725,7 @@ function! s:prototype.on_parseend(...) dict
 endfunction
 
 function! s:prototype.on_parse_vartype(...) dict
-    let __func__ = "on_parseend"
+    let __func__ = "on_parse_vartype"
 
     let modelVar = NbRuntimeGet('Model_var')
     if empty(modelVar)
@@ -728,7 +733,6 @@ function! s:prototype.on_parse_vartype(...) dict
         return
     endif
 
-    call nelib#util#mark_active_win()
     let ret = modelVar.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
     if ret == 0
         " succ, parse-finish
@@ -756,8 +760,8 @@ function! s:prototype.on_parse_varend(...) dict
     call modelVar.ParseVarEnd('/tmp/gdb.vars')
 
     " Trigger Jump
-    call self.Send('info line')
-    call nelib#util#restore_active_win()
+    "call self.Send('info line')
+    "call nelib#util#active_win_pop()
 endfunction
 
 function! s:prototype.on_parse_error(...) dict
@@ -812,7 +816,7 @@ endfunction
 
 
 function! s:prototype.on_initend(...) dict
-    let __func__ = "gdb.on_initend"
+    let __func__ = "on_initend"
     silent! call s:log.info(__func__, " args=", string(a:000))
 
     if has_key(self, 'Init')

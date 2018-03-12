@@ -33,7 +33,7 @@ endfunction
 "
 " @return current frame name
 function! s:prototype.ParseFrame(framefile) dict
-    let __func__ = "gdb.ParseFrame"
+    let __func__ = "ParseFrame"
     silent! call s:log.info(__func__, '()')
 
     let self.frames = []
@@ -74,7 +74,7 @@ function! s:prototype.ParseFrame(framefile) dict
                             \})
             endif
         endif
-        silent! call s:log.info(__func__, ' line=', l:line, ' matches=', string(matches))
+        "silent! call s:log.info(__func__, ' line=', l:line, ' matches=', string(matches))
     endfor
 
     " view2window

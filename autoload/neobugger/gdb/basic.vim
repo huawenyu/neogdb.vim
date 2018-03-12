@@ -133,12 +133,6 @@ function! neobugger#gdb#basic#Conf() abort
         \           "action":  "call",
         \           "arg0":    "on_parse_error",
         \       },
-        \       {   "match":   ['#neobug_tag_parseend#'],
-        \           "hint":    "gdb.ParseEnd",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_parseend",
-        \       },
         \   ],
         \   "gdbserver": [
         \       {   "match":   ['\vListening on port (\d+)'],

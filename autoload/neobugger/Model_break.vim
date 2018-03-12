@@ -66,7 +66,7 @@ function! s:prototype.ToggleBreak() dict
     let __func__ = "ToggleBreak"
     silent! call s:log.info(__func__, "()")
 
-    call nelib#util#mark_active_win()
+    call nelib#util#active_win_push()
     let newItem = neobugger#break_item#New('toggle', '')
     if empty(newItem)
         silent! call s:log.info(__func__, "() create a break_item fail")
@@ -94,7 +94,7 @@ function! s:prototype.ToggleBreak() dict
         endif
     endfor
 
-    call nelib#util#restore_active_win()
+    call nelib#util#active_win_pop()
 endfunction
 
 
