@@ -86,7 +86,7 @@ endfunction
 
 " Output format for Breakpoints Window
 function! s:prototype.Render() dict
-    let output = "Backtrace:\n"
+    let output = "Frames:\n"
     for frame in self.frames
         let l:file = tlib#file#Relative(frame.file, getcwd())
         let output .= '#'. frame.id. ' '. frame.func. '('. frame.param. ')  at '. l:file. ':'.frame.line. "\n"
