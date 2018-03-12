@@ -14,9 +14,8 @@ endif
 " Constructor
 function! neobugger#Model#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
-
-    let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    return l:model
+    let model = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    return model
 endfunction
 
 
@@ -38,7 +37,9 @@ function! s:prototype.ObserverRemove(name)
     let __func__ = 'ObserverRemove'
     silent! call s:log.info(__func__, '('.a:name.')')
 
-    unlet s:observers[a:name]
+    if has_key(s:observers, a:name)
+        unlet s:observers[a:name]
+    endif
 endfunction
 
 function! s:prototype.ObserverExist(name)

@@ -10,13 +10,13 @@ endif
 function! neobugger#View_var#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let view = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:title = NbConfGet(s:name, 'title')
-    let l:abstract = neobugger#View#New(s:name, l:title, {})
-    call l:view.Inherit(l:abstract)
+    let abstract = neobugger#View#New(s:name, l:title, {})
+    call view.Inherit(abstract)
 
-    call NbConfSet(s:name, 'this', l:view)
-    return l:view
+    call NbConfSet(s:name, 'this', view)
+    return view
 endfunction
 
 
@@ -26,11 +26,8 @@ function! s:prototype.bind_mappings()
 endfunction
 
 
-" Returns string that contains all variables (for Window.display())
-function! s:prototype.Render() dict
-    let variables = self.title . "\n"
-    let variables .= (g:RubyDebugger.variables == {} ? '' : g:RubyDebugger.variables.Render())
-    return variables
+function! s:prototype.UpdateVar(model) dict
+    call self.display(a:model.Render())
 endfunction
 
 

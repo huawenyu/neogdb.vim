@@ -3,24 +3,25 @@ if !exists("s:script")
     let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
     let s:prototype = tlib#Object#New({'_class': [s:name]})
+
+    let s:_Prototype = {
+          \ 'frame': '',
+          \ 'vars': {},
+          \ 'vars_last': {},
+          \}
 endif
 
 
 " Constructor
-function! neobugger#Model_var#New(viewer)
-    "{
+function! neobugger#Model_var#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:model.frame = ""
-    let l:model.vars = {}
-    let l:model.vars_last = {}
-    let l:model.viewer = a:viewer
-    let l:abstract = neobugger#Model#New()
-    call l:model.Inherit(l:abstract)
+    let model = s:prototype.New(deepcopy(s:_Prototype))
+    let abstract = neobugger#Model#New()
+    call model.Inherit(abstract)
 
-    return l:model
-    "}
+    call NbRuntimeSet(s:name, model)
+    return model
 endfunction
 
 
@@ -146,8 +147,8 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
     endif
 
     " view2window
-    silent! call s:log.info(__func__, ' vars=', string(self.vars))
-    call self.viewer.display(self.Render())
+    "silent! call s:log.info(__func__, ' vars=', string(self.vars))
+    call self.ObserverUpdateAll("var")
     return 0
 endfunction
 
@@ -161,7 +162,7 @@ function! s:prototype.ParseVarEnd(srcfile) dict
 
     " view2window
     silent! call s:log.info(__func__, ' vars=', string(self.vars))
-    call self.viewer.display(self.Render())
+    call self.ObserverUpdateAll("var")
     return 0
 endfunction
 

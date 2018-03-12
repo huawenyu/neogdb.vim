@@ -159,10 +159,10 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     endif
 
     let l:parent = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:abstract = neobugger#Debugger#New()
-    call l:parent.Inherit(l:abstract)
-    let l:abstract = neobugger#View#New('View_gdb', "instanceGDB", {'is_job': 1})
-    call l:parent.Inherit(l:abstract)
+    let abstract = neobugger#Debugger#New()
+    call l:parent.Inherit(abstract)
+    let abstract = neobugger#View#New('View_gdb', "instanceGDB", {'is_job': 1})
+    call l:parent.Inherit(abstract)
 
     if has_key(conf, 'Inherit')
         let l:ChildNew = function(conf.Inherit)
@@ -629,32 +629,20 @@ endfunction
 
 
 function! s:prototype.ToggleViewVar() dict
-    if (has_key(self, 'Model_var'))
-        unlet self['Model_var']
-    endif
+    call neobugger#Model_var#New()
+    call neobugger#Model_frame#New()
 
-    let l:view = neobugger#View#Toggle('View_var')
-    if !empty(l:view)
-        let self.Model_var = neobugger#Model_var#New(l:view)
-
-        " Get current frame
-        if !has_key(self, 'Model_frame')
-            if has_key(self, 'View_frame')
-                let self.Model_frame = neobugger#Model_frame#New(self.View_frame)
-            else
-                let self.Model_frame = neobugger#Model_frame#New()
-            endif
-        endif
-
-        " Trigger parse
+    let view = neobugger#View#Toggle('View_var')
+    " Trigger parse
+    if !empty(view)
         call self.on_parseend()
     endif
 endfunction
 
 
 function! s:prototype.ToggleViewFrame() dict
-    let l:view = neobugger#View#Toggle('View_frame')
-    if !empty(l:view)
+    let view = neobugger#View#Toggle('View_frame')
+    if !empty(view)
         if !has_key(self, 'Model_frame')
             let self.Model_frame = neobugger#Model_frame#New(self.View_frame)
         endif
@@ -703,21 +691,22 @@ endfunction
 function! s:prototype.on_parseend(...) dict
     let __func__ = "on_parseend"
 
-    " parser frame backtrace
-    if has_key(self, 'Model_frame')
-        let s:currFrame = self.Model_frame.ParseFrame('/tmp/gdb.frame')
+    let modelFrame = NbRuntimeGet('Model_frame')
+    if !empty(modelFrame)
+        let s:currFrame = modelFrame.ParseFrame('/tmp/gdb.frame')
         silent! call s:log.info(__func__, '(): currentFrame=', s:currFrame)
     endif
 
     " Start parser the info local variables
-    if neobugger#View#IsOpen('View_var')
+    let modelVar = NbRuntimeGet('Model_var')
+    if !empty(modelVar) && neobugger#View#IsOpen('View_var')
         call state#Switch('gdb', 'parsevar', 1)
-        let l:ret = self.Model_var.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
+        let l:ret = modelVar.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
         silent! call s:log.info(__func__, '(): ret=', l:ret)
         if l:ret == 0
             " succ, parse-finish
             call state#Switch('gdb', 'parsevar', 2)
-            call self.Model_var.ParseVarEnd('/tmp/gdb.var')
+            call modelVar.ParseVarEnd('/tmp/gdb.var')
         elseif l:ret == -1
             " file-not-exist
             call state#Switch('gdb', 'parsevar', 2)
@@ -729,11 +718,19 @@ function! s:prototype.on_parseend(...) dict
 endfunction
 
 function! s:prototype.on_parse_vartype(...) dict
-    let l:ret = self.Model_var.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
+    let __func__ = "on_parseend"
+
+    let modelVar = NbRuntimeGet('Model_var')
+    if empty(modelVar)
+        silent! call s:log.info(__func__, '(): no instance of Model_var')
+        return
+    endif
+
+    let l:ret = modelVar.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
     if l:ret == 0
         " succ, parse-finish
         call state#Switch('gdb', 'parsevar', 2)
-        call self.Model_var.ParseVarEnd('/tmp/gdb.var')
+        call modelVar.ParseVarEnd('/tmp/gdb.var')
     elseif l:ret == -1
         " file-not-exist
         call state#Switch('gdb', 'parsevar', 2)
@@ -744,8 +741,16 @@ function! s:prototype.on_parse_vartype(...) dict
 endfunction
 
 function! s:prototype.on_parse_varend(...) dict
+    let __func__ = "on_parse_varend"
+
     call state#Switch('gdb', 'parsevar', 2)
-    call self.Model_var.ParseVarEnd('/tmp/gdb.vars')
+    let modelVar = NbRuntimeGet('Model_var')
+    if empty(modelVar)
+        silent! call s:log.info(__func__, '(): no instance of Model_var')
+        return
+    endif
+
+    call modelVar.ParseVarEnd('/tmp/gdb.vars')
 
     " Trigger Jump
     call self.Send('info line')
@@ -789,7 +794,6 @@ function! s:prototype.on_init(...) dict
     call modelBreak.ObserverAppend('View_main', viewMain)
 
     call modelBreak.LoadFromFile('./.gdb.break')
-    call NbRuntimeSet('Model_break', modelBreak)
 
     call self.Send('echo #neobug_tag_initend#\n')
 endfunction

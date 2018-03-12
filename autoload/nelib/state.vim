@@ -214,27 +214,27 @@ function! nelib#state#CreateRuntime(scheme, config) abort
         try
             if matched[2] ==# 'call'
                 let scheme = g:state_ctx.scheme
-                let l:funcname = matched[3]
-                if has_key(scheme, l:funcname)
-                    let l:funcargs = []
-                    call add(l:funcargs, l:funcname)
-                    call extend(l:funcargs, a:000)
-                    silent! call s:log.info(__func__, "func=", l:funcname,
-                                \" args=", string(l:funcargs))
-                    call call(scheme[l:funcname], l:funcargs, scheme)
+                let funcname = matched[3]
+                if has_key(scheme, funcname)
+                    let funcargs = []
+                    call add(funcargs, funcname)
+                    call extend(funcargs, a:000)
+                    silent! call s:log.info(__func__, "func=", funcname,
+                                \" args=", string(funcargs))
+                    call call(scheme[funcname], funcargs, scheme)
                 else
                     silent! call s:log.info("Scheme '", scheme.name,
-                                \"' call function '", l:funcname, "' not exist")
+                                \"' call function '", funcname, "' not exist")
                 endif
             elseif matched[2] ==# 'send'
-                let str = call("printf", [l:funcname] + a:000)
+                let str = call("printf", [funcname] + a:000)
                 call jobsend(window._client_id, str."\<cr>")
             elseif matched[2] ==# 'switch'
-                call state#Switch(window._name, l:funcname, 0)
+                call state#Switch(window._name, funcname, 0)
             elseif matched[2] ==# 'push'
-                call state#Switch(window._name, l:funcname, 1)
+                call state#Switch(window._name, funcname, 1)
             elseif matched[2] ==# 'pop'
-                call state#Switch(window._name, l:funcname, 2)
+                call state#Switch(window._name, funcname, 2)
             endif
         catch
             silent! call s:log.info(matched, " trigger ", v:exception)

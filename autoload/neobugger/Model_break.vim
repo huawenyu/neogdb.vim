@@ -22,11 +22,12 @@ endif
 function! neobugger#Model_break#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let l:model = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:abstract = neobugger#Model#New()
-    call l:model.Inherit(l:abstract)
+    let model = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let abstract = neobugger#Model#New()
+    call model.Inherit(abstract)
 
-    return l:model
+    call NbRuntimeSet(s:name, model)
+    return model
 endfunction
 
 

@@ -79,8 +79,9 @@ endfunction
 
 " Close window
 function! s:prototype.close() dict
-    let __func__ = 'open'
+    let __func__ = 'close'
     silent! call s:log.info(__func__, '(', self.name, ')')
+
     if !self.is_open()
         throw s:script. ": Window " . self.name . " is not open"
     endif
@@ -235,6 +236,8 @@ function! s:prototype.Update(type, model) dict
         call self.UpdateBreak(a:model)
     elseif a:type ==# 'step'
         call self.UpdateStep(a:model)
+    elseif a:type ==# 'var'
+        call self.UpdateVar(a:model)
     elseif a:type ==# 'current'
         call self.UpdateCurrent(a:model)
     endif
@@ -256,6 +259,13 @@ endfunction
 
 
 function! s:prototype.UpdateCurrent(model) dict
+    let __func__ = 'UpdateCurrent'
+    silent! call s:log.info(__func__, ' view='. string(self))
+    throw s:script. ': '. self.name .' must implement '. __func__
+endfunction
+
+
+function! s:prototype.UpdateVar(model) dict
     let __func__ = 'UpdateCurrent'
     silent! call s:log.info(__func__, ' view='. string(self))
     throw s:script. ': '. self.name .' must implement '. __func__

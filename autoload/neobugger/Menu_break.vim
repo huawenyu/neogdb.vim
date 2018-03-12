@@ -11,8 +11,8 @@ function! neobugger#Menu_break#New(...)
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
     let menu = s:prototype.New(a:0 >= 1 ? a:1 : {})
-    let l:abstract = neobugger#Menu#New('Breakpoints')
-    call menu.Inherit(l:abstract)
+    let abstract = neobugger#Menu#New('Breakpoints')
+    call menu.Inherit(abstract)
 
     call menu.addMenuItem(neobugger#menu_item#New(
                 \{ 'text': '[t] toggle the breakpoint',

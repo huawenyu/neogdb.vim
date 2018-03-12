@@ -8,16 +8,15 @@ endif
 
 " Constructor
 function! neobugger#View_frame#New()
-    "{
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let l:view = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let view = s:prototype.New(a:0 >= 1 ? a:1 : {})
     let l:title = NbConfGet(s:name, 'title')
-    let l:abstract = neobugger#View#New(s:name, l:title, {})
-    call l:view.Inherit(l:abstract)
+    let abstract = neobugger#View#New(s:name, l:title, {})
+    call view.Inherit(abstract)
 
-    return l:view
-    "}
+    call NbConfSet(s:name, 'this', view)
+    return view
 endfunction
 
 
