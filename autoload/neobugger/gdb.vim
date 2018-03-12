@@ -728,12 +728,13 @@ function! s:prototype.on_parse_vartype(...) dict
         return
     endif
 
-    let l:ret = modelVar.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
-    if l:ret == 0
+    call nelib#util#mark_active_win()
+    let ret = modelVar.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
+    if ret == 0
         " succ, parse-finish
         call state#Switch('gdb', 'parsevar', 2)
         call modelVar.ParseVarEnd('/tmp/gdb.var')
-    elseif l:ret == -1
+    elseif ret == -1
         " file-not-exist
         call state#Switch('gdb', 'parsevar', 2)
     else
@@ -754,6 +755,15 @@ function! s:prototype.on_parse_varend(...) dict
 
     call modelVar.ParseVarEnd('/tmp/gdb.vars')
 
+    " Trigger Jump
+    call self.Send('info line')
+    call nelib#util#restore_active_win()
+endfunction
+
+function! s:prototype.on_parse_error(...) dict
+    let __func__ = "on_parse_error"
+
+    call state#Switch('gdb', 'parsevar', 2)
     " Trigger Jump
     call self.Send('info line')
 endfunction

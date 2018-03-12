@@ -50,26 +50,24 @@ function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
     let l:check_parse = 0
     let l:lines = readfile(a:srcfile)
     for l:line in l:lines
-        let matches = matchlist(l:line, '\(.*\) = \(.*\)')
+        let matches = matchlist(l:line, '^\(\S\) = \(.*\)')
         if len(matches) < 2
             continue
         endif
 
         let l:key = matches[1]
         let l:val = matches[2]
-        if match(l:val, '0x') != -1
+        if match(l:val, '{') != -1
+            continue
+        elseif match(l:val, '<optimized out>') != -1
+            continue
+        elseif match(l:key, '__FUNCTION__') != -1
+            continue
+        elseif match(l:val, '0x') != -1
             let l:check_parse = 1
         endif
 
-        if match(l:key, '__FUNCTION__') != -1
-            continue
-        endif
-
-        if match(l:val, '<optimized out>') != -1
-            continue
-        endif
-
-        "echomsg 'ParseVar '. l:key . ' = '. l:val
+        "silent! call s:log.info(__func__, '() '. l:key . ' = '. l:val)
         let self.vars[l:key] = l:val
     endfor
 

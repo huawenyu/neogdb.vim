@@ -4,20 +4,40 @@
 #include <stdio.h>
 #include <unistd.h> /* sleep() */
 
+struct cb_ops {
+	void (*cb)(int);
+};
+
+int bar(int a, int b)
+{
+	return a + b;
+}
+
+int foo(int a)
+{
+	int x = 11;
+	int y = 22;
+	char *str = "This is function 'foo'";
+
+	return bar(a, x + y);
+}
+
 int main(void)
 {
-	int count = 0;
-	int a;
+	int a = 3;
+	struct embedd {
+		struct ops *ops;
+	} cb;
+	int b = 6;
+	char *str = "Hello world";
 
-	while ((++count) <= 20) {
-		printf("pid=%d sleep(%d)\n", getpid(), count);
-		sleep(2);
-	}
+	a += 1;
+	b += 1;
+	cb.ops = 0;
 
-	a += 1;
-	a += 1;
-	a += 1;
-	a += 1;
+	a = foo(a);
+
+	printf("a=%d\n", a);
 	return 1;
 }
 

@@ -2,6 +2,14 @@ if !exists("s:script")
     let s:script = expand('<sfile>:t')
     let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
+
+    let s:_active_info = {
+          \ 'wid': -1,
+          \}
+
+    let s:_static_prototype = {
+          \ 'stack': [],
+          \}
 endif
 
 
@@ -40,4 +48,20 @@ function! nelib#util#read_variable(file)
         return result
     endtry
 endfunction
+
+
+function! nelib#util#mark_active_win(var, file)
+    let active = deepcopy(s:_active_info)
+    let active.wid = win_getid()
+    add(s:_static_prototype, active)
+endfunction
+
+
+function! nelib#util#restore_active_win(var, file)
+    let old = s:_static_prototype[-1]
+    call win_gotoid(old.wid)
+    stopinsert
+    call remove(s:_static_prototype, -1)
+endfunction
+
 

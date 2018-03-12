@@ -127,6 +127,18 @@ function! neobugger#gdb#basic#Conf() abort
         \           "action":  "call",
         \           "arg0":    "on_parse_varend",
         \       },
+        \       {   "match":   ['Error in sourced command file', ],
+        \           "hint":    "Parse var data error",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parse_error",
+        \       },
+        \       {   "match":   ['#neobug_tag_parseend#'],
+        \           "hint":    "gdb.ParseEnd",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parseend",
+        \       },
         \   ],
         \   "gdbserver": [
         \       {   "match":   ['\vListening on port (\d+)'],
@@ -186,6 +198,11 @@ function! neobugger#gdb#basic#Conf() abort
     endfunction
 
     function this.on_parse_varend(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
+    function this.on_parse_error(funcname, ...)
         silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
         call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction
