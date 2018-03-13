@@ -156,33 +156,29 @@ function! nelib#state#CreateRuntime(scheme, config) abort
             let cmdstr = conf_win.cmd[1]
         endif
 
-        " layout
-        let viewGdb = NbConfGet('View_gdb', 'this')
-        if !empty(viewGdb)
+        " window as view
+        let viewName = conf_win.view
+        let view = NbConfGet(viewName, 'this')
+        if empty(view)
+            let view = neobugger#View#New(viewName, "instanceOf".viewName, {'is_job': 1})
+            call NbConfSet(viewName, 'this', view)
+        endif
+        if !empty(view)
             silent! call s:log.info(__func__, " termopen:", cmdstr)
 
-            call viewGdb.open()
+            call view.open()
             let window._wid = win_getid()
             enew | let window._client_id = termopen(cmdstr, target)
             let window._bufnr = bufnr('%')
-            let status = NbConfGet(conf_win.view, 'status')
-            if empty(status)
-                call viewGdb.close()
+            let confStatus = NbConfGet(viewName, 'status')
+            if empty(confStatus)
+                call view.close()
             else
                 " Scroll to the end of terminal output
                 normal G
             endif
-        else
-            throw printf("%s: instance of 'View_gdb' not exist"
-                        \ , __func__)
         endif
     endfor
-
-    "let viewGdb = NbConfGet('View_gdb', 'wid')
-    "if win_gotoid(viewGdb) == 1
-    "    silent! call s:log.info("Backto 'gdb' window-id=", viewGdb)
-    "    exec 'buffer '. NbConfGet('View_gdb', 'bufnr')
-    "endif
 
     " Backto main windows
     if win_gotoid(ctx._wid_main) == 1

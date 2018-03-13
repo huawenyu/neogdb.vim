@@ -294,10 +294,15 @@ function! s:prototype._render2sign(options) dict
     for [next_key, next_val] in items(s:breakpoints)
         try
             let buf = bufnr(next_val['file'])
+            if buf == -1
+                exec 'e '.next_val['file']
+            endif
+            let buf = bufnr(next_val['file'])
             let linenr = next_val['line']
             let next_val['sign_id'] = 0
 
             let state = next_val['state'] % 3
+            "silent! call s:log.info(__func__, "() buf=". buf. ' linenr='. linenr. ' state='.state)
             if state == 0
                 exe 'sign place '.id.' name=GdbBreakpointEn line='.linenr.' buffer='.buf
             elseif state == 1

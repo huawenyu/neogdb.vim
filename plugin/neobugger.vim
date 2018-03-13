@@ -18,22 +18,6 @@ let g:neobugger_tmp = {}
 "   - The 'bufnr', 'wid' is runtime value,
 "   - 'gdb' is the InstanceGdb
 let s:neobugger_conf = {
-            \'gdb': {'status': 1, 'title': "InstanceGdb",
-            \       'layout': [],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'observe': [],
-            \       'this': {},
-            \       },
-            \'gdbserver': {'status': 1, 'title': "GdbServer",
-            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
-            \       'bufnr': -1,
-            \       'wid': -1,
-            \       'observe': [],
-            \       'this': {},
-            \       },
-            \
-            \
             \'View_main': {'status': 1, 'title': "Main",
             \       'layout': ['tabnew', 'silent! b1', 'silent! ball 1'],
             \       'bufnr': -1,
@@ -48,6 +32,15 @@ let s:neobugger_conf = {
             \       'observe': [],
             \       'this': {},
             \       },
+            \'View_server': {'status': 1, 'title': "WindowOfGdbServer",
+            \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
+            \       'bufnr': -1,
+            \       'wid': -1,
+            \       'observe': [],
+            \       'this': {},
+            \       },
+            \
+            \
             \'View_var': {'status': 1, 'title': "Variable",
             \       'layout': ['wincmd l', 'wincmd j', 'wincmd j', 'wincmd j', 'rightbelow new'],
             \       'bufnr': -1,

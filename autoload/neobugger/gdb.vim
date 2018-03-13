@@ -283,25 +283,25 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     endif
 
     " Create quickfix: lgetfile, cgetfile
-    if gdb._showbacktrace && win_gotoid(g:state_ctx._wid_main) == 1
-        if !filereadable(gdb._gdb_bt_qf)
-            exec "silent! vimgrep " . cword ." ". expand("%")
-        else
-            "exec "silent cgetfile " . gdb._gdb_bt_qf
-        endif
-        silent! copen
-        let gdb._win_qf = win_getid()
-    endif
+    "if gdb._showbacktrace && win_gotoid(g:state_ctx._wid_main) == 1
+    "    if !filereadable(gdb._gdb_bt_qf)
+    "        exec "silent! vimgrep " . cword ." ". expand("%")
+    "    else
+    "        exec "silent cgetfile " . gdb._gdb_bt_qf
+    "    endif
+    "    silent! copen
+    "    let gdb._win_qf = win_getid()
+    "endif
 
-    if gdb._showbreakpoint && win_gotoid(g:state_ctx._wid_main) == 1
-        if !filereadable(gdb._gdb_break_qf)
-            exec "silent! lvimgrep " . cword ." ". expand("%")
-        else
-            exec "silent lgetfile " . gdb._gdb_break_qf
-        endif
-        silent! lopen
-        let gdb._win_lqf = win_getid()
-    endif
+    "if gdb._showbreakpoint && win_gotoid(g:state_ctx._wid_main) == 1
+    "    if !filereadable(gdb._gdb_break_qf)
+    "        exec "silent! lvimgrep " . cword ." ". expand("%")
+    "    else
+    "        exec "silent lgetfile " . gdb._gdb_break_qf
+    "    endif
+    "    silent! lopen
+    "    let gdb._win_lqf = win_getid()
+    "endif
 
     " Create gdb terminal
     if win_gotoid(gdb._win_gdb._wid) == 1
