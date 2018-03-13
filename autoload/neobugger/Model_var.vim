@@ -4,6 +4,7 @@ if !exists("s:script")
     silent! let s:log = logger#getLogger(s:script)
     let s:prototype = tlib#Object#New({'_class': [s:name]})
 
+    let s:indent = -1
     let s:_Prototype = {
           \ 'frame': '',
           \ 'vars': {},
@@ -33,8 +34,8 @@ endfunction
 "          0 succ
 "          1 wait 'end'
 function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
-    let __func__ = "Model_Var.ParseVar"
-    silent! call s:log.info(__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
+    let __func__ = "ParseVar"
+    "silent! call s:log.info(__func__, '() frame=', a:frame, ' src=', a:srcfile, ' dst=', a:dstfile)
 
     if self.frame == a:frame
         let self.vars_last = deepcopy(self.vars)
@@ -76,6 +77,10 @@ function! s:prototype.ParseVar(frame, srcfile, dstfile) dict
     endfor
 
     if !l:check_parse
+                \ || !exists("g:neogdb_vars")
+                \ || empty(g:neogdb_vars)
+                \ || type(g:neogdb_vars) != type({})
+        call self.ObserverUpdateAll("var")
         return 0
     endif
 
@@ -103,15 +108,20 @@ endfunction
 "          0 succ
 "          1 wait 'end'
 function! s:prototype.ParseVarType(srcfile, dstfile) dict
-    let __func__ = "Model_Var.ParseVarEnd"
+    let __func__ = "ParseVarType"
+    "silent! call s:log.info(__func__, '() src=', a:srcfile, ' dst=', a:dstfile)
 
+    if exists("g:neogdb_vars") && type(g:neogdb_vars) == type({})
+    else
+        return -1
+    endif
     if !filereadable(a:srcfile)
         return -1
     endif
     let l:lines = readfile(a:srcfile)
 
     let next_is_key = 1
-    let l:ParseVarValue = []
+    let customVars = []
     for l:line in l:lines
         if next_is_key
             let next_is_key = 0
@@ -119,7 +129,7 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
             let matches = matchlist(l:line, 'whatis \(.*\)')
             "silent! call s:log.info(__func__, ' line=', l:line, ' key=', string(matches))
             if len(matches) > 0 && !empty(matches[1])
-                let l:key = matches[1]
+                let memberName = matches[1]
             endif
         else
             let next_is_key = 1
@@ -127,28 +137,45 @@ function! s:prototype.ParseVarType(srcfile, dstfile) dict
             let matches = matchlist(l:line, 'type = \(.*\)')
             "silent! call s:log.info(__func__, ' line=', l:line, ' val=', string(matches))
             if len(matches) > 0 && !empty(matches[1])
-                let l:val = matches[1]
-                if has_key(self.vars, l:key)
+                let memberTypeName = matches[1]
+                if has_key(self.vars, memberName)
                     let l:cmdstr = ''
                     " Write command backto /tmp/gdb.cmd
-                    if exists("*NeogdbvimVarCallback")
-                        let l:plist = NeogdbvimVarCallback(l:key, l:val)
-                        if !empty(l:plist)
-                            let l:varname = printf('ValueOf %s', l:key)
-                            call add(l:ParseVarValue, "echo ". l:varname. '\n')
-
-                            for l:print in l:plist
-                                call add(l:ParseVarValue, l:print)
-                            endfor
+                    " Customize var detail
+                    let listPrint = []
+                    let listInfo = []
+                    if has_key(g:neogdb_vars, memberTypeName)
+                        let l:attrs = get(g:neogdb_vars, memberTypeName, [])
+                        if type(l:attrs) != type([])
+                            continue
                         endif
+
+                        for l:attr in l:attrs
+                            let l:print = substitute(l:attr, '{}', memberName, "g")
+                            let l:info = substitute(l:attr, '{}', '', "g")
+                            call add(listPrint, l:print)
+                            call add(listInfo, l:info)
+                        endfor
+                    endif
+
+                    let iMax = len(listPrint)
+                    if iMax > 0
+                        call add(customVars, printf('echo ValueOf %s\n', memberName))
+
+                        let i = 0
+                        while i < iMax
+                            call add(customVars, printf('echo MemberIs %s\n', listInfo[i]))
+                            call add(customVars, 'p '. listPrint[i])
+                            let i += 1
+                        endwhile
                     endif
                 endif
             endif
         endif
     endfor
 
-    if !empty(l:ParseVarValue)
-        call writefile(l:ParseVarValue, a:dstfile)
+    if !empty(customVars)
+        call writefile(customVars, a:dstfile)
         return 1
     endif
 
@@ -161,9 +188,70 @@ endfunction
 
 function! s:prototype.ParseVarEnd(srcfile) dict
     let __func__ = "ParseVarEnd"
+    silent! call s:log.info(__func__, '() src=', a:srcfile)
 
     if !filereadable(a:srcfile)
         return -1
+    endif
+    let l:lines = readfile(a:srcfile)
+
+    let next_is_key = 1
+    let varName = ''
+    let memberName = ''
+    let child = {}
+    for l:line in l:lines
+        let matches = matchlist(l:line, '^ValueOf \(.*\)')
+        "silent! call s:log.info(__func__, ' line=', l:line, ' key=', string(matches))
+        if len(matches) > 0 && !empty(matches[1])
+            if !empty(varName) && !empty(child)
+                if has_key(self.vars, varName)
+                    let child['s:pointer'] = self.vars[varName]
+                    let self.vars[varName] = child
+                endif
+            endif
+
+            let varName = matches[1]
+            let memberName = ''
+            let child = {}
+            continue
+        else
+            let matches = matchlist(l:line, '^MemberIs \(.*\)')
+            if len(matches) > 0 && !empty(matches[1])
+                let memberName = matches[1]
+                continue
+            else
+                " Show error in vars
+                "echo matchlist('$15 = 0x5f6775626f656e23 <error: Cannot access', '$\d\+ = \(.*\) <error: \(.*\)')
+                "let matches = matchlist(l:line, '^ <error: \(.*\)')
+                if len(matches) > 0 && !empty(matches[1])
+                    let memberName = ''
+                    continue
+                else
+                    "echo matchlist('$16 = 1600610676', '$\d\+ = \(.*\)')
+                    let matches = matchlist(l:line, '$\d\+ = \(.*\)')
+                    "silent! call s:log.info(__func__, ' line=', l:line, ' val=', string(matches))
+                    if len(matches) > 0 && !empty(matches[1])
+                        let memberVal = matches[1]
+
+                        if empty(memberName)
+                            continue
+                        else
+                            let child[memberName] = memberVal
+                        endif
+                    else
+                        let memberName = ''
+                        continue
+                    endif
+                endif
+            endif
+        endif
+    endfor
+
+    if !empty(varName) && !empty(child)
+        if has_key(self.vars, varName)
+            let child['s:pointer'] = self.vars[varName]
+            let self.vars[varName] = child
+        endif
     endif
 
     " view2window
@@ -189,19 +277,54 @@ function! s:prototype.get_selected() dict
 endfunction
 
 
-" @todo wilson: Forward the changed item
-" Output format for Breakpoints Window
-function! s:prototype.Render() dict
-    let output = "Variables:\n"
-    for [name, data] in items(self.vars)
-        if has_key(self.vars_last, name)
-                    \ && self.vars_last[name] != data
-            let output .= name. ': {'. data. "} <- {". self.vars_last[name]. "}\n"
-        else
-            let output .= name. ': {'. data. "}\n"
+function! s:prototype._render(dir, output) dict
+    let s:indent += 1
+    for [name, data] in items(a:dir)
+        if name ==# 's:pointer'
+            continue
+        "elseif data =~ '<error: '
+        "    continue
+        elseif type(data) == type('')
+            let got = 0
+            if has_key(self.vars_last, name)
+                let old = self.vars_last[name]
+                if type(old) == type('') && old != data
+                    let got = 1
+                    call add(a:output,
+                                \ printf("%*s%s: {%s} <= {%s}",
+                                \ s:indent * 3, ' ',
+                                \ name, data,
+                                \ self.vars_last[name]))
+                endif
+            endif
+
+            if !got
+                call add(a:output,
+                            \ printf("%*s%s: {%s}",
+                            \ s:indent * 3, ' ',
+                            \ name, data))
+            endif
+        elseif type(data) == type({})
+            if has_key(data, 's:pointer')
+                let str_data = data['s:pointer']
+                call add(a:output,
+                            \ printf("%*s%s: {%s}",
+                            \ s:indent * 3, ' ',
+                            \ name, str_data))
+            endif
+            call self._render(data, a:output)
         endif
     endfor
-    return output
+endfunction
+
+
+" @todo wilson: Forward the changed item
+" Output format for Breakpoints Window
+function! s:prototype.Render(...) dict
+    let s:indent = -1
+    let output = ["Variables:"]
+    call self._render(self.vars, output)
+    return join(output, "\n")
 endfunction
 
 

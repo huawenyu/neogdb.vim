@@ -111,7 +111,7 @@ endfunction
 " Display data to the window
 function! s:prototype.display(data) dict
     let __func__ = 'display'
-    silent! call s:log.info(__func__, '(', self.name, ')')
+    "silent! call s:log.info(__func__, '(', self.name, ')')
     call self.focus()
     setlocal modifiable
 
@@ -125,13 +125,13 @@ function! s:prototype.display(data) dict
     call self._restore_view(top_line, current_line, current_column)
 
     setlocal nomodifiable
-    call s:log.info("Complete displaying data in window with name: " . self.name)
+    "call s:log.info("Complete displaying data in window with name: " . self.name)
 endfunction
 
 
 function! s:prototype.focus() dict
     let __func__ = 'focus'
-    silent! call s:log.info(__func__, '(', self.name, ')')
+    "silent! call s:log.info(__func__, '(', self.name, ')')
     call win_gotoid(self.wid)
 endfunction
 
@@ -300,7 +300,7 @@ function! s:prototype._insert_data(data) dict
     let @p = a:data
     silent exe "normal \"pP"
     let @p = old_p
-    call s:log.info("Inserted data to window with name: " . self.name)
+    "call s:log.info("Inserted data to window with name: " . self.name)
 endfunction
 
 
@@ -320,7 +320,7 @@ function! s:prototype._restore_view(top_line, current_line, current_column) dict
     normal! zt
     call cursor(a:current_line, a:current_column)
     let &scrolloff = old_scrolloff
-    call s:log.info("Restored view of window with name: " . self.name)
+    "call s:log.info("Restored view of window with name: " . self.name)
 endfunction
 
 

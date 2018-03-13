@@ -99,6 +99,7 @@ if !exists("s:script")
     call add(s:initCmds, '  set logging overwrite on')
     call add(s:initCmds, '  set logging redirect on')
     call add(s:initCmds, '  set logging on')
+    call add(s:initCmds, '  info args')
     call add(s:initCmds, '  info local')
     call add(s:initCmds, '  set logging off')
     " Interrupt trigger 'on_jump'
@@ -713,7 +714,6 @@ function! s:prototype.on_parseend(...) dict
         if l:ret == 0
             " succ, parse-finish
             call state#Switch('gdb', 'parsevar', 2)
-            call modelVar.ParseVarEnd('/tmp/gdb.var')
         elseif l:ret == -1
             " file-not-exist
             call state#Switch('gdb', 'parsevar', 2)
