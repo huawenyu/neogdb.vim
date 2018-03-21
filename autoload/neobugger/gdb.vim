@@ -377,7 +377,7 @@ function! s:prototype.Attach() dict
     if !empty(self._server_addr)
         call self.Send(printf('target remote %s',
                     \join(self._server_addr, ":")))
-        call state#Switch('gdb', 'remoteconn', 0)
+        call state#Switch('gdb', 'pause', 0)
     endif
 endfunction
 
