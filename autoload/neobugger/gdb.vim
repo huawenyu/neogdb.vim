@@ -118,6 +118,13 @@ if !exists("s:script")
     call add(s:initCmds, '    set logging off')
     call add(s:initCmds, 'end')
 
+    call add(s:initCmds, 'define skipme')
+    call add(s:initCmds, '    silent_on')
+    call add(s:initCmds, '    tbreak +1')
+    call add(s:initCmds, '    jump +1')
+    call add(s:initCmds, '    silent_off')
+    call add(s:initCmds, 'end')
+
     call add(s:initCmds, 'define hook-stop')
     call add(s:initCmds, '    handle SIGALRM nopass')
     call add(s:initCmds, '    parser_var_bt')
@@ -566,6 +573,10 @@ function! s:prototype.Step() dict
     call self.Send("s")
 endfunction
 
+function! s:prototype.Skip() dict
+    call self.Send("skipme")
+endfunction
+
 function! s:prototype.Eval(expr) dict
     if !neobugger#Exists(s:name)
         throw 'Gdb is not running'
@@ -903,6 +914,7 @@ function! s:prototype.Map(type) dict
         exe 'unmap ' . g:gdb_keymap_clear_break
         exe 'unmap ' . g:gdb_keymap_debug_stop
         exe 'unmap ' . g:gdb_keymap_until
+        exe 'unmap ' . g:gdb_keymap_skip
         exe 'unmap ' . g:gdb_keymap_toggle_break
         exe 'unmap ' . g:gdb_keymap_toggle_break_all
         exe 'vunmap ' . g:gdb_keymap_toggle_break
@@ -914,6 +926,7 @@ function! s:prototype.Map(type) dict
         exe 'tunmap ' . g:gdb_keymap_next
         exe 'tunmap ' . g:gdb_keymap_step
         exe 'tunmap ' . g:gdb_keymap_finish
+        exe 'tunmap ' . g:gdb_keymap_skip
         exe 'tunmap ' . g:gdb_keymap_toggle_break_all
 
         if exists("*NeogdbvimUnmapCallback")
@@ -925,6 +938,7 @@ function! s:prototype.Map(type) dict
         exe 'tnoremap <silent> ' . g:gdb_keymap_next . ' <c-\><c-n>:GdbNext<cr>i'
         exe 'tnoremap <silent> ' . g:gdb_keymap_step . ' <c-\><c-n>:GdbStep<cr>i'
         exe 'tnoremap <silent> ' . g:gdb_keymap_finish . ' <c-\><c-n>:GdbFinish<cr>i'
+        exe 'tnoremap <silent> ' . g:gdb_keymap_skip . ' <c-\><c-n>:GdbSkip<cr>i'
         exe 'tnoremap <silent> ' . g:gdb_keymap_toggle_break_all . ' <c-\><c-n>:GdbToggleBreakAll<cr>i'
     elseif a:type ==# "nmap"
         exe 'nnoremap <silent> ' . g:gdb_keymap_refresh . ' :GdbRefresh<cr>'
@@ -933,6 +947,7 @@ function! s:prototype.Map(type) dict
         exe 'nnoremap <silent> ' . g:gdb_keymap_step . ' :GdbStep<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_finish . ' :GdbFinish<cr>'
         exe 'nnoremap <silent> ' . g:gdb_keymap_until . ' :GdbUntil<cr>'
+        exe 'nnoremap <silent> ' . g:gdb_keymap_skip . ' :GdbSkip<cr>'
 
         " @todo wilson: If showMenu, consider the default menu choose
         let toggle_break_binding = 'nnoremap <silent> ' . g:gdb_keymap_toggle_break . ' :GdbToggleBreak<cr>'

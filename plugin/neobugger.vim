@@ -97,6 +97,7 @@ command! -nargs=0 GdbStep call neobugger#Handle('current', 'Step')
 command! -nargs=0 GdbFinish call neobugger#Handle('current', 'Send', "finish")
 "command! -nargs=0 GdbUntil call neobugger#Handle('current', 'Send', "until ". line('.'))
 command! -nargs=0 GdbUntil call neobugger#Handle('current', 'TBreak')
+command! -nargs=0 GdbSkip call neobugger#Handle('current', 'Skip')
 command! -nargs=0 GdbFrameUp call neobugger#Handle('current', 'FrameUp')
 command! -nargs=0 GdbFrameDown call neobugger#Handle('current', 'FrameDown')
 command! -nargs=0 GdbInterrupt call neobugger#Handle('current', 'Interrupt')
@@ -121,6 +122,7 @@ if exists('g:neobugger_leader') && !empty(g:neobugger_leader)
         let g:gdb_keymap_continue = g:neobugger_leader.'c'
         let g:gdb_keymap_next = g:neobugger_leader.'n'
         let g:gdb_keymap_step = g:neobugger_leader.'i'
+        let g:gdb_keymap_skip = g:neobugger_leader.'s'
         let g:gdb_keymap_finish = g:neobugger_leader.'N'
         let g:gdb_keymap_until = g:neobugger_leader.'t'
         let g:gdb_keymap_toggle_break = g:neobugger_leader.'b'
@@ -136,7 +138,10 @@ if exists('g:neobugger_leader') && !empty(g:neobugger_leader)
         let g:gdb_keymap_view_frame = g:neobugger_leader.'vf'
 else
     if !exists("g:gdb_keymap_refresh")
-        let g:gdb_keymap_refresh = '<f3>'
+        let g:gdb_keymap_refresh = '<f1>'
+    endif
+    if !exists("g:gdb_keymap_skip")
+        let g:gdb_keymap_skip = '<f3>'
     endif
     if !exists("g:gdb_keymap_continue")
         let g:gdb_keymap_continue = '<f4>'
