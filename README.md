@@ -1,6 +1,6 @@
 # What's new
 
-## UI
+## UI: Using MVC pattern
   - [o] Support new View: local-variable, backtrace, register
   - [o] Support new Menu: start, breakpoint
     - [ ] Menu support default which come from last time choice
