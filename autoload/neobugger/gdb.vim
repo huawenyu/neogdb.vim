@@ -13,6 +13,7 @@ if !exists("s:script")
     set errorformat+=#%c\ \ %m\ \(%.%#\)\ at\ %f:%l
 
     let s:gdb_init = '/tmp/gdb.init'
+    let s:gdb_parser = '/tmp/gdb-parser.py'
     let s:qf_gdb_frame = '/tmp/gdb.frame'
     let s:qf_gdb_break = '/tmp/gdb.breaks'
     let s:gdb_break = '/tmp/gdb.break'
@@ -32,79 +33,6 @@ if !exists("s:script")
     call add(s:initCmds, 'set print pretty on')
     call add(s:initCmds, 'set print array off')
     call add(s:initCmds, 'set print array-indexes on')
-
-    " @param logfile, echomsg, commands
-    call add(s:initCmds, 'define neobug_redir_cmd')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  set logging file $arg0')
-    call add(s:initCmds, '  set logging overwrite on')
-    call add(s:initCmds, '  set logging redirect on')
-    call add(s:initCmds, '  set logging on')
-    call add(s:initCmds, '  if $argc == 3')
-    call add(s:initCmds, '      $arg2')
-    call add(s:initCmds, '  end')
-    call add(s:initCmds, '  if $argc == 4')
-    call add(s:initCmds, '      $arg2 $arg3')
-    call add(s:initCmds, '  end')
-    call add(s:initCmds, '  if $argc == 5')
-    call add(s:initCmds, '      $arg2 $arg3 $arg4')
-    call add(s:initCmds, '  end')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  if $arg1 != 0')
-    call add(s:initCmds, '    echo $arg1\n')
-    call add(s:initCmds, '  end')
-    call add(s:initCmds, 'end')
-
-    " @param logfile, commands
-    " if @param == 0, means NULL
-    call add(s:initCmds, 'define neobug_redir')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  set logging file $arg0')
-    call add(s:initCmds, '  set logging overwrite on')
-    call add(s:initCmds, '  set logging redirect on')
-    call add(s:initCmds, '  set logging on')
-    call add(s:initCmds, '  if $arg1 != 0')
-    call add(s:initCmds, '    $arg1')
-    call add(s:initCmds, '  end')
-    call add(s:initCmds, 'end')
-
-    call add(s:initCmds, 'define neobug_redirend')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  if $arg0 != 0')
-    call add(s:initCmds, '    echo $arg0\n')
-    call add(s:initCmds, '  end')
-    call add(s:initCmds, 'end')
-
-    call add(s:initCmds, 'define parser_bt')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  set logging file /tmp/gdb.frame')
-    call add(s:initCmds, '  set logging overwrite on')
-    call add(s:initCmds, '  set logging redirect on')
-    call add(s:initCmds, '  set logging on')
-    call add(s:initCmds, '  bt')
-    call add(s:initCmds, '  set logging off')
-    " Interrupt trigger 'on_jump'
-    "call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
-    call add(s:initCmds, 'end')
-
-    call add(s:initCmds, 'define parser_var_bt')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  set logging file /tmp/gdb.frame')
-    call add(s:initCmds, '  set logging overwrite on')
-    call add(s:initCmds, '  set logging redirect on')
-    call add(s:initCmds, '  set logging on')
-    call add(s:initCmds, '  bt')
-    call add(s:initCmds, '  set logging off')
-    call add(s:initCmds, '  set logging file /tmp/gdb.var')
-    call add(s:initCmds, '  set logging overwrite on')
-    call add(s:initCmds, '  set logging redirect on')
-    call add(s:initCmds, '  set logging on')
-    call add(s:initCmds, '  info args')
-    call add(s:initCmds, '  info local')
-    call add(s:initCmds, '  set logging off')
-    " Interrupt trigger 'on_jump'
-    "call add(s:initCmds, '  echo #neobug_tag_parseend#\n')
-    call add(s:initCmds, 'end')
 
     call add(s:initCmds, 'define silent_on')
     call add(s:initCmds, '  set logging off')
@@ -127,7 +55,6 @@ if !exists("s:script")
 
     call add(s:initCmds, 'define hook-stop')
     call add(s:initCmds, '    handle SIGALRM nopass')
-    call add(s:initCmds, '    parser_var_bt')
     call add(s:initCmds, 'end')
     call add(s:initCmds, 'define hook-run')
     call add(s:initCmds, '    handle SIGALRM pass')
@@ -420,21 +347,6 @@ function! s:prototype.Jump(file, line) dict
         silent! call s:log.error("Jump File not exist: " . file)
     endif
 
-
-    " Method-1: Using ansync job to parse response
-    "if filereadable(s:qf_gdb_frame)
-    "    call delete(s:qf_gdb_frame)
-    "endif
-    "call self.Send('parser_bt')
-    "call self.SendJob("for x in {1..15}; do if [ ! -f /tmp/gdb.frame ]; then sleep 0.2; else  echo 'jobDoneLoadBacktrace'; break; fi; done")
-
-    "" Method-2: Using syncronize to parse response
-    if self._showbacktrace && filereadable(s:qf_gdb_frame)
-        exec "cgetfile " . s:qf_gdb_frame
-        call delete(s:qf_gdb_frame)
-    endif
-
-
     let cwindow = win_getid()
     if cwindow != g:state_ctx._wid_main
         if win_gotoid(g:state_ctx._wid_main) != 1
@@ -644,24 +556,13 @@ endfunction
 
 function! s:prototype.ToggleViewVar() dict
     call neobugger#Model_var#New()
-    call neobugger#Model_frame#New()
-
     let view = neobugger#View#Toggle('View_var')
-    " Trigger parse
-    if !empty(view)
-        call self.on_parseend()
-    endif
 endfunction
 
 
 function! s:prototype.ToggleViewFrame() dict
     call neobugger#Model_frame#New()
     let view = neobugger#View#Toggle('View_frame')
-
-    " Trigger parse
-    if !empty(view)
-        call self.on_parseend()
-    endif
 endfunction
 
 
@@ -686,9 +587,10 @@ function! s:prototype.on_continue(...) dict
     call self.Update_current_line_sign(0)
 endfunction
 
+" @todo wilson: remove this function
 function! s:prototype.on_jump(file, line, ...) dict
     let __func__ = "gdb.on_jump"
-    silent! call s:log.info(__func__, ' open ', a:file, ':', a:line)
+    silent! call s:log.info(__func__, '(', a:file, ':', a:line, ')')
 
     call nelib#util#active_win_push()
 
@@ -696,91 +598,12 @@ function! s:prototype.on_jump(file, line, ...) dict
         silent! call s:log.info(gdb)
         silent! call s:log.info("State ", self._win_gdb._state.name, " => pause")
         call state#Switch('gdb', 'pause', 0)
-        call self.Send('parser_var_bt')
-        call self.Send('info line')
     endif
     call self.Jump(a:file, a:line)
-    call self.on_parseend()
 endfunction
 
 function! s:prototype.on_whatis(type, ...) dict
     call self.Whatis(a:type)
-endfunction
-
-function! s:prototype.on_parseend(...) dict
-    let __func__ = "on_parseend"
-
-    let modelFrame = NbRuntimeGet('Model_frame')
-    if !empty(modelFrame)
-        let s:currFrame = modelFrame.ParseFrame('/tmp/gdb.frame')
-        silent! call s:log.info(__func__, '(): currentFrame=', s:currFrame)
-    endif
-
-    " Start parser the info local variables
-    let modelVar = NbRuntimeGet('Model_var')
-    if !empty(modelVar) && neobugger#View#IsOpen('View_var')
-        call state#Switch('gdb', 'parsevar', 1)
-        let l:ret = modelVar.ParseVar(s:currFrame, '/tmp/gdb.var', '/tmp/gdb.cmd')
-        silent! call s:log.info(__func__, '(): ret=', l:ret)
-        if l:ret == 0
-            " succ, parse-finish
-            call state#Switch('gdb', 'parsevar', 2)
-        elseif l:ret == -1
-            " file-not-exist
-            call state#Switch('gdb', 'parsevar', 2)
-        else
-            " succ & wait end
-            call self.Send('neobug_redir_cmd /tmp/gdb.var_type "#neobug_tag_var_type#" source /tmp/gdb.cmd')
-        endif
-    endif
-endfunction
-
-function! s:prototype.on_parse_vartype(...) dict
-    let __func__ = "on_parse_vartype"
-
-    let modelVar = NbRuntimeGet('Model_var')
-    if empty(modelVar)
-        silent! call s:log.info(__func__, '(): no instance of Model_var')
-        return
-    endif
-
-    let ret = modelVar.ParseVarType('/tmp/gdb.var_type', '/tmp/gdb.cmd')
-    if ret == 0
-        " succ, parse-finish
-        call state#Switch('gdb', 'parsevar', 2)
-        call modelVar.ParseVarEnd('/tmp/gdb.var')
-    elseif ret == -1
-        " file-not-exist
-        call state#Switch('gdb', 'parsevar', 2)
-    else
-        " succ & wait end
-        call self.Send('neobug_redir_cmd /tmp/gdb.vars "#neobug_tag_var_data#" source /tmp/gdb.cmd')
-    endif
-endfunction
-
-function! s:prototype.on_parse_varend(...) dict
-    let __func__ = "on_parse_varend"
-
-    call state#Switch('gdb', 'parsevar', 2)
-    let modelVar = NbRuntimeGet('Model_var')
-    if empty(modelVar)
-        silent! call s:log.info(__func__, '(): no instance of Model_var')
-        return
-    endif
-
-    call modelVar.ParseVarEnd('/tmp/gdb.vars')
-
-    " Trigger Jump
-    "call self.Send('info line')
-    "call nelib#util#active_win_pop()
-endfunction
-
-function! s:prototype.on_parse_error(...) dict
-    let __func__ = "on_parse_error"
-
-    call state#Switch('gdb', 'parsevar', 2)
-    " Trigger Jump
-    call self.Send('info line')
 endfunction
 
 function! s:prototype.on_retry(...) dict
@@ -799,6 +622,30 @@ function! s:prototype.PrepareInitFile(initfile) dict
 endfunction
 
 
+function! s:prototype.PyEvent(evt_opts) dict
+    let __func__ = "gdb.PyEvent"
+
+    if !has_key(a:evt_opts, 'event')
+        silent! call s:log.info(__func__, "no 'event' in args=", string(a:evt_opts))
+        return
+    endif
+
+    let event = a:evt_opts['event']
+    if event ==# 'update-all'
+        call self.on_jump(a:evt_opts['file'], a:evt_opts['line'])
+    elseif event ==# 'clear'
+    endif
+endfunction
+
+function! s:prototype.on_pyevent(evt_info, ...) dict
+    let __func__ = "gdb.on_pyevent"
+    silent! call s:log.info(__func__, " args=", a:evt_info)
+
+    let opts = nelib#util#str2dict('{'.a:evt_info.'}')
+    call self.PyEvent(opts)
+endfunction
+
+
 function! s:prototype.on_init(...) dict
     let __func__ = "gdb.on_init"
     silent! call s:log.info(__func__, " args=", string(a:000))
@@ -810,8 +657,17 @@ function! s:prototype.on_init(...) dict
 
     let self._initialized = 1
     call state#Switch('gdb', 'init', 0)
+    " set env var used by gdb.python
+    let $VIMPID = getpid()
     call self.PrepareInitFile(s:gdb_init)
     call self.Send('source '.s:gdb_init)
+
+    " Performance: python script as parser
+    " If file ext is 'py', should disable script-extension
+    call self.Send('set script-extension off')
+    call self.Send('source '.s:gdb_parser)
+    " restore to default
+    call self.Send('set script-extension soft')
 
     silent! call s:log.info("Load breaks ...")
     let viewMain = NbConfGet('View_main', 'this')

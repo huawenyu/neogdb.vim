@@ -62,7 +62,8 @@ function! neobugger#Handle(module, handle, ...)
                 "call call(a:handle, a:000, s:modules[l:module])
 
                 let l:args = a:000
-                if len(a:000) > 0
+                let l:len = len(a:000)
+                if l:len > 0
                     if type(a:000[0]) == type([])
                         let l:args = a:000[0]
                     endif

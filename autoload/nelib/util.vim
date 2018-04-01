@@ -50,6 +50,19 @@ function! nelib#util#read_variable(file)
 endfunction
 
 
+function! nelib#util#str2dict(str)
+    let __func__ = "nelib#util#str2var"
+    let result = {}
+    try
+        let str_var = "let result = " . a:str
+        execute str_var
+        return result
+    catch /.*/
+        return result
+    endtry
+endfunction
+
+
 function! nelib#util#active_win_push()
     let active = deepcopy(s:_active_info)
     let active.wid = win_getid()

@@ -23,6 +23,14 @@ function! neobugger#gdb#basic#Conf() abort
         \   },
         \ ],
         \ "state" : {
+        \   "_all_": [
+        \       {   "match":   ['\v^#VIMPY# (.*) #VIMPYEND#',],
+        \           "hint":    "The event come from python parser",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_pyevent",
+        \       },
+        \   ],
         \   "init": [
         \       {   "match":   [ '#neobug_tag_init#', ],
         \           "hint":    "The 1st time entering gdb",
@@ -50,16 +58,6 @@ function! neobugger#gdb#basic#Conf() abort
         \           "action":  "call",
         \           "arg0":    "on_remoteconn_fail",
         \       },
-        \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
-        \                       '\v/([\h\d/]+):(\d+):\d+',
-        \                       '\v^#\d+ .{-} \(\) at (.+):(\d+)',
-        \                       '\v at /([\h\d/]+):(\d+)',
-        \                      ],
-        \           "hint":    "gdb.Jump",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_jump",
-        \       },
         \   ],
         \   "pause": [
         \       {   "match":   ["Continuing."],
@@ -73,16 +71,6 @@ function! neobugger#gdb#basic#Conf() abort
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_parseend",
-        \       },
-        \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
-        \                       '\v/([\h\d/]+):(\d+):\d+',
-        \                       '\v^#\d+ .{-} \(\) at (.+):(\d+)',
-        \                       '\v at /([\h\d/]+):(\d+)',
-        \                      ],
-        \           "hint":    "gdb.Jump",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_jump",
         \       },
         \       {   "match":   ['The program is not being run.'],
         \           "hint":    "gdb.Unexpect",
@@ -124,26 +112,6 @@ function! neobugger#gdb#basic#Conf() abort
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_disconnected",
-        \       },
-        \   ],
-        \   "parsevar": [
-        \       {   "match":   ['#neobug_tag_var_type#', ],
-        \           "hint":    "Parse var type end",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_parse_vartype",
-        \       },
-        \       {   "match":   ['#neobug_tag_var_data#', ],
-        \           "hint":    "Parse var data end",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_parse_varend",
-        \       },
-        \       {   "match":   ['Error in sourced command file', ],
-        \           "hint":    "Parse var data error",
-        \           "window":  "",
-        \           "action":  "call",
-        \           "arg0":    "on_parse_error",
         \       },
         \   ],
         \   "gdbserver": [
@@ -198,27 +166,17 @@ function! neobugger#gdb#basic#Conf() abort
         call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction
 
-    function this.on_parse_vartype(funcname, ...)
-        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
-        call neobugger#Handle(self.module, a:funcname, a:000)
-    endfunction
-
-    function this.on_parse_varend(funcname, ...)
-        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
-        call neobugger#Handle(self.module, a:funcname, a:000)
-    endfunction
-
-    function this.on_parse_error(funcname, ...)
-        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
-        call neobugger#Handle(self.module, a:funcname, a:000)
-    endfunction
-
     function this.on_whatis(funcname, ...)
         silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
         call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction
 
     function this.on_retry(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
+    function this.on_pyevent(funcname, ...)
         silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
         call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction

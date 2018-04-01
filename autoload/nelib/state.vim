@@ -39,6 +39,14 @@ function! nelib#state#CreateRuntime(scheme, config) abort
     let ctx.scheme = scheme
     let ctx.conf = conf
 
+    " Merge state.'_all_' into every scheme.state
+    if has_key(scheme.state, '_all_')
+        let v_of_all = scheme.state['_all_']
+        for [k,v] in items(scheme.state)
+            call extend(scheme.state[k], v_of_all, 0)
+        endfor
+    endif
+
     " Merge conf.state into scheme.state
     if has_key(conf, 'state')
         for [k,v] in items(conf.state)
