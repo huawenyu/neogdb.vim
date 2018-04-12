@@ -53,7 +53,7 @@ function! s:prototype.LoadFromFile(fBreakpoints) dict
 
     silent! call s:log.info("Load breaks: ", string(s:breakpoints))
     if !empty(s:breakpoints)
-        call self.ObserverUpdateAll("break")
+        call self.UpdateView()
     endif
 endfunction
 
@@ -83,7 +83,7 @@ function! s:prototype.ToggleBreak() dict
         let newItem['update'] = 1
     endif
     call nelib#util#save_variable(s:breakpoints, s:save_break)
-    call self.ObserverUpdateAll("break")
+    call self.UpdateView()
 
     " Remove state=2 item
     for [next_key, next_val] in items(s:breakpoints)
@@ -108,17 +108,20 @@ function! s:prototype.ToggleBreakAll() dict
             let v['state'] = 1
         endif
     endfor
-    call self.ObserverUpdateAll("break")
+    call self.UpdateView()
 endfunction
 
 
 function! s:prototype.ClearBreak() dict
     let s:breakpoints = {}
-    call self.ObserverUpdateAll("break")
+    call self.UpdateView()
 endfunction
 
 
-
+function! s:prototype.Update(dir) dict
+    let __func__ = 'Update'
+    silent! call s:log.info(__func__, '(Do nothing) type='. a:dir)
+endfunction
 
 
 

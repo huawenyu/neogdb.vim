@@ -176,7 +176,9 @@ function! neobugger#gdb#New(conf, binaryFile, args)
 
     " window number that will be displaying the current file
     let gdb._jump_window = 1
+    let gdb._cwd = ''
     let gdb._current_buf = -1
+    let gdb._current_file = ''
     let gdb._current_line = -1
     let gdb._has_breakpoints = 0
     let gdb._server_exited = 0
@@ -216,27 +218,6 @@ function! neobugger#gdb#New(conf, binaryFile, args)
         let gdb._job_id = win_job._client_id
     endif
 
-    " Create quickfix: lgetfile, cgetfile
-    "if gdb._showbacktrace && win_gotoid(g:state_ctx._wid_main) == 1
-    "    if !filereadable(gdb._gdb_bt_qf)
-    "        exec "silent! vimgrep " . cword ." ". expand("%")
-    "    else
-    "        exec "silent cgetfile " . gdb._gdb_bt_qf
-    "    endif
-    "    silent! copen
-    "    let gdb._win_qf = win_getid()
-    "endif
-
-    "if gdb._showbreakpoint && win_gotoid(g:state_ctx._wid_main) == 1
-    "    if !filereadable(gdb._gdb_break_qf)
-    "        exec "silent! lvimgrep " . cword ." ". expand("%")
-    "    else
-    "        exec "silent lgetfile " . gdb._gdb_break_qf
-    "    endif
-    "    silent! lopen
-    "    let gdb._win_lqf = win_getid()
-    "endif
-
     " Create gdb terminal
     if win_gotoid(gdb._win_gdb._wid) == 1
         let gdb._server_buf = -1
@@ -245,6 +226,7 @@ function! neobugger#gdb#New(conf, binaryFile, args)
     endif
 
     if win_gotoid(g:state_ctx._wid_main) == 1
+        let gdb._cwd = getcwd()
         stopinsert
         call gdb.Map("nmap")
         return gdb
@@ -355,6 +337,7 @@ function! s:prototype.Jump(file, line) dict
     endif
     stopinsert
 
+    let self._current_file = tlib#file#Relative(a:file, self._cwd)
     let self._current_buf = bufnr('%')
     let target_buf = bufnr(a:file, 1)
     if bufnr('%') != target_buf
@@ -427,7 +410,7 @@ function! neobugger#gdb#curr_info()
 endfunction
 
 
-function! s:prototype.UpdateBreak(model) dict
+function! s:prototype.Update(model) dict
     let __func__ = "UpdateBreak"
     silent! call s:log.info(__func__, '()')
 
@@ -447,16 +430,6 @@ function! s:prototype.UpdateBreak(model) dict
     if is_running
         call self.Send('c')
     endif
-endfunction
-
-
-function! s:prototype.UpdateStep(breaks) dict
-    throw s:script. ': Virtual function UpdateStep() must be implement.'
-endfunction
-
-
-function! s:prototype.UpdateCurrent(breaks) dict
-    throw s:script. ': Virtual function UpdateCurrent() must be implement.'
 endfunction
 
 
@@ -555,22 +528,20 @@ endfunction
 
 
 function! s:prototype.ToggleViewVar() dict
-    call neobugger#Model_var#New()
     let view = neobugger#View#Toggle('View_var')
 endfunction
 
 
 function! s:prototype.ToggleViewFrame() dict
-    call neobugger#Model_frame#New()
     let view = neobugger#View#Toggle('View_frame')
 endfunction
 
 
 function! s:prototype.ToggleViewBreak() dict
-    let modelBreak = neobugger#Model_break#New()
+    let model = neobugger#Model#Resolve('Model_break')
     let view = neobugger#View#Toggle('View_break')
-    if !empty(view)
-        call modelBreak.ObserverUpdateAll("break")
+    if !empty(model) && !empty(view)
+        call model.UpdateView()
     endif
 endfunction
 
@@ -587,12 +558,14 @@ function! s:prototype.on_continue(...) dict
     call self.Update_current_line_sign(0)
 endfunction
 
-" @todo wilson: remove this function
+
 function! s:prototype.on_jump(file, line, ...) dict
     let __func__ = "gdb.on_jump"
-    silent! call s:log.info(__func__, '(', a:file, ':', a:line, ')')
-
-    call nelib#util#active_win_push()
+    if self._current_file ==# a:file && self._current_line == a:line
+        silent! call s:log.info(__func__, '(same-old ', a:file, ':', a:line, ')')
+        return
+    endif
+    silent! call s:log.info(__func__, '(goto ', a:file, ':', a:line, ')')
 
     if self._win_gdb._state.name !=# "pause"
         silent! call s:log.info(gdb)
@@ -601,6 +574,7 @@ function! s:prototype.on_jump(file, line, ...) dict
     endif
     call self.Jump(a:file, a:line)
 endfunction
+
 
 function! s:prototype.on_whatis(type, ...) dict
     call self.Whatis(a:type)
@@ -626,15 +600,20 @@ function! s:prototype.PyEvent(evt_opts) dict
     let __func__ = "gdb.PyEvent"
 
     if !has_key(a:evt_opts, 'event')
-        silent! call s:log.info(__func__, "no 'event' in args=", string(a:evt_opts))
+        silent! call s:log.info(__func__, "() fail: no 'event' in args=", string(a:evt_opts))
         return
     endif
+
+    call nelib#util#active_win_push()
 
     let event = a:evt_opts['event']
     if event ==# 'update-all'
         call self.on_jump(a:evt_opts['file'], a:evt_opts['line'])
+        call neobugger#Model#DashboardUpdate(a:evt_opts['dir'])
     elseif event ==# 'clear'
     endif
+
+    call nelib#util#active_win_pop()
 endfunction
 
 function! s:prototype.on_pyevent(evt_info, ...) dict
@@ -657,8 +636,6 @@ function! s:prototype.on_init(...) dict
 
     let self._initialized = 1
     call state#Switch('gdb', 'init', 0)
-    " set env var used by gdb.python
-    let $VIMPID = getpid()
     call self.PrepareInitFile(s:gdb_init)
     call self.Send('source '.s:gdb_init)
 
@@ -671,7 +648,7 @@ function! s:prototype.on_init(...) dict
 
     silent! call s:log.info("Load breaks ...")
     let viewMain = NbConfGet('View_main', 'this')
-    let modelBreak = neobugger#Model_break#New()
+    let modelBreak = neobugger#Model#Resolve('Model_break')
 
     call modelBreak.ObserverAppend(s:name, self)
     call modelBreak.ObserverAppend('View_main', viewMain)

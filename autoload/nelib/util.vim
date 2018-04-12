@@ -71,10 +71,12 @@ endfunction
 
 
 function! nelib#util#active_win_pop()
-    let old = s:_static_prototype.stack[-1]
-    call win_gotoid(old.wid)
-    stopinsert
-    call remove(s:_static_prototype.stack, -1)
+    if !empty(s:_static_prototype.stack)
+        let old = s:_static_prototype.stack[-1]
+        call win_gotoid(old.wid)
+        stopinsert
+        call remove(s:_static_prototype.stack, -1)
+    endif
 endfunction
 
 

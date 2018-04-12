@@ -4,6 +4,7 @@ if !exists("s:script")
     silent! let s:log = logger#getLogger(s:script)
     let s:prototype = tlib#Object#New({'_class': [s:name]})
 
+    let s:srcfile = 'stack'
     let s:enumFrame = nelib#enum#Create(['RAWLINE', 'FRAME', 'FUNC', 'PARAM', 'FILE', 'LINE'])
 endif
 
@@ -26,71 +27,35 @@ function! neobugger#Model_frame#New(...)
 endfunction
 
 
-" Input Sample:
-"
-" > #0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65
-" > #1  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24
-"
-" @return current frame name
-function! s:prototype.ParseFrame(framefile) dict
-    let __func__ = "ParseFrame"
-    silent! call s:log.info(__func__, '()')
-
-    let self.frames = []
-    if !filereadable(a:framefile)
-        return "Error"
-    endif
-
-    let frame0 = "Null"
-    let matches = []
-    let l:lines = readfile(a:framefile)
-    for l:line in l:lines
-        "" RunScript
-        "echomsg string(matchlist('#0  foo (e=0x7fc9333516a0, ev=<optimized out>) at /full/path/of/foo.c:65'
-        "      \, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$'))
-        "echomsg string(matchlist('#2  0x00000000004348d0 in bar (argc=3, argv=0x7fff6c42b768) at /full/path/of/bar.c:24'
-        "      \, '\v^#(\d+)  (.*) in (.*) \((.*)\) at (.*):(\d+)$'))
-        if frame0 == "Null"
-            let matches = matchlist(l:line, '\v^#(\d+)  (.*) \((.*)\) at (.*):(\d+)$')
-            if len(matches) > 5
-                let frame0 = matches[2]
-                call add(self.frames, {
-                            \ 'id': matches[1],
-                            \ 'func': matches[2],
-                            \ 'param': matches[3],
-                            \ 'file': matches[4],
-                            \ 'line': matches[5],
-                            \})
-            endif
-        else
-            let matches = matchlist(l:line, '\v^#(\d+)  (.*) in (.*) \((.*)\) at (.*):(\d+)$')
-            if len(matches) > 6
-                call add(self.frames, {
-                            \ 'id': matches[1],
-                            \ 'func': matches[3],
-                            \ 'param': matches[4],
-                            \ 'file': matches[5],
-                            \ 'line': matches[6],
-                            \})
-            endif
-        endif
-        "silent! call s:log.info(__func__, ' line=', l:line, ' matches=', string(matches))
-    endfor
-
-    " view2window
-    "silent! call s:log.info(__func__, ' frames=', string(self.frames))
-    call self.ObserverUpdateAll("frame")
-    return frame0
-endfunction
-
-
 " Output format for Breakpoints Window
 function! s:prototype.Render() dict
     let output = "Frames:\n"
     for frame in self.frames
-        let l:file = tlib#file#Relative(frame.file, getcwd())
-        let output .= '#'. frame.id. ' '. frame.func. '('. frame.param. ')  at '. l:file. ':'.frame.line. "\n"
+        let output .= '#'. frame['id']. ' '. frame['fn']. ' at '. frame['locate']. "\n"
     endfor
     return output
+endfunction
+
+
+function! s:prototype.Update(dir) dict
+    let __func__ = 'Update'
+    let fname = a:dir. s:srcfile
+    silent! call s:log.info(__func__, ' file='. fname)
+    if !filereadable(fname)
+        return -1
+    endif
+
+    let self.frames = []
+    let lines = readfile(fname)
+    for line in lines
+        let frame = nelib#util#str2dict('{'.line.'}')
+        call add(self.frames, frame)
+    endfor
+
+    " view2window
+    "silent! call s:log.info(__func__, ' vars=', string(self.vars))
+    call self.UpdateView()
+    call nelib#util#active_win_pop()
+    return 0
 endfunction
 

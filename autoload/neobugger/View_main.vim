@@ -20,16 +20,11 @@ function! neobugger#View_main#New()
 endfunction
 
 
-function! s:prototype.UpdateBreak(model) dict
+function! s:prototype.Update(model) dict
+    let __func__ = 'Update'
+    silent! call s:log.info(__func__, '()')
+
     call a:model.Render('sign', {})
-endfunction
-
-
-function! s:prototype.UpdateStep(model) dict
-endfunction
-
-
-function! s:prototype.UpdateCurrent(model) dict
 endfunction
 
 

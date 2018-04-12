@@ -3,6 +3,10 @@ if !exists("s:script")
     let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
     let s:prototype = tlib#Object#New({'_class': [s:name]})
+
+    let s:_Prototype = {
+                \ 'dashboard': 'stack',
+                \}
 endif
 
 
@@ -10,7 +14,7 @@ endif
 function! neobugger#View_frame#New()
     let __func__ = substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
 
-    let view = s:prototype.New(a:0 >= 1 ? a:1 : {})
+    let view = s:prototype.New(deepcopy(s:_Prototype))
     let l:title = NbConfGet(s:name, 'title')
     let abstract = neobugger#View#New(s:name, l:title, {})
     call view.Inherit(abstract)
@@ -26,7 +30,10 @@ function! s:prototype.bind_mappings()
 endfunction
 
 
-function! s:prototype.UpdateFrame(model) dict
+function! s:prototype.Update(model) dict
+    let __func__ = 'Update'
+    silent! call s:log.info(__func__, '()')
+
     call self.display(a:model.Render())
 endfunction
 

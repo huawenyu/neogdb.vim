@@ -48,6 +48,7 @@ function! neobugger#View#Toggle(name)
         let Fview_new = function('neobugger#'. a:name. '#New')
         let this = Fview_new()
         call this.open()
+
         let l:bufnum = NbConfGet(a:name, 'bufnr')
         if l:bufnum >=0
             silent! call s:log.info(__func__, 'backto buffer ', l:bufnum)
@@ -95,11 +96,12 @@ function! s:prototype.close() dict
     endfor
 
     if winnr("$") != 1
-        call self.focus()
-        close
-        exe "wincmd p"
-        stopinsert
-        let self.wid = -1
+        if win_gotoid(self.wid) == 1
+            close
+            exe "wincmd p"
+            stopinsert
+            let self.wid = -1
+        endif
     else
         " If this is only one window, just quit
         :q
@@ -112,27 +114,21 @@ endfunction
 function! s:prototype.display(data) dict
     let __func__ = 'display'
     "silent! call s:log.info(__func__, '(', self.name, ')')
-    call self.focus()
-    setlocal modifiable
+    if win_gotoid(self.wid) == 1
+        setlocal modifiable
 
-    let current_line = line(".")
-    let current_column = col(".")
-    let top_line = line("w0")
+        let current_line = line(".")
+        let current_column = col(".")
+        let top_line = line("w0")
 
-    call self.clear()
+        call self.clear()
 
-    call self._insert_data(a:data)
-    call self._restore_view(top_line, current_line, current_column)
+        call self._insert_data(a:data)
+        call self._restore_view(top_line, current_line, current_column)
 
-    setlocal nomodifiable
-    "call s:log.info("Complete displaying data in window with name: " . self.name)
-endfunction
-
-
-function! s:prototype.focus() dict
-    let __func__ = 'focus'
-    "silent! call s:log.info(__func__, '(', self.name, ')')
-    call win_gotoid(self.wid)
+        setlocal nomodifiable
+        "call s:log.info("Complete displaying data in window with name: " . self.name)
+    endif
 endfunction
 
 
@@ -164,9 +160,10 @@ function! s:prototype.open() dict
 
             let obs = NbConfGet(self.name, 'observe')
             for nameObs in obs
-                let ob = NbRuntimeGet(nameObs)
+                let ob = neobugger#Model#Resolve(nameObs)
                 if !empty(ob)
                     call ob.ObserverAppend(self.name, self)
+                    call ob.UpdateView()
                 endif
             endfor
         else
@@ -228,54 +225,8 @@ function! s:prototype.toggle() dict
 endfunction
 
 
-function! s:prototype.Update(type, model) dict
+function! s:prototype.Update(model) dict
     let __func__ = 'Update'
-    silent! call s:log.info(__func__, '(type='.a:type.' name='.a:model.name.')')
-
-    if a:type ==# 'break'
-        call self.UpdateBreak(a:model)
-    elseif a:type ==# 'step'
-        call self.UpdateStep(a:model)
-    elseif a:type ==# 'var'
-        call self.UpdateVar(a:model)
-    elseif a:type ==# 'frame'
-        call self.UpdateFrame(a:model)
-    elseif a:type ==# 'current'
-        call self.UpdateCurrent(a:model)
-    endif
-endfunction
-
-
-function! s:prototype.UpdateBreak(model) dict
-    let __func__ = 'UpdateBreak'
-    silent! call s:log.warn(__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. __func__
-endfunction
-
-
-function! s:prototype.UpdateStep(model) dict
-    let __func__ = 'UpdateStep'
-    silent! call s:log.warn(__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. __func__
-endfunction
-
-
-function! s:prototype.UpdateCurrent(model) dict
-    let __func__ = 'UpdateCurrent'
-    silent! call s:log.warn(__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. __func__
-endfunction
-
-
-function! s:prototype.UpdateVar(model) dict
-    let __func__ = 'UpdateVar'
-    silent! call s:log.warn(__func__, ' view='. string(self))
-    throw s:script. ': '. self.name .' must implement '. __func__
-endfunction
-
-
-function! s:prototype.UpdateFrame(model) dict
-    let __func__ = 'UpdateFrame'
     silent! call s:log.warn(__func__, ' view='. string(self))
     throw s:script. ': '. self.name .' must implement '. __func__
 endfunction
