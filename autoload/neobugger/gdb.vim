@@ -1,4 +1,5 @@
 if !exists("s:script")
+    let s:dir = expand('<sfile>:p:h')
     let s:script = expand('<sfile>:t')
     let s:name = expand('<sfile>:t:r')
     silent! let s:log = logger#getLogger(s:script)
@@ -13,7 +14,7 @@ if !exists("s:script")
     set errorformat+=#%c\ \ %m\ \(%.%#\)\ at\ %f:%l
 
     let s:gdb_init = '/tmp/gdb.init'
-    let s:gdb_parser = '/tmp/gdb-parser.py'
+    let s:gdb_parser = s:dir. '/../../gdb-parser.py'
     let s:qf_gdb_frame = '/tmp/gdb.frame'
     let s:qf_gdb_break = '/tmp/gdb.breaks'
     let s:gdb_break = '/tmp/gdb.break'
