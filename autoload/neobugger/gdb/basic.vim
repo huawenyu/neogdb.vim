@@ -10,31 +10,31 @@ function! neobugger#gdb#basic#Conf() abort
         \ "name" : "SchemeGDB",
         \ "window" : [
         \   {   "name":   "gdb",
+        \       "view":   "View_gdb",
         \       "state":  "init",
         \       "status":  1,
-        \       "layout": ["conf_gdb_layout", "vsp"],
         \       "cmd":    ["conf_gdb_cmd", "$SHELL"],
         \   },
         \   {   "name":   "gdbserver",
+        \       "view":   "View_server",
         \       "state":  "gdbserver",
         \       "status":  1,
-        \       "layout": ["conf_server_layout", "sp"],
         \       "cmd":    ["conf_server_cmd", "$SHELL"],
-        \   },
-        \   {   "name":   "job",
-        \       "state":  "job",
-        \       "status":  0,
-        \       "layout": ["conf_job_layout", "tabnew"],
-        \       "cmd":    ["conf_job_cmd", "$SHELL"],
         \   },
         \ ],
         \ "state" : {
         \   "init": [
-        \       {   "match":   [ 'neobugger_starting', ],
+        \       {   "match":   [ '#neobug_tag_init#', ],
         \           "hint":    "The 1st time entering gdb",
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_init",
+        \       },
+        \       {   "match":   [ '#neobug_tag_initend#', ],
+        \           "hint":    "gdb Init End",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_initend",
         \       },
         \   ],
         \   "remoteconn": [
@@ -50,6 +50,16 @@ function! neobugger#gdb#basic#Conf() abort
         \           "action":  "call",
         \           "arg0":    "on_remoteconn_fail",
         \       },
+        \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
+        \                       '\v/([\h\d/]+):(\d+):\d+',
+        \                       '\v^#\d+ .{-} \(\) at (.+):(\d+)',
+        \                       '\v at /([\h\d/]+):(\d+)',
+        \                      ],
+        \           "hint":    "gdb.Jump",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_jump",
+        \       },
         \   ],
         \   "pause": [
         \       {   "match":   ["Continuing."],
@@ -57,6 +67,12 @@ function! neobugger#gdb#basic#Conf() abort
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_continue",
+        \       },
+        \       {   "match":   ['#neobug_tag_parseend#'],
+        \           "hint":    "gdb.ParseEnd",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parseend",
         \       },
         \       {   "match":   ['\v[\o32]{2}([^:]+):(\d+):\d+',
         \                       '\v/([\h\d/]+):(\d+):\d+',
@@ -88,6 +104,12 @@ function! neobugger#gdb#basic#Conf() abort
         \       },
         \   ],
         \   "running": [
+        \       {   "match":   ['#neobug_tag_parseend#'],
+        \           "hint":    "gdb.ParseEnd",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parseend",
+        \       },
         \       {   "match":   ['\v^Breakpoint \d+',
         \                       '\v^Temporary breakpoint \d+',
         \                       '\v^\(gdb\) ',
@@ -102,6 +124,26 @@ function! neobugger#gdb#basic#Conf() abort
         \           "window":  "",
         \           "action":  "call",
         \           "arg0":    "on_disconnected",
+        \       },
+        \   ],
+        \   "parsevar": [
+        \       {   "match":   ['#neobug_tag_var_type#', ],
+        \           "hint":    "Parse var type end",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parse_vartype",
+        \       },
+        \       {   "match":   ['#neobug_tag_var_data#', ],
+        \           "hint":    "Parse var data end",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parse_varend",
+        \       },
+        \       {   "match":   ['Error in sourced command file', ],
+        \           "hint":    "Parse var data error",
+        \           "window":  "",
+        \           "action":  "call",
+        \           "arg0":    "on_parse_error",
         \       },
         \   ],
         \   "gdbserver": [
@@ -151,6 +193,26 @@ function! neobugger#gdb#basic#Conf() abort
         call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction
 
+    function this.on_parseend(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
+    function this.on_parse_vartype(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
+    function this.on_parse_varend(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
+    function this.on_parse_error(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
     function this.on_whatis(funcname, ...)
         silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
         call neobugger#Handle(self.module, a:funcname, a:000)
@@ -162,6 +224,11 @@ function! neobugger#gdb#basic#Conf() abort
     endfunction
 
     function this.on_init(funcname, ...)
+        silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
+        call neobugger#Handle(self.module, a:funcname, a:000)
+    endfunction
+
+    function this.on_initend(funcname, ...)
         silent! call s:log.info(self.module.".Scheme.".a:funcname." args=", string(a:000))
         call neobugger#Handle(self.module, a:funcname, a:000)
     endfunction

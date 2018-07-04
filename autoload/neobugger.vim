@@ -9,7 +9,7 @@ endif
 
 
 function! neobugger#New(module, ...)
-    let l:__func__ = "neobugger#New"
+    let __func__ = "neobugger#New"
     silent! call s:log.info('')
     silent! call s:log.info('')
     silent! call s:log.info("=============================================")
@@ -23,7 +23,7 @@ function! neobugger#New(module, ...)
                 return
             endif
             silent! call s:log.info("The module [".a:module ."] already running!")
-            echomsg l:__func__. 'neobugger['.a:module.' already running!'
+            echomsg __func__. 'neobugger['.a:module.' already running!'
         else
             silent! call s:log.info(l:new. "(): args=", string(a:000))
             let l:obj = call(l:new, a:000)
@@ -33,7 +33,7 @@ function! neobugger#New(module, ...)
         endif
     catch
         silent! call s:log.info("New module [".a:module ."] creat fail: ". string(v:exception))
-        echomsg l:__func__. ' error:' . v:exception
+        echomsg __func__. ' error:' . v:exception
     endtry
 endfunction
 
@@ -48,7 +48,7 @@ function! neobugger#Remove(module)
 endfunction
 
 function! neobugger#Handle(module, handle, ...)
-    let l:__func__ = "neobugger#Handle"
+    let __func__ = "neobugger#Handle"
     let l:module = a:module
     if a:module ==# 'current'
         let l:module = s:current_module
@@ -57,7 +57,7 @@ function! neobugger#Handle(module, handle, ...)
     try
         if !empty(l:module) && neobugger#Exists(l:module)
             if s:modules[l:module].RespondTo(a:handle)
-                silent! call s:log.info(l:__func__, ': call ', l:module, '.', a:handle, '(args=', a:000,') ')
+                silent! call s:log.info(__func__, ': call ', l:module, '.', a:handle, '(args=', a:000,') ')
                 "s:modules[l:module].Call(s:modules[l:module], a:handle, a:000)
                 "call call(a:handle, a:000, s:modules[l:module])
 
@@ -71,14 +71,15 @@ function! neobugger#Handle(module, handle, ...)
                 return
             endif
             silent! call s:log.info("Module=[".l:module ."].".a:handle. "() not exist. Please report a bug if possible.")
-            echomsg l:__func__. ': module['. l:module. "] function '".a:handle. "()' not exist. Please report a bug if possible."
+            echomsg __func__. ': module['. l:module. "] function '".a:handle. "()' not exist. Please report a bug if possible."
         else
             silent! call s:log.info("Module=[".l:module ."] not existed in ", string(s:modules), " when call ".a:handle. "()")
-            echomsg l:__func__. ': module['. l:module. "] not exist, call ".a:handle "() fail. Please starter firstly."
+            echomsg __func__. ': module['. l:module. "] not exist, call ".a:handle "() fail. Please starter firstly."
         endif
     catch
         silent! call s:log.info("Module=[".l:module ."].".a:handle. "() error:", string(v:exception))
-        echomsg l:__func__. ' module['. l:module. "].".a:handle. "() error:". v:exception
+        echomsg __func__. ' module['. l:module. "].".a:handle. "() error:". v:exception
     endtry
 endfunction
+
 
