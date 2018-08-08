@@ -67,7 +67,7 @@ function! neobugger#gdb#server#New()
         let self._remote_debugging = 0
 
         silent! call s:log.info(l:__func__, " args=", string(self.args))
-        let l:cmdstr = 'login.py -h '. self._server_addr[0].' '.join(self.args.args[1:], ' ')
+        let l:cmdstr = 'dut.py -h '. self._server_addr[0].' '.join(self.args.args[1:], ' ')
         silent! call s:log.info(l:__func__, " cmdstr=", l:cmdstr)
         call self.SendSvr(l:cmdstr)
     endfunction
