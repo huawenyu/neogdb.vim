@@ -446,7 +446,7 @@ function! s:prototype.Jump(file, line)
 
     "" Method-2: Using syncronize to parse response
     if self._showbacktrace && filereadable(s:gdb_bt_qf)
-        exec "cgetfile " . s:gdb_bt_qf
+        exec "silent! cgetfile " . s:gdb_bt_qf
         call delete(s:gdb_bt_qf)
     endif
 
@@ -500,7 +500,7 @@ function! s:prototype.Stack(file)
         throw 'Gdb is not running'
     endif
     if self._showbacktrace && filereadable(a:file)
-        exec "silent cgetfile " . a:file
+        exec "silent! cgetfile " . a:file
     endif
 endfunction
 
