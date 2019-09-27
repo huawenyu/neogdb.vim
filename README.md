@@ -1,3 +1,7 @@
+## Project deprecated in favor of: new.vim + new-gdb.vim:
+  - https://github.com/huawenyu/new.vim
+  - https://github.com/huawenyu/new-gdb.vim
+
 # neogdb.vim
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
 The code reference: https://github.com/neovim/neovim/blob/master/contrib/gdb/neovim_gdb.vim  
