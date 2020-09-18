@@ -1,6 +1,5 @@
-## Project deprecated in favor of: new.vim + new-gdb.vim:
-  - https://github.com/huawenyu/new.vim
-  - https://github.com/huawenyu/new-gdb.vim
+## Project deprecated in favor of my another re-implement plugin vimgdb (neovim+tmux):
+  - https://github.com/huawenyu/vimgdb
 
 # neogdb.vim
 Vim GDB front-end for neovim: https://github.com/huawenyu/neogdb.vim  
